@@ -169,7 +169,7 @@ async function fetchBEs() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/bureaux-etudes/')
+    const response = await axiosInstance.get('bureaux-etudes/')
     bes.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -180,7 +180,7 @@ async function fetchBEs() {
 
 async function addBE() {
   try {
-    const res = await axiosInstance.post('http://10.10.150.75:8000/api/bureaux-etudes/', newBE.value)
+    const res = await axiosInstance.post('bureaux-etudes/', newBE.value)
     bes.value.push(res.data)
     showAddPopup.value = false
     newBE.value = { nom: '', description: '', adresse: '', telephone: '', email: '' }
@@ -196,7 +196,7 @@ function confirmDelete(be: BureauEtude) {
 async function deleteBE() {
   if (!beToDelete.value) return
   try {
-    await axiosInstance.delete(`http://10.10.150.75:8000/api/bureaux-etudes/${beToDelete.value.idBET}/`)
+    await axiosInstance.delete(`bureaux-etudes/${beToDelete.value.idBET}/`)
     bes.value = bes.value.filter(b => b.idBET !== beToDelete.value!.idBET)
     beToDelete.value = null
   } catch (e: any) {

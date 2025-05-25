@@ -175,7 +175,7 @@ async function fetchData() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('/api/subdivision-nv2/')
+    const response = await axiosInstance.get('subdivision-nv2/')
     data.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -186,7 +186,7 @@ async function fetchData() {
 
 async function fetchSubdivisionsNv1() {
   try {
-    const response = await axiosInstance.get('/api/subdivision-nv1/')
+    const response = await axiosInstance.get('subdivision-nv1/')
     subdivisionsNv1.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -195,7 +195,7 @@ async function fetchSubdivisionsNv1() {
 
 async function addSubdivision() {
   try {
-    const res = await axiosInstance.post('/api/subdivision-nv2/', newSubdivision.value)
+    const res = await axiosInstance.post('subdivision-nv2/', newSubdivision.value)
     data.value.push(res.data)
     showAddPopup.value = false
     newSubdivision.value = { nom: '', designation: '', subDiv: true, idSubDivisionNv_1: null }
@@ -211,7 +211,7 @@ function confirmDelete(subdivision: SubdivisionNv2) {
 async function deleteSubdivision() {
   if (!subdivisionToDelete.value) return
   try {
-    await axiosInstance.delete(`/api/subdivision-nv2/${subdivisionToDelete.value.idSubDivisionNv_2}/`)
+    await axiosInstance.delete(`subdivision-nv2/${subdivisionToDelete.value.idSubDivisionNv_2}/`)
     data.value = data.value.filter(s => s.idSubDivisionNv_2 !== subdivisionToDelete.value!.idSubDivisionNv_2)
     subdivisionToDelete.value = null
   } catch (e: any) {

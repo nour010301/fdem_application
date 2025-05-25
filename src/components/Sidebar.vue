@@ -139,6 +139,10 @@
         </transition>
       </div>
       <!-- END BIBLIOTHEQUE -->
+      <router-link to="/create_account" class="nav-link" active-class="active">
+           <span class="icon">👔</span>
+           <span>Create Account</span>
+      </router-link>
       <router-link to="/parametre" class="nav-link" active-class="active">
                       <span class="icon">⚙️</span>
                       <span>Paramètres</span>

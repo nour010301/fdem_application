@@ -153,7 +153,7 @@ async function fetchDirecteurs() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/directions-projets/')
+    const response = await axiosInstance.get('directions-projets/')
     directeurs.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -164,7 +164,7 @@ async function fetchDirecteurs() {
 
 async function addDirecteur() {
   try {
-    const res = await axiosInstance.post('http://10.10.150.75:8000/api/directions-projets/', newDirecteur.value)
+    const res = await axiosInstance.post('directions-projets/', newDirecteur.value)
     directeurs.value.push(res.data)
     showAddPopup.value = false
     newDirecteur.value = { nomPrenomDirecteur: '', fonction: '', telephone: '' }
@@ -180,7 +180,7 @@ function confirmDelete(directeur: Directeur) {
 async function deleteDirecteur() {
   if (!directeurToDelete.value) return
   try {
-    await axiosInstance.delete(`http://10.10.150.75:8000/api/directions-projets/${directeurToDelete.value.idDirecteur}/`)
+    await axiosInstance.delete(`directions-projets/${directeurToDelete.value.idDirecteur}/`)
     directeurs.value = directeurs.value.filter(d => d.idDirecteur !== directeurToDelete.value!.idDirecteur)
     directeurToDelete.value = null
   } catch (e: any) {

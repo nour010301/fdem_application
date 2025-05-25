@@ -1,80 +1,92 @@
 import axios from 'axios'
-import type {
-  AxiosError,
-  AxiosInstance,
-  InternalAxiosRequestConfig,
-} from 'axios'
+import router from './router'
 
-// --- Token Utilities ---
-function getAccessToken(): string | null {
-  return localStorage.getItem('access')
-}
-
-function getRefreshToken(): string | null {
-  return localStorage.getItem('refresh')
-}
-
-function setAccessToken(token: string): void {
-  localStorage.setItem('access', token)
-}
-
-function clearTokens(): void {
-  localStorage.removeItem('access')
-  localStorage.removeItem('refresh')
-  window.location.href = '/login' // Optional: redirect to login
-}
-
-// --- Create Axios Instance ---
-const instance: AxiosInstance = axios.create({
-  baseURL: 'http://10.10.150.75:8000',
-  timeout: 5000,
+const instance = axios.create({
+  baseURL: 'http://10.10.150.75:8000/api/', // Your backend API base URL
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// --- Request Interceptor ---
+// Flag to prevent multiple refresh requests at once
+let isRefreshing = false
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: any) => void }> = []
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token!)
+    }
+  })
+  failedQueue = []
+}
+
+// Attach access token to each request if available
 instance.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = getAccessToken()
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+  config => {
+    const accessToken = localStorage.getItem('access_token')
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`
     }
     return config
   },
-  (error) => Promise.reject(error)
+  error => Promise.reject(error)
 )
 
-// --- Response Interceptor ---
+// Handle expired tokens and refresh automatically
 instance.interceptors.response.use(
   response => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+  async error => {
+    const originalRequest = error.config
 
+    // If 401 Unauthorized AND it's not a retry
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
-      const refresh = getRefreshToken()
-      if (!refresh) {
-        clearTokens()
+      const refreshToken = localStorage.getItem('refresh_token')
+      if (!refreshToken) {
+        // No refresh token - logout user
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        router.push('/login')
         return Promise.reject(error)
       }
 
+      if (isRefreshing) {
+        return new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        })
+          .then(token => {
+            originalRequest.headers.Authorization = 'Bearer ' + token
+            return axios(originalRequest)
+          })
+          .catch(err => Promise.reject(err))
+      }
+
+      isRefreshing = true
+
       try {
-        const refreshResponse = await axios.post('http://10.10.150.75:8000/accounts/api/refresh/', {
-          refresh: refresh,
+        const response = await axios.post('http://10.10.150.75:8000/api/token/refresh/', {
+          refresh: refreshToken,
         })
 
-        const newAccess = refreshResponse.data.access
-        setAccessToken(newAccess)
+        const { access } = response.data
+        localStorage.setItem('access_token', access)
 
-        originalRequest.headers.Authorization = `Bearer ${newAccess}`
+        instance.defaults.headers.common['Authorization'] = `Bearer ${access}`
+        processQueue(null, access)
 
         return instance(originalRequest)
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError)
-        clearTokens()
-        return Promise.reject(refreshError)
+      } catch (err) {
+        processQueue(err, null)
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        router.push('/login')
+        return Promise.reject(err)
+      } finally {
+        isRefreshing = false
       }
     }
 

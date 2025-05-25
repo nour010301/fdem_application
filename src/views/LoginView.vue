@@ -22,17 +22,9 @@
       </div>
     </div>
     <div class="futuristic-form-container">
-      <!-- Holographic Logo with 3D Orb and Light Beams -->
-      <div class="holo-logo holo-logo-animated">
-        <div class="holo-orb holo-orb-animated">
-          <img :src="cosiderLogo" alt="Cosider Logo" />
-          <span class="orb-glass"></span>
-          <span class="orb-refraction"></span>
-        </div>
-        <span class="holo-beam beam1"></span>
-        <span class="holo-beam beam2"></span>
-        <span class="holo-beam beam3"></span>
-        <span class="holo-shine"></span>
+      <!-- Plain Logo Image (no extra wrappers or spans or CSS) -->
+      <div style="display: flex; justify-content: center; margin-bottom: 1.3rem;">
+        <img :src="cosiderLogo" alt="Cosider Logo" style="max-width: 290px; max-height: 290px;" />
       </div>
       <h1 class="futuristic-title">
         <span>Connectez-vous</span>
@@ -111,6 +103,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import cosiderLogo from '../assets/cosiderLogo.png'
+import instance from '../axios.ts'
 
 const router = useRouter()
 
@@ -173,17 +166,39 @@ const handleLogin = async () => {
   if (!valid) return
 
   loading.value = true
+
   try {
+    // Send the login request
+    const response = await instance.post('/api/login/', {
+      username: username.value,
+      password: password.value
+    })
+
+    const { access, refresh } = response.data
+
+    // Save tokens in localStorage
+  localStorage.setItem('access_token', access)
+localStorage.setItem('refresh_token', refresh)
+
+
     playRipple()
+
+    // Redirect to the home page after animation
     setTimeout(() => {
-      router.push({ name: 'Accueil' })
+      router.push({ name: 'Accueil' }) // Make sure your route is correctly named
     }, 900)
+
   } catch (err: any) {
-    error.value = err.message || 'Erreur de connexion'
+    if (err.response && err.response.status === 401) {
+      error.value = "Nom d'utilisateur ou mot de passe incorrect."
+    } else {
+      error.value = 'Erreur de connexion. Veuillez réessayer.'
+    }
   } finally {
     setTimeout(() => loading.value = false, 900)
   }
 }
+
 
 function playFocus() {
   if (focusSound.value) {
@@ -214,9 +229,6 @@ function liquidRipple(e: MouseEvent) {
   ripple.className = 'liquid-ripple'
   const rect = btn.getBoundingClientRect()
   const size = Math.max(rect.width, rect.height)
-  // ripple.style.width = ripple.style.height = size + 'px'
-  // ripple.style.left = e.clientX - rect.left - size / 2 + 'px'
-  // ripple.style.top = e.clientY - rect.top - size / 2 + 'px'
   btn.appendChild(ripple)
   setTimeout(() => ripple && ripple.remove(), 700)
   // Particle burst
@@ -242,14 +254,17 @@ function particleStyle(n: number) {
   }
 }
 </script>
+
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+/* --- Keep all previous styles, but REMOVE all logo/orb/holo/beam-related selectors! --- */
+/* No .holo-logo, .holo-orb, .orb-glass, .holo-beam, .holo-shine, etc. */
 
 /* Use a dark blues gradient for background, like sidebar */
 .futuristic-bg {
   min-height: 100vh;
   min-width: 100vw;
-  /* Sidebar vibe: diagonal blue gradient */
   background: linear-gradient(135deg, #16213e 75%, #1a237e 100%);
   overflow: hidden;
   display: flex;
@@ -284,7 +299,7 @@ function particleStyle(n: number) {
   height: 4px;
   margin: 0 7px;
   border-radius: 50%;
-  background: rgba(144,202,249,0.10); /* sidebar accent blue with more opacity */
+  background: rgba(144,202,249,0.10);
   animation: matrixDotAnim 2.5s infinite alternate;
 }
 @keyframes matrixDotAnim {
@@ -295,7 +310,7 @@ function particleStyle(n: number) {
 .aurora-gradient {
   position: absolute;
   left: 0; top: 0; width: 100%; height: 100%;
-  background: linear-gradient(120deg, #1a237e55 0%, #2196F377 70%, #43E97B22 100%); /* subtle, long blue */
+  background: linear-gradient(120deg, #1a237e55 0%, #2196F377 70%, #43E97B22 100%);
   opacity: 0.55;
   z-index: 1;
   pointer-events: none;
@@ -321,7 +336,7 @@ function particleStyle(n: number) {
 }
 .particle {
   position: absolute;
-  background: linear-gradient(135deg, #2196F3 0%, #90caf9 100%); /* light blue particles */
+  background: linear-gradient(135deg, #2196F3 0%, #90caf9 100%);
   border-radius: 50%;
   opacity: 0.15;
   animation: particleFloat linear infinite;
@@ -339,7 +354,6 @@ function particleStyle(n: number) {
   width: 100%;
   margin: 0 auto;
   padding: 2.7rem 2.2rem 2.2rem 2.2rem;
-  /* Use the sidebar blue with some opacity! */
   background: linear-gradient(135deg, #16213ee9 75%, #1a237eea 100%);
   border: 2.5px solid #232f4bcc;
   border-radius: 32px;
@@ -355,130 +369,11 @@ function particleStyle(n: number) {
   margin-top: 2vh;
 }
 
-/* Holographic Logo styling stays the same, but slight blue tone-up if wanted */
-.holo-logo {
-  width: 170px;
-  height: 170px;
-  margin: 0 auto 1.3rem auto;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-.holo-logo-animated {
-  animation: logoBounce 3.5s infinite alternate cubic-bezier(.77,0,.18,1);
-}
-@keyframes logoBounce {
-  0% { transform: translateY(0) scale(1);}
-  50% { transform: translateY(-18px) scale(1.08);}
-  100% { transform: translateY(0) scale(1);}
-}
-.holo-orb {
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  background: rgba(33,37,126,0.13); /* dark blue overlay */
-  box-shadow: 0 0 32px 0 #2196f355, 0 2px 16px 0 #90caf933;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: visible;
-}
-.holo-orb-animated {
-  animation: orbFloat 7s infinite alternate cubic-bezier(.77,0,.18,1), orbSpin 12s linear infinite;
-}
-@keyframes orbFloat {
-  0% { transform: translateY(0);}
-  100% { transform: translateY(-12px);}
-}
-@keyframes orbSpin {
-  0% { transform: rotateZ(0deg);}
-  100% { transform: rotateZ(360deg);}
-}
-.holo-orb img {
-  width: 90px;
-  height: 90px;
-  object-fit: contain;
-  border-radius: 50%;
-  filter: drop-shadow(0 2px 16px #2196f3bb);
-  z-index: 2;
-  position: relative;
-}
-.orb-glass {
-  position: absolute;
-  left: 0; top: 0;
-  width: 130px; height: 130px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #fff8 0%, #fff0 70%);
-  opacity: 0.68;
-  pointer-events: none;
-  z-index: 3;
-  animation: glassSweep 3.2s infinite alternate;
-}
-@keyframes glassSweep {
-  0% { opacity: 0.6; }
-  100% { opacity: 0.9; }
-}
-.orb-refraction {
-  position: absolute;
-  left: 0; top: 0;
-  width: 130px; height: 130px;
-  border-radius: 50%;
-  background: conic-gradient(from 90deg, #2196f344 0%, #90caf922 60%, #43E97B11 100%);
-  opacity: 0.23;
-  pointer-events: none;
-  z-index: 2;
-  animation: refractionSpin 7s linear infinite;
-}
-@keyframes refractionSpin {
-  0% { transform: rotate(0deg);}
-  100% { transform: rotate(360deg);}
-}
-/* Holographic Beams - bluees */
-.holo-beam {
-  position: absolute;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  width: 180px; height: 180px;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0.14;
-  z-index: 1;
-  background: conic-gradient(from 0deg, #2196F3 0%, #1a237e 90%, #43E97B 100%);
-  filter: blur(18px);
-  animation: beamSpin 8s linear infinite;
-}
-.beam1 { animation-delay: 0s; }
-.beam2 { animation-delay: 2s; opacity: 0.10; }
-.beam3 { animation-delay: 4s; opacity: 0.07; }
-@keyframes beamSpin {
-  0% { transform: translate(-50%, -50%) rotate(0deg);}
-  100% { transform: translate(-50%, -50%) rotate(360deg);}
-}
-.holo-shine {
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 170px; height: 170px;
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(circle at 60% 30%, #fff8 0%, #fff0 78%);
-  opacity: 0.10;
-  transform: translate(-50%, -50%);
-  z-index: 5;
-  animation: shineSweep 4.2s infinite alternate;
-}
-@keyframes shineSweep {
-  0% { opacity: 0.09; }
-  100% { opacity: 0.17; }
-}
-
-/* Title - now sidebar blue with light blue shadow */
+/* Title styles (unchanged) */
 .futuristic-title {
   text-align: center;
   margin-bottom: 2.1rem;
-  color: #90caf9; /* sidebar sidebar-title */
+  color: #90caf9;
   font-size: 2.1rem;
   font-weight: 780;
   letter-spacing: 1.2px;
@@ -497,7 +392,7 @@ function particleStyle(n: number) {
   font-size: 2.1rem;
 }
 
-/* Inputs - use blue, not green, for highlight/focus */
+/* Inputs - blue accent */
 .futuristic-form-group {
   margin-bottom: 1.35rem;
   z-index: 4;
@@ -505,7 +400,7 @@ function particleStyle(n: number) {
 label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #90caf9; /* sidebar nav-link */
+  color: #90caf9;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -518,10 +413,10 @@ label {
   width: 100%;
   padding: 0.7rem 2.2rem 0.7rem 1.1rem;
   border: none;
-  border-bottom: 2.5px solid #2196F3; /* focus blue */
+  border-bottom: 2.5px solid #2196F3;
   border-radius: 0;
   font-size: 1.07rem;
-  background: rgba(34,47,75,0.18); /* subtle dark blue bg */
+  background: rgba(34,47,75,0.18);
   color: #e3eafc;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   outline: none;
@@ -533,7 +428,7 @@ label {
 }
 .futuristic-input-wrapper input:focus {
   border-color: #90caf9;
-  background: rgba(26,35,126,0.14); /* deeper blue on focus */
+  background: rgba(26,35,126,0.14);
   box-shadow: 0 0 10px 0 #2196F366;
 }
 .input-error {
@@ -614,7 +509,6 @@ label {
   box-shadow: 0 2px 18px 0 #2196f366, 0 2px 8px 0 #16213e44;
   transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
   outline: none;
-  /* Animated gradient highlight in blue range */
   animation: morphGradient 3.5s infinite alternate;
 }
 @keyframes morphGradient {
@@ -708,7 +602,6 @@ label {
   to { transform: rotate(360deg); }
 }
 
-/* Error card unchanged (keep red) */
 .futuristic-error {
   color: #E53935;
   margin-top: 1.25rem;
@@ -723,7 +616,6 @@ label {
   z-index: 4;
 }
 
-/* Responsive (retain previous look, but blue coloring applies) */
 @media (max-width: 600px) {
   .futuristic-form-container {
     padding: 1.3rem 0.5rem 1.1rem 0.5rem;
@@ -733,45 +625,7 @@ label {
   .futuristic-title {
     font-size: 1.3rem;
   }
-  .holo-logo {
-    width: 110px;
-    height: 110px;
-    margin-bottom: 0.7rem;
-  }
-  .holo-orb, .orb-glass, .orb-refraction {
-    width: 80px;
-    height: 80px;
-  }
-  .holo-orb img {
-    width: 54px;
-    height: 54px;
-  }
 }
-
-
-
-
-
-
-
-
-
-/* === Place at the END of your <style scoped> in LoginView.vue === */
-/* === Place at the END of your <style scoped> in LoginView.vue === */
-.orb-glass,
-.orb-refraction {
-  display: none !important;
-}
-.holo-orb {
-  background: none !important;
-  box-shadow: none !important;
-}
-.holo-orb img {
-  filter: none !important;
-}
-
-
-
 
 
 

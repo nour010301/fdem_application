@@ -145,7 +145,7 @@ async function fetchStructures() {
   loading.value = true
   error.value = null
   try {
-    const res = await axiosInstance.get('/api/structures/')
+    const res = await axiosInstance.get('structures/')
     structures.value = res.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -156,7 +156,7 @@ async function fetchStructures() {
 
 async function addStructure() {
   try {
-    const res = await axiosInstance.post('/api/structures/', newStructure.value)
+    const res = await axiosInstance.post('structures/', newStructure.value)
     structures.value.push(res.data)
     showAddPopup.value = false
     newStructure.value = { nom: '', designation: '' }
@@ -172,7 +172,7 @@ function confirmDelete(structure: Structure) {
 async function deleteStructure() {
   if (!structureToDelete.value) return
   try {
-    await axiosInstance.delete(`/api/structures/${structureToDelete.value.idStructure}/`)
+    await axiosInstance.delete(`structures/${structureToDelete.value.idStructure}/`)
     structures.value = structures.value.filter(s => s.idStructure !== structureToDelete.value!.idStructure)
     structureToDelete.value = null
   } catch (e: any) {

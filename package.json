@@ -13,14 +13,18 @@
     "@vue/runtime-dom": "^3.5.13",
     "@vueform/multiselect": "^2.6.11",
     "axios": "^1.8.4",
+    "chart.js": "^4.4.9",
     "html2pdf.js": "^0.10.3",
+    "pdfjs-dist": "^5.2.133",
     "sass": "^1.87.0",
     "vue": "^3.5.13",
     "vue-multiselect": "^3.2.0",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@types/chart.js": "^2.9.41",
     "@types/node": "^22.14.1",
+    "@types/pdfjs-dist": "^2.10.377",
     "@vitejs/plugin-vue": "^5.2.2",
     "@vue/tsconfig": "^0.7.0",
     "autoprefixer": "^10.4.21",

@@ -161,7 +161,7 @@ async function fetchMaitresOuvrage() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/maitres-ouvrage/')
+    const response = await axiosInstance.get('maitres-ouvrage/')
     maitresOuvrage.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -172,7 +172,7 @@ async function fetchMaitresOuvrage() {
 
 async function addMaitreOuvrage() {
   try {
-    const res = await axiosInstance.post('http://10.10.150.75:8000/api/maitres-ouvrage/', newMaitreOuvrage.value)
+    const res = await axiosInstance.post('maitres-ouvrage/', newMaitreOuvrage.value)
     maitresOuvrage.value.push(res.data)
     showAddPopup.value = false
     newMaitreOuvrage.value = { designationMOg: '', description: '', adresse: '', email: '' }
@@ -188,7 +188,7 @@ function confirmDelete(maitreOuvrage: MaitreOuvrage) {
 async function deleteMaitreOuvrage() {
   if (!maitreOuvrageToDelete.value) return
   try {
-    await axiosInstance.delete(`http://10.10.150.75:8000/api/maitres-ouvrage/${maitreOuvrageToDelete.value.idMaitreOuvrage}/`)
+    await axiosInstance.delete(`maitres-ouvrage/${maitreOuvrageToDelete.value.idMaitreOuvrage}/`)
     maitresOuvrage.value = maitresOuvrage.value.filter(m => m.idMaitreOuvrage !== maitreOuvrageToDelete.value!.idMaitreOuvrage)
     maitreOuvrageToDelete.value = null
   } catch (e: any) {

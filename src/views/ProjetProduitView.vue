@@ -194,7 +194,7 @@ async function fetchProjets() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/projets/')
+    const response = await axiosInstance.get('projets/')
     projets.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -205,7 +205,7 @@ async function fetchProjets() {
 
 async function addProjet() {
   try {
-    const res = await axiosInstance.post('http://10.10.150.75:8000/api/projets/', newProjet.value)
+    const res = await axiosInstance.post('projets/', newProjet.value)
     projets.value.push(res.data)
     showAddPopup.value = false
     newProjet.value = { code: '', description: '', adresse: '', wilaya: '' }
@@ -221,7 +221,7 @@ function confirmDelete(projet: Projet) {
 async function deleteProjet() {
   if (!projetToDelete.value) return
   try {
-    await axiosInstance.delete(`http://10.10.150.75:8000/api/projets/${projetToDelete.value.idProjet}/`)
+    await axiosInstance.delete(`projets/${projetToDelete.value.idProjet}/`)
     projets.value = projets.value.filter(p => p.idProjet !== projetToDelete.value!.idProjet)
     projetToDelete.value = null
   } catch (e: any) {

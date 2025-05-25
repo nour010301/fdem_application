@@ -169,7 +169,7 @@ async function fetchSoustraitants() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/Soustraitants/')
+    const response = await axiosInstance.get('Soustraitants/')
     soustraitants.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -180,7 +180,7 @@ async function fetchSoustraitants() {
 
 async function addSoustraitant() {
   try {
-    const res = await axiosInstance.post('http://10.10.150.75:8000/api/Soustraitants/', newSoustraitant.value)
+    const res = await axiosInstance.post('Soustraitants/', newSoustraitant.value)
     soustraitants.value.push(res.data)
     showAddPopup.value = false
     newSoustraitant.value = { designationStt: '', description: '', adresse: '', telephone: '', email: '' }
@@ -196,7 +196,7 @@ function confirmDelete(soustraitant: Soustraitant) {
 async function deleteSoustraitant() {
   if (!soustraitantToDelete.value) return
   try {
-    await axiosInstance.delete(`http://10.10.150.75:8000/api/Soustraitants/${soustraitantToDelete.value.idSoustraitants}/`)
+    await axiosInstance.delete(`Soustraitants/${soustraitantToDelete.value.idSoustraitants}/`)
     soustraitants.value = soustraitants.value.filter(s => s.idSoustraitants !== soustraitantToDelete.value!.idSoustraitants)
     soustraitantToDelete.value = null
   } catch (e: any) {

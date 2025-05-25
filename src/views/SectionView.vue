@@ -144,7 +144,7 @@ async function fetchSections() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('/api/sections/')
+    const response = await axiosInstance.get('sections/')
     sections.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -155,7 +155,7 @@ async function fetchSections() {
 
 async function addSection() {
   try {
-    const res = await axiosInstance.post('/api/sections/', newSection.value)
+    const res = await axiosInstance.post('sections/', newSection.value)
     sections.value.push(res.data)
     showAddPopup.value = false
     newSection.value = { nom: '', designation: '' }
@@ -171,7 +171,7 @@ function confirmDelete(section: Section) {
 async function deleteSection() {
   if (!sectionToDelete.value) return
   try {
-    await axiosInstance.delete(`/api/sections/${sectionToDelete.value.idSectionProduit}/`)
+    await axiosInstance.delete(`sections/${sectionToDelete.value.idSectionProduit}/`)
     sections.value = sections.value.filter(s => s.idSectionProduit !== sectionToDelete.value!.idSectionProduit)
     sectionToDelete.value = null
   } catch (e: any) {

@@ -10,10 +10,12 @@
       <button class="icon-btn" aria-label="Settings">
         <span class="icon">⚙️</span>
       </button>
-      <div class="profile">
-        <img src="https://i.pravatar.cc/32?img=1" alt="User" class="profile-img" />
-        <span class="profile-name">User</span>
-      </div>
+      <router-link to="/profile" class="profile-link">
+        <div class="profile">
+          <img src="https://i.pravatar.cc/32?img=1" alt="User" class="profile-img" />
+          <span class="profile-name">User</span>
+        </div>
+      </router-link>
     </div>
   </header>
 </template>
@@ -60,6 +62,10 @@
 }
 .icon-btn:hover {
   background: #f4f6f8;
+}
+.profile-link {
+  text-decoration: none;
+  color: inherit;
 }
 .profile {
   display: flex;

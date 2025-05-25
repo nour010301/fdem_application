@@ -145,7 +145,7 @@
     loading.value = true
     error.value = null
     try {
-      const response = await axiosInstance.get('/api/types/')
+      const response = await axiosInstance.get('types/')
       types.value = response.data
     } catch (e: any) {
       error.value = e?.message || 'Erreur inconnue'
@@ -160,7 +160,7 @@
 
   async function addType() {
   try {
-    const res = await axiosInstance.post('/api/types/', newType.value)
+    const res = await axiosInstance.post('types/', newType.value)
     types.value.push(res.data)
     showAddPopup.value = false
     newType.value = { designation: '', description: '' }
@@ -176,7 +176,7 @@ function confirmDelete(type: TypeProduit) {
 async function deleteType() {
   if (!typeToDelete.value) return
   try {
-    await axiosInstance.delete(`/api/types/${typeToDelete.value.idTypeProduit}/`)
+    await axiosInstance.delete(`types/${typeToDelete.value.idTypeProduit}/`)
     types.value = types.value.filter(t => t.idTypeProduit !== typeToDelete.value!.idTypeProduit)
     typeToDelete.value = null
   } catch (e: any) {

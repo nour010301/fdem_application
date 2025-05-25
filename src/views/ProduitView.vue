@@ -139,7 +139,7 @@ const newProduit = ref<{
 
 async function fetchTypes() {
   try {
-    const res = await axiosInstance.get('/api/types/')
+    const res = await axiosInstance.get('types/')
     types.value = res.data
   } catch (e) {
     console.error('Erreur lors du chargement des types', e)
@@ -148,7 +148,7 @@ async function fetchTypes() {
 
 async function fetchTypeDetails(idTypeProduit: number): Promise<TypeProduit> {
   try {
-    const res = await axiosInstance.get(`/api/types/${idTypeProduit}/detail/`)
+    const res = await axiosInstance.get(`types/${idTypeProduit}/detail/`)
     return res.data
   } catch (e) {
     console.error(`Erreur lors du chargement des détails du type ${idTypeProduit}`, e)
@@ -160,7 +160,7 @@ async function fetchProduits() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('/api/produits/')
+    const response = await axiosInstance.get('produits/')
     const produitsWithTypes = await Promise.all(
       response.data.map(async (produit: Produit) => {
         const typeDetails = await fetchTypeDetails(produit.idTypeProduit)
@@ -236,7 +236,7 @@ async function addProduit() {
       designation: newProduit.value.designation,
       description: newProduit.value.description
     }
-    const res = await axiosInstance.post('/api/produits/', produitToSend)
+    const res = await axiosInstance.post('produits/', produitToSend)
     const typeDetails = await fetchTypeDetails(newProduit.value.idTypeProduit!)
     produits.value.push({
       ...res.data,
@@ -256,7 +256,7 @@ function confirmDelete(produit: Produit) {
 async function deleteProduit() {
   if (!produitToDelete.value) return
   try {
-    await axiosInstance.delete(`/api/produits/${produitToDelete.value.idProduit}/`)
+    await axiosInstance.delete(`produits/${produitToDelete.value.idProduit}/`)
     produits.value = produits.value.filter(p => p.idProduit !== produitToDelete.value?.idProduit)
     produitToDelete.value = null
   } catch (e: any) {

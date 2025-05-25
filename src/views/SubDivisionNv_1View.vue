@@ -170,7 +170,7 @@ async function fetchData() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('/api/subdivision-nv1/')
+    const response = await axiosInstance.get('subdivision-nv1/')
     data.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -181,7 +181,7 @@ async function fetchData() {
 
 async function fetchStructures() {
   try {
-    const response = await axiosInstance.get('/api/structures/')
+    const response = await axiosInstance.get('structures/')
     structures.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -190,7 +190,7 @@ async function fetchStructures() {
 
 async function addSubdivision() {
   try {
-    const res = await axiosInstance.post('/api/subdivision-nv1/', newSubdivision.value)
+    const res = await axiosInstance.post('subdivision-nv1/', newSubdivision.value)
     data.value.push(res.data)
     showAddPopup.value = false
     newSubdivision.value = { nom: '', designation: '', idStructure: null }
@@ -206,7 +206,7 @@ function confirmDelete(subdivision: SubdivisionNv1) {
 async function deleteSubdivision() {
   if (!subdivisionToDelete.value) return
   try {
-    await axiosInstance.delete(`/api/subdivision-nv1/${subdivisionToDelete.value.idSubDivisionNv_1}/`)
+    await axiosInstance.delete(`subdivision-nv1/${subdivisionToDelete.value.idSubDivisionNv_1}/`)
     data.value = data.value.filter(s => s.idSubDivisionNv_1 !== subdivisionToDelete.value!.idSubDivisionNv_1)
     subdivisionToDelete.value = null
   } catch (e: any) {

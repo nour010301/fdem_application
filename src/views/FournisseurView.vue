@@ -169,7 +169,7 @@ async function fetchFournisseurs() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/fournisseurs/')
+    const response = await axiosInstance.get('fournisseurs/')
     fournisseurs.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -180,7 +180,7 @@ async function fetchFournisseurs() {
 
 async function addFournisseur() {
   try {
-    const res = await axiosInstance.post('http://10.10.150.75:8000/api/fournisseurs/', newFournisseur.value)
+    const res = await axiosInstance.post('fournisseurs/', newFournisseur.value)
     fournisseurs.value.push(res.data)
     showAddPopup.value = false
     newFournisseur.value = { designationFournisseur: '', description: '', adresse: '', telephone: '', email: '' }
@@ -196,7 +196,7 @@ function confirmDelete(fournisseur: Fournisseur) {
 async function deleteFournisseur() {
   if (!fournisseurToDelete.value) return
   try {
-    await axiosInstance.delete(`http://10.10.150.75:8000/api/fournisseurs/${fournisseurToDelete.value.idFournisseur}/`)
+    await axiosInstance.delete(`fournisseurs/${fournisseurToDelete.value.idFournisseur}/`)
     fournisseurs.value = fournisseurs.value.filter(f => f.idFournisseur !== fournisseurToDelete.value!.idFournisseur)
     fournisseurToDelete.value = null
   } catch (e: any) {
