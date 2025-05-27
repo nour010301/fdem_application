@@ -220,22 +220,22 @@
       </form>
       <!-- CONTEXT MODE FORM: Multi-directeurs per project and date -->
       <!-- CONTEXT MODE FORM: Multi-directeurs per project and date -->
-<div v-if="mode === 'contexte'" class="step context-stepper">
-  <h2>Sélection du Contexte</h2>
-  <div class="context-cards">
-    <div
-      v-for="entity in contextEntities"
-      :key="entity.key"
-      class="context-card"
-    >
-      <span class="context-entity-title">{{ entity.label }}</span>
-      <div class="context-actions">
-        <button @click="onAjouter(entity.key)" class="context-action add">+ Ajouter</button>
-        <button @click="onConsulterFunction(entity.key)" class="context-action view">Consulter</button>
+   <div v-if="mode === 'contexte'" class="step context-stepper">
+        <h2>Sélection du Contexte</h2>
+        <div class="context-cards">
+          <div
+            v-for="entity in contextEntities"
+            :key="entity.key"
+            class="context-card"
+          >
+            <span class="context-entity-title">{{ entity.label }}</span>
+            <div class="context-actions">
+              <button @click="onAjouter(entity.key)" class="context-action add">+ Ajouter</button>
+              <button @click="onConsulterFunction(entity.key)" class="context-action view">Consulter</button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
     </div>
 
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
@@ -253,128 +253,180 @@
 
 
 <!-- ADD: Contexte Ajouter Modal -->
-<div v-if="contextAjouter.visible" class="doc-modal-backdrop">
-  <div class="doc-modal" style="width: 90vw; max-height: 90vh; overflow-y: auto; font-size: 1.25rem;">
-    <div class="doc-modal-header">
-      <h3 style="font-size: 1.6rem;">
-        Ajouter {{ contextAjouter.entityLabel }}
-      </h3>
-      <button @click="closeContextAjouterModal" class="close-modal" style="font-size:1.5em;">&times;</button>
-    </div>
-    <div class="doc-modal-body" style="display: flex; gap: 1em; flex-wrap: wrap;">
-      <!-- LEFT: Selected Table -->
-      <div style="flex:1 1 25%;">
-        <h4 style="font-size: 1.15em;">Votre sélection</h4>
-        <table class="doc-table" style="font-size:1em;">
-          <thead>
-            <tr>
-              <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in contextAjouter.selected" :key="item[contextAjouter.idCol]">
-              <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
-              <td>
-                <button class="delete-button" @click="removeFromSelected(contextAjouter.entityKey, item)" style="font-size:1em;">Enlever</button>
-                <!-- Add button for adding directors in the left table -->
-                <button
-                  v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'"
-                  class="save-btn"
-                  @click="openDirecteurModal(item)"
-                  style="font-size:1em;"
-                >Ajouter Directeur</button>
-              </td>
-            </tr>
-            <tr v-if="!contextAjouter.selected.length">
-              <td :colspan="contextAjouter.columns.length + 1" style="text-align:center; font-style:italic;">
-                Aucune sélection pour l'instant.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- RIGHT: All Items Table (scrollable 10 rows max)-->
-      <div style="flex:1 1 55%;">
-        <h4 style="font-size: 1.15em;">{{ contextAjouter.entityLabel }} disponibles</h4>
-        <table class="doc-table" style="font-size:1em;">
-          <thead>
-            <tr>
-              <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
-              <th></th>
-            </tr>
-          </thead>
-        </table>
-        <div style="max-height: 430px; overflow-y: auto;">
-          <table class="doc-table" style="margin: 0; font-size:1em;">
-            <tbody>
-              <tr
-                v-for="item in contextAjouter.all"
-                :key="item[contextAjouter.idCol]"
-                :class="{ selected: isAlreadySelected(contextAjouter.entityKey, item) }"
-                style="cursor: pointer;"
-              >
-                <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
-                <td>
-                  <button
-                    class="save-btn"
-                    @click="addToSelected(contextAjouter.entityKey, item)"
-                    :disabled="isAlreadySelected(contextAjouter.entityKey, item) || (!getEntityConfig(contextAjouter.entityKey)?.allowMultiple && contextAjouter.selected.length >= 1)"
-                    style="font-size:1em;"
-                  >Ajouter</button>
-                </td>
-              </tr>
-              <tr v-if="!contextAjouter.all.length">
-                <td :colspan="contextAjouter.columns.length + 1" style="text-align:center; font-style:italic;">
-                  Aucun élément à afficher.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+ <!-- ADD: Contexte Ajouter Modal -->
+    <div v-if="contextAjouter.visible" class="doc-modal-backdrop">
+      <div class="doc-modal" style="width: 90vw; max-height: 90vh; overflow-y: auto; font-size: 1.25rem;">
+        <div class="doc-modal-header">
+          <h3 style="font-size: 1.6rem;">
+            Ajouter {{ contextAjouter.entityLabel }}
+          </h3>
+          <button @click="closeContextAjouterModal" class="close-modal" style="font-size:1.5em;">&times;</button>
         </div>
-      </div>
-    </div>
-    <div class="doc-modal-footer" style="text-align:right; margin-top:1em;">
-      <button class="save-btn" @click="saveSelectedContextEntities" style="font-size:1em;">Valider sélection</button>
-    </div>
+        <div class="doc-modal-body" style="display: flex; gap: 1em; flex-wrap: wrap;">
+          <!-- LEFT: Selected Table -->
+        <div style="flex:1 1 25%;">
+            <h4 style="font-size: 1.15em;">Votre sélection</h4>
+            <table class="doc-table" style="font-size:1em;">
+              <thead>
+                <tr>
+                  <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
+                  <th>Actions</th>
+                  <th v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in contextAjouter.selected" :key="item[contextAjouter.idCol]">
+                  <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
+                  <td>
+                    <button class="delete-button" @click="removeFromSelected(contextAjouter.entityKey, item)" style="font-size:1em;">Enlever</button>
+                    <!-- Add button for adding directors in the left table -->
+                    <button
+                      v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'"
+                      class="save-btn"
+                      @click="openDirecteurModal(item)"
+                      style="font-size:1em;"
+                    >Ajouter Directeur</button>
+                  </td>
+                  <td v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">
+                    <div class="dropdown">
+                      <button class="dropdown-btn" @click="loadDirecteurs(contextAjouter.entityKey, item)">
+                        Liste Directeurs
+                        <span class="dropdown-arrow">▼</span>
+                      </button>
+                      <div class="dropdown-content" v-if="activeDropdown === `${contextAjouter.entityKey}-${item[contextAjouter.idCol]}`">
+                        <div v-if="loadingDirecteurs" class="dropdown-loading">Chargement...</div>
+                        <div v-else-if="directeursList.length === 0" class="dropdown-empty">Aucun directeur</div>
+                 <div v-else v-for="directeur in directeursList" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
+  <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
+  <div class="dropdown-dates">
+    <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
   </div>
 </div>
 
-<!-- New Modal for Adding Directors -->
-<div v-if="directeurModal.visible" class="doc-modal-backdrop">
-  <div class="doc-modal" style="min-width:380px;">
-    <div class="doc-modal-header">
-      <h3>
-        Ajouter un Directeur
-      </h3>
-      <button @click="closeDirecteurModal" class="close-modal">&times;</button>
+
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="!contextAjouter.selected.length">
+                  <td :colspan="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes' ? contextAjouter.columns.length + 2 : contextAjouter.columns.length + 1" style="text-align:center; font-style:italic;">
+                    Aucune sélection pour l'instant.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- RIGHT: All Items Table (scrollable 10 rows max)-->
+          <div style="flex:1 1 55%;">
+            <h4 style="font-size: 1.15em;">{{ contextAjouter.entityLabel }} disponibles</h4>
+            <table class="doc-table" style="font-size:1em;">
+              <thead>
+                <tr>
+                  <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
+                  <th></th>
+                </tr>
+              </thead>
+            </table>
+            <div style="max-height: 430px; overflow-y: auto;">
+              <table class="doc-table" style="margin: 0; font-size:1em;">
+                <tbody>
+                  <tr
+                    v-for="item in contextAjouter.all"
+                    :key="item[contextAjouter.idCol]"
+                    :class="{ selected: isAlreadySelected(contextAjouter.entityKey, item) }"
+                    style="cursor: pointer;"
+                  >
+                    <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
+                    <td>
+                      <button
+                        class="save-btn"
+                        @click="contextAjouter.entityKey === 'direction_projet' ? openDateModal(item) : addToSelected(contextAjouter.entityKey, item)"
+                        :disabled="isAlreadySelected(contextAjouter.entityKey, item) || (!getEntityConfig(contextAjouter.entityKey)?.allowMultiple && contextAjouter.selected.length >= 1)"
+                        style="font-size:1em;"
+                      >Ajouter</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!contextAjouter.all.length">
+                    <td :colspan="contextAjouter.columns.length + 1" style="text-align:center; font-style:italic;">
+                      Aucun élément à afficher.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="doc-modal-footer" style="text-align:right; margin-top:1em;">
+          <button class="save-btn" @click="saveSelectedContextEntities" style="font-size:1em;">Valider sélection</button>
+        </div>
+      </div>
     </div>
-    <div class="doc-modal-body">
-      <form @submit.prevent="addDirecteur">
-        <div style="margin-bottom: 1em;">
-          <label for="nom">Nom:</label>
-          <input type="text" id="nom" v-model="directeurModal.nom" required>
+
+    <!-- New Modal for Adding Directors -->
+    <div v-if="directeurModal.visible" class="doc-modal-backdrop">
+      <div class="doc-modal" style="min-width:380px;">
+        <div class="doc-modal-header">
+          <h3>
+            Ajouter un Directeur
+          </h3>
+          <button @click="closeDirecteurModal" class="close-modal">&times;</button>
         </div>
-        <div style="margin-bottom: 1em;">
-          <label for="prenom">Prénom:</label>
-          <input type="text" id="prenom" v-model="directeurModal.prenom" required>
+        <div class="doc-modal-body">
+          <form @submit.prevent="addDirecteur">
+            <div style="margin-bottom: 1em;">
+              <label for="nom">Nom:</label>
+              <input type="text" id="nom" v-model="directeurModal.nom" required>
+            </div>
+            <div style="margin-bottom: 1em;">
+              <label for="prenom">Prénom:</label>
+              <input type="text" id="prenom" v-model="directeurModal.prenom" required>
+            </div>
+            <div style="margin-bottom: 1em;">
+              <label for="date_debut">Date de Début:</label>
+              <input type="date" id="date_debut" v-model="directeurModal.date_debut">
+            </div>
+            <div style="margin-bottom: 1em;">
+              <label for="date_fin">Date de Fin:</label>
+              <input type="date" id="date_fin" v-model="directeurModal.date_fin">
+            </div>
+            <div class="doc-modal-footer" style="text-align:right">
+              <button type="submit" class="save-btn">Ajouter</button>
+            </div>
+          </form>
         </div>
-        <div style="margin-bottom: 1em;">
-          <label for="date_debut">Date de Début:</label>
-          <input type="date" id="date_debut" v-model="directeurModal.date_debut">
-        </div>
-        <div style="margin-bottom: 1em;">
-          <label for="date_fin">Date de Fin:</label>
-          <input type="date" id="date_fin" v-model="directeurModal.date_fin">
-        </div>
-        <div class="doc-modal-footer" style="text-align:right">
-          <button type="submit" class="save-btn">Ajouter</button>
-        </div>
-      </form>
+      </div>
     </div>
-  </div>
-</div>
+
+    <!-- New Modal for Direction Projet Dates -->
+    <div v-if="dateModal.visible" class="doc-modal-backdrop">
+      <div class="doc-modal" style="min-width:380px;">
+        <div class="doc-modal-header">
+          <h3>
+            Ajouter Dates pour Direction Projet
+          </h3>
+          <button @click="closeDateModal" class="close-modal">&times;</button>
+        </div>
+        <div class="doc-modal-body">
+          <form @submit.prevent="addDirectionProjet">
+            <div style="margin-bottom: 1em;">
+              <label>Directeur: {{ dateModal.directeur?.nomPrenomDirecteur }}</label>
+            </div>
+            <div style="margin-bottom: 1em;">
+              <label for="date_debut_projet">Date de Début:</label>
+              <input type="date" id="date_debut_projet" v-model="dateModal.date_debut" required>
+            </div>
+            <div style="margin-bottom: 1em;">
+              <label for="date_fin_projet">Date de Fin:</label>
+              <input type="date" id="date_fin_projet" v-model="dateModal.date_fin">
+            </div>
+            <div class="doc-modal-footer" style="text-align:right">
+              <button type="submit" class="save-btn">Ajouter</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
 
 
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
@@ -388,37 +440,60 @@
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
-  <div v-if="contextConsulter.visible" class="doc-modal-backdrop">
-  <div class="doc-modal" style="min-width:700px;min-height:350px">
-    <div class="doc-modal-header">
-      <h3>
-        Consulter - {{ contextConsulter.entityLabel }}
-      </h3>
-      <button @click="closeContextConsulterModal" class="close-modal">&times;</button>
-    </div>
-    <div class="doc-modal-body" style="max-height:420px; overflow-x:auto;">
-      <div v-if="contextConsulter.loading">Chargement...</div>
-      <div v-else-if="contextConsulter.error" style="color:red;">{{ contextConsulter.error }}</div>
-      <div v-else>
-        <table v-if="contextConsulter.data.length" class="doc-table">
-          <thead>
-            <tr>
-              <th v-for="col in contextConsulter.columns" :key="col">{{ col }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in contextConsulter.data" :key="row[contextConsulter.columnKeys[0]]">
-              <td v-for="colKey in contextConsulter.columnKeys" :key="colKey">{{ row[colKey] ?? '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div v-if="!contextConsulter.data.length" style="text-align:center; font-style:italic;">
-          Aucun élément à afficher.
+<!-- Consulter context modal with Director Dropdown -->
+    <div v-if="contextConsulter.visible" class="doc-modal-backdrop">
+      <div class="doc-modal" style="min-width:700px;min-height:350px">
+        <div class="doc-modal-header">
+          <h3>
+            Consulter - {{ contextConsulter.entityLabel }}
+          </h3>
+          <button @click="closeContextConsulterModal" class="close-modal">&times;</button>
+        </div>
+        <div class="doc-modal-body" style="max-height:420px; overflow-x:auto;">
+          <div v-if="contextConsulter.loading">Chargement...</div>
+          <div v-else-if="contextConsulter.error" style="color:red;">{{ contextConsulter.error }}</div>
+          <div v-else>
+            <table v-if="contextConsulter.data.length" class="doc-table">
+              <thead>
+                <tr>
+                  <th v-for="col in contextConsulter.columns" :key="col">{{ col }}</th>
+                  <th v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in contextConsulter.data" :key="row[contextConsulter.columnKeys[0]]">
+                  <td v-for="colKey in contextConsulter.columnKeys" :key="colKey">{{ row[colKey] ?? '-' }}</td>
+                  <td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
+                    <div class="dropdown">
+                      <button class="dropdown-btn" @click="loadDirecteursConsulter(contextConsulter.entityKey, row)">
+                        Liste Directeurs
+                        <span class="dropdown-arrow">▼</span>
+                      </button>
+                      <div class="dropdown-content" v-if="activeDropdownConsulter === `${contextConsulter.entityKey}-${row[contextConsulter.columnKeys[0]]}`">
+                        <div v-if="loadingDirecteursConsulter" class="dropdown-loading">Chargement...</div>
+                        <div v-else-if="directeursListConsulter.length === 0" class="dropdown-empty">Aucun directeur</div>
+        <div v-else v-for="directeur in directeursListConsulter" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
+  <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
+  <div class="dropdown-dates">
+    <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
+  </div>
+</div>
+
+
+
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-if="!contextConsulter.data.length" style="text-align:center; font-style:italic;">
+              Aucun élément à afficher.
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
@@ -583,7 +658,19 @@
         </div>
         <button class="save-btn" @click="submitForm" style="margin-top:1em;">Ajouter Document</button>
       </div>
-
+      <!-- PDF VIEWER MODAL -->
+    <!-- PDF VIEWER MODAL -->
+    <div v-if="selectedDocument" class="modal-overlay">
+      <div class="modal">
+        <h2>Consulter Document</h2>
+        <div class="pdf-viewer-container">
+          <PdfViewer :pdfUrl="`${selectedDocument.fichier_pdf}`" />
+        </div>
+        <div class="modal-actions">
+          <button @click="selectedDocument = null" class="cancel">Fermer</button>
+        </div>
+      </div>
+    </div>
     </div>
   </div>
 </div>
@@ -595,10 +682,10 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import "vue-multiselect/dist/vue-multiselect.css";
 import axios from '../axios'
-
+import PdfViewer from '../components/PdfViewer.vue'
 // const API_BASE = 'http://10.10.150.75:8000/api'
 
-
+const selectedDocument = ref<Document | null>(null)
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -613,6 +700,7 @@ import axios from '../axios'
 
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+// Structure mode variables and functions
 const typeProduits = ref<any[]>([])
 const produits = ref<any[]>([])
 const sections = ref<any[]>([])
@@ -906,11 +994,36 @@ const contextConsulterEntityConfig = {
   },
   direction_projet: {
     label: "Direction du Projet",
-    endpoint: (projetId: number) => `directions-projets/by-projet/${projetId}`,
+    endpoint: (projetId: number) => `directeurs-by-projet/${projetId}`,
     columns: ["ID", "Nom", "Fonction", "Téléphone"],
     columnKeys: ["idDirecteur", "nomPrenomDirecteur", "fonction", "telephone"]
   }
 };
+
+// Define an interface for the directeur object
+// Update the Directeur interface to match the actual data structure
+interface Directeur {
+  id?: number;
+  idDirecteur?: number;
+  nom?: string;
+  nomDirecteur?: string;
+  prenom?: string;
+  prenomDirecteur?: string;
+  date_debut?: string;
+  date_fin?: string;
+}
+
+
+// Update the state variables with proper types
+const directeursList = ref<Directeur[]>([]);
+const loadingDirecteurs = ref<boolean>(false);
+const activeDropdown = ref<string | null>(null);
+
+// For consulter modal
+const directeursListConsulter = ref<Directeur[]>([]);
+const loadingDirecteursConsulter = ref<boolean>(false);
+const activeDropdownConsulter = ref<string | null>(null);
+
 
 
 // --- Function to open the consulter popup and fetch data ---
@@ -922,30 +1035,34 @@ async function onConsulterFunction(entityKey: string) {
   }
 
   // Check if the entity is 'direction_projet' and if a project is selected
-  if (entityKey === 'direction_projet') {
-    if (!selectedProjets.value.length) {
-      alert("Veuillez d'abord sélectionner un projet.");
-      return;
-    }
-    contextConsulter.value.loading = true;
-    contextConsulter.value.error = '';
-    contextConsulter.value.entityKey = entityKey;
-    contextConsulter.value.entityLabel = config.label;
-    contextConsulter.value.columns = config.columns;
-    contextConsulter.value.columnKeys = config.columnKeys;
-    contextConsulter.value.data = [];
+// Check if the entity is 'direction_projet' and if a project is selected
+if (entityKey === 'direction_projet') {
+  if (!selectedProjets.value.length) {
+    alert("Veuillez d'abord sélectionner un projet.");
+    return;
+  }
+  contextConsulter.value.visible = true; // Add this line to make the modal visible
+  contextConsulter.value.loading = true;
+  contextConsulter.value.error = '';
+  contextConsulter.value.entityKey = entityKey;
+  contextConsulter.value.entityLabel = config.label;
+  contextConsulter.value.columns = config.columns;
+  contextConsulter.value.columnKeys = config.columnKeys;
+  contextConsulter.value.data = [];
 
-    try {
-      const { data } = await axios.get(config.endpoint(selectedProjets.value[0].idProjet));
-      let rows = Array.isArray(data) ? data : [data];
-      contextConsulter.value.data = rows;
-    } catch (e) {
-      contextConsulter.value.error = "Erreur lors du chargement des données.";
-      contextConsulter.value.data = [];
-    } finally {
-      contextConsulter.value.loading = false;
-    }
-  } else {
+  try {
+    const { data } = await axios.get(config.endpoint(selectedProjets.value[0].idProjet));
+    let rows = Array.isArray(data) ? data : [data];
+    contextConsulter.value.data = rows;
+  } catch (e) {
+    contextConsulter.value.error = "Erreur lors du chargement des données.";
+    contextConsulter.value.data = [];
+  } finally {
+    contextConsulter.value.loading = false;
+  }
+} else {
+  // The rest of your code for other entities...
+
     if (!selectedProduitId.value) {
       alert("Veuillez d'abord sélectionner un produit.");
       return;
@@ -1009,15 +1126,15 @@ const contextEntityDeleteConfig = {
   },
   soustraitants_tvx: {
     endpoint: '/contexte-soustraitant/',
-    getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idSoustraitant: item.idSoustraitants }),
+    getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idSoustraitant: item.idSoustraitant }),
   },
   fournisseur: {
     endpoint: '/contexte-fournisseur/',
     getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idFournisseur: item.idFournisseur }),
   },
   bet_soustraitants_etudes: {
-    endpoint: '/contexte-bet/',
-    getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idBet: item.idBET }),
+    endpoint: '/contexte-bureau-etude/',
+    getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idBET: item.idBET }),
   },
   direction_projet: {
     endpoint: '/projets-directeurs/',
@@ -1033,6 +1150,7 @@ function getColKeyByHeader(header: string) {
 }
 
 
+// Context entities list for UI
 const contextEntities = [
   { key: "projet", label: "Projet" },
   { key: "maitre_ouvrage", label: "Maître d'Ouvrage" },
@@ -1041,7 +1159,7 @@ const contextEntities = [
   { key: "fournisseur", label: "Fournisseur" },
   { key: "bet_soustraitants_etudes", label: "BET Soustraitants Études" },
   { key: "direction_projet", label: "Direction du Projet" }
-]; 
+];
 // MODAL STATE FOR CONTEXTE "AJOUTER"
 const contextAjouter = ref({
   visible: false,
@@ -1053,6 +1171,61 @@ const contextAjouter = ref({
   columnKeys: [] as string[],
   idCol: '',
 });
+
+// New date modal for Direction Projet
+const dateModal = ref({
+  visible: false,
+  directeur: null as any,
+  date_debut: null as string | null,
+  date_fin: null as string | null
+})
+
+
+// Function to open date modal for Direction Projet
+function openDateModal(directeur: any) {
+  dateModal.value.visible = true;
+  dateModal.value.directeur = directeur;
+  dateModal.value.date_debut = null;
+  dateModal.value.date_fin = null;
+}
+
+// Function to close date modal
+function closeDateModal() {
+  dateModal.value.visible = false;
+}
+// Function to add Direction Projet with dates
+async function addDirectionProjet() {
+  if (!selectedProjets.value.length || !dateModal.value.directeur) {
+    alert("Veuillez sélectionner un projet et un directeur");
+    return;
+  }
+
+  try {
+    const payload = {
+      idProjet: selectedProjets.value[0].idProjet,
+      idDirecteur: dateModal.value.directeur.idDirecteur,
+      date_debut: dateModal.value.date_debut,
+      date_fin: dateModal.value.date_fin
+    };
+
+    await axios.post('/projets-directeurs/', payload);
+    
+    // Add to selected list
+    const directeur = dateModal.value.directeur;
+    if (!isAlreadySelected('direction_projet', directeur)) {
+      selectedDirectionsProjets.value.push(directeur);
+      contextAjouter.value.selected = [...selectedDirectionsProjets.value];
+    }
+    
+    closeDateModal();
+    alert("Directeur ajouté avec succès!");
+  } catch (e) {
+    alert("Erreur lors de l'ajout du directeur au projet");
+  }
+}
+
+
+
 
 const contextSelectedEntitiesApi = {
   projet: (produitId: number) => `projets/by-produit/${produitId}`,
@@ -1126,7 +1299,11 @@ async function onAjouter(entityKey: string) {
       unique[String(item[config.idCol])] = item;
     selectedList = Object.values(unique);
   }
-
+  // For direction_projet, check if a project is selected
+  if (entityKey === 'direction_projet' && !selectedProjets.value.length) {
+    alert("Veuillez d'abord sélectionner un projet");
+    return;
+  }
   config.selectedRef.value = selectedList;
   contextAjouter.value.selected = [...selectedList];
   contextAjouter.value.visible = true;
@@ -1155,17 +1332,22 @@ async function addToSelected(entityKey: string, item: any) {
           endpoint = 'contexte-moe';
           payload = { idProduit: selectedProduitId.value, idMaitreOeuvre: item.idMaitreOeuvre };
           break;
-        case 'soustraitants_tvx':
-          endpoint = 'contexte-soustraitant';
-          payload = { idProduit: selectedProduitId.value, idSoustraitant: item.idSoustraitant };
-          break;
+       case 'soustraitants_tvx':
+  endpoint = 'contexte-soustraitant';
+  payload = { 
+    idProduit: selectedProduitId.value, 
+    idSoustraitant: item.idSoustraitants // Use the correct property name
+  };
+  break;
+
+
         case 'fournisseur':
           endpoint = 'contexte-fournisseur';
           payload = { idProduit: selectedProduitId.value, idFournisseur: item.idFournisseur };
           break;
         case 'bet_soustraitants_etudes':
-          endpoint = 'contexte-bet';
-          payload = { idProduit: selectedProduitId.value, idBet: item.idBet };
+          endpoint = 'contexte-bureau-etude';
+          payload = { idProduit: selectedProduitId.value, idBET: item.idBET };
           break;
         case 'direction_projet':
           endpoint = 'projets-directeurs';
@@ -1212,17 +1394,22 @@ async function removeFromSelected(entityKey: string, item: any) {
         endpoint = 'contexte-moe';
         payload = { idProduit: selectedProduitId.value, idMaitreOeuvre: item.idMaitreOeuvre };
         break;
-      case 'soustraitants_tvx':
-        endpoint = 'contexte-soustraitant';
-        payload = { idProduit: selectedProduitId.value, idSoustraitant: item.idSoustraitant };
-        break;
+    case 'soustraitants_tvx':
+  endpoint = 'contexte-soustraitant';
+  payload = { 
+    idProduit: selectedProduitId.value, 
+    idSoustraitant: item.idSoustraitants // Use the correct property name
+  };
+  break;
+
+
       case 'fournisseur':
         endpoint = 'contexte-fournisseur';
         payload = { idProduit: selectedProduitId.value, idFournisseur: item.idFournisseur };
         break;
       case 'bet_soustraitants_etudes':
-        endpoint = 'contexte-bet';
-        payload = { idProduit: selectedProduitId.value, idBet: item.idBet };
+        endpoint = 'contexte-bureau-etude';
+        payload = { idProduit: selectedProduitId.value, idBET: item.idBET };
         break;
       case 'direction_projet':
         endpoint = 'projets-directeurs';
@@ -1261,7 +1448,7 @@ const directeurModal = ref({
   prenom: '',
   date_debut: null,
   date_fin: null,
-});
+})
 
 // Function to open the director modal
 function openDirecteurModal(item: any) {
@@ -1311,6 +1498,22 @@ async function addDirecteur() {
         };
         endpoint = 'contexte-moe/add-directeur';
         break;
+
+
+ case 'bet_soustraitants_etudes':
+        payload = {
+          idProduit: selectedProduitId.value,
+          idBET: directeurModal.value.idEntity,
+          nom: directeurModal.value.nom,
+          prenom: directeurModal.value.prenom,
+          date_debut: directeurModal.value.date_debut,
+          date_fin: directeurModal.value.date_fin,
+        };
+        endpoint = 'contexte-bet/add-directeur';
+        break;
+
+
+
       case 'direction_projet':
         payload = {
           idProjet: selectedProjets.value[0]?.idProjet,
@@ -1365,7 +1568,7 @@ const contextBulkCreateConfig = {
   },
   soustraitants_tvx: {
     url: `contexte-soustraitant/bulk-create/`,
-    listKey: "idSoustraitants",
+    listKey: "idSoustraitant",
     extractIds: (selected: any[]) => selected.map(x => x.idSoustraitant),
   },
   maitre_ouvrage: {
@@ -1381,7 +1584,7 @@ const contextBulkCreateConfig = {
   bet_soustraitants_etudes: {
     url: `contexte-bureau-etude/bulk-create/`,
     listKey: "idBETs",
-    extractIds: (selected: any[]) => selected.map(x => x.idBetSoustraitant ?? x.idBET ?? x.idBureauEtude), // cover all possible
+    extractIds: (selected: any[]) => selected.map(x => x.idBET ?? x.idBET ?? x.idBureauEtude), // cover all possible
   },
 };
 
@@ -1424,6 +1627,7 @@ function closeContextAjouterModal() {
 
 
 // Prevent double-adding
+// Function to check if an item is already selected
 function isAlreadySelected(entityKey: string, item: any) {
   const config = contextEntitiesConfig[entityKey as keyof typeof contextEntitiesConfig];
   if (!config) return false;
@@ -1589,31 +1793,32 @@ async function handleDeleteDocument(document: any) {
 }
 
 function viewDocument(document: Document) {
-  if (document.fichier_pdf) {
-    window.open(`${document.fichier_pdf}`, '_blank')
-  }
+  selectedDocument.value = document
 }
 
 // ==== Context directors logic: string keys for TS safety ====
+// Context mode variables
 const mode = ref<'structure' | 'contexte' | ''>('structure')
-
 const loadingContexteLists = ref(false)
-const bureauxEtudesList   = ref<any[]>([])
-const fournisseursList    = ref<any[]>([])
-const maitresOeuvreList   = ref<any[]>([])
-const maitresOuvrageList  = ref<any[]>([])
-const soustraitantsList   = ref<any[]>([])
-const projetsList         = ref<any[]>([])
+const bureauxEtudesList = ref<any[]>([])
+const fournisseursList = ref<any[]>([])
+const maitresOeuvreList = ref<any[]>([])
+const maitresOuvrageList = ref<any[]>([])
+const soustraitantsList = ref<any[]>([])
+const projetsList = ref<any[]>([])
 const directionsProjetsList = ref<any[]>([])
-const selectedBureauxEtudes   = ref<any[]>([])
-const selectedFournisseurs    = ref<any[]>([])
-const selectedMaitresOeuvre   = ref<any[]>([])
-const selectedMaitresOuvrage  = ref<any[]>([])
-const selectedSoustraitants   = ref<any[]>([])
-const selectedProjets         = ref<any[]>([])
+const selectedBureauxEtudes = ref<any[]>([])
+const selectedFournisseurs = ref<any[]>([])
+const selectedMaitresOeuvre = ref<any[]>([])
+const selectedMaitresOuvrage = ref<any[]>([])
+const selectedSoustraitants = ref<any[]>([])
+const selectedProjets = ref<any[]>([])
 const selectedDirectionsProjets = ref<any[]>([])
-const contexteFormSubmitted = ref(false)
-const directionsProjets = ref<Record<string, any[]>>({})
+
+
+
+
+
 
 
 const projectDirectorsForm = ref<Record<string, {
@@ -1622,45 +1827,46 @@ const projectDirectorsForm = ref<Record<string, {
 }>>({});
 
 
-const fetchDirectionsForProjet = async (idProjet: number) => {
-  const pid = String(idProjet)
-  try {
-    const res = await axios.get(`directions-projets/?projet=${idProjet}`)
-    directionsProjets.value[pid] = res.data
-  } catch {
-    directionsProjets.value[pid] = []
-  }
-}
-
-const handleProjectSelection = async () => {
-  for (const projet of selectedProjets.value) {
-    const pid = String(projet.idProjet)
-    if (!directionsProjets.value[pid]) {
-      await fetchDirectionsForProjet(projet.idProjet)
-    }
-    if (!projectDirectorsForm.value[pid]) {
-      projectDirectorsForm.value[pid] = {
-        selectedDirecteurs: [],
-        dates: {}
-      }
-    }
-  }
-  const selectedIds = selectedProjets.value.map((p: any) => String(p.idProjet))
-  for (const pid of Object.keys(projectDirectorsForm.value)) {
-    if (!selectedIds.includes(pid)) {
-      delete projectDirectorsForm.value[pid]
-    }
-  }
-  for (const pid of Object.keys(directionsProjets.value)) {
-    if (!selectedIds.includes(pid)) {
-      delete directionsProjets.value[pid]
-    }
-  }
-}
+// const fetchDirectionsForProjet = async (idProjet: number) => {
+//   const pid = String(idProjet)
+//   try {
+//     const res = await axios.get(`directions-projets/?projet=${idProjet}`)
+//     directionsProjets.value[pid] = res.data
+//   } catch {
+//     directionsProjets.value[pid] = []
+//   }
+// }
 
 
+// const handleProjectSelection = async () => {
+//   for (const projet of selectedProjets.value) {
+//     const pid = String(projet.idProjet)
+//     if (!directionsProjets.value[pid]) {
+//       await fetchDirectionsForProjet(projet.idProjet)
+//     }
+//     if (!projectDirectorsForm.value[pid]) {
+//       projectDirectorsForm.value[pid] = {
+//         selectedDirecteurs: [],
+//         dates: {}
+//       }
+//     }
+//   }
+//   const selectedIds = selectedProjets.value.map((p: any) => String(p.idProjet))
+//   for (const pid of Object.keys(projectDirectorsForm.value)) {
+//     if (!selectedIds.includes(pid)) {
+//       delete projectDirectorsForm.value[pid]
+//     }
+//   }
+//   for (const pid of Object.keys(directionsProjets.value)) {
+//     if (!selectedIds.includes(pid)) {
+//       delete directionsProjets.value[pid]
+//     }
+//   }
+// }
 
-watch(selectedProjets, handleProjectSelection, { immediate: false })
+
+
+// watch(selectedProjets, { immediate: false })
 
 const selectedBureauEtudeNoms = computed(() =>
   selectedBureauxEtudes.value.map(b => b.nom)
@@ -1688,16 +1894,16 @@ function resetContexteForm() {
   selectedMaitresOuvrage.value = []
   selectedSoustraitants.value = []
   selectedProjets.value = []
-  contexteFormSubmitted.value = false
+  // contexteFormSubmitted.value = false
   pdfUrl.value = null
-  directionsProjets.value = {}
+  // directionsProjets.value = {}
   projectDirectorsForm.value = {}
 }
 
+// Watch for mode changes
 watch(mode, async (val) => {
   if (val === 'contexte') {
-    loadingContexteLists.value = true
-    resetContexteForm()
+    loadingContexteLists.value = true;
     try {
       const [
         betRes,
@@ -1705,7 +1911,8 @@ watch(mode, async (val) => {
         moeurRes,
         mouvRes,
         sttRes,
-        projetsRes
+        projetsRes,
+        directionsRes
       ] = await Promise.all([
         axios.get(`bureaux-etudes/`),
         axios.get(`fournisseurs/`),
@@ -1713,24 +1920,22 @@ watch(mode, async (val) => {
         axios.get(`maitres-ouvrage/`),
         axios.get(`Soustraitants/`),
         axios.get(`projets/`),
-         axios.get(`directions-projets/`)
-      ])
-      bureauxEtudesList.value  = betRes.data
-      fournisseursList.value   = fourRes.data
-      maitresOeuvreList.value  = moeurRes.data
-      maitresOuvrageList.value = mouvRes.data
-      soustraitantsList.value  = sttRes.data
-      projetsList.value        = projetsRes.data
-      directionsProjetsList.value = projetsRes.data // Assuming same endpoint for directions
+        axios.get(`directions-projets/`)
+      ]);
+      bureauxEtudesList.value = betRes.data;
+      fournisseursList.value = fourRes.data;
+      maitresOeuvreList.value = moeurRes.data;
+      maitresOuvrageList.value = mouvRes.data;
+      soustraitantsList.value = sttRes.data;
+      projetsList.value = projetsRes.data;
+      directionsProjetsList.value = directionsRes.data;
     } catch (e) {
-      alert("Erreur de chargement des listes de contexte.")
+      alert("Erreur de chargement des listes de contexte.");
     } finally {
-      loadingContexteLists.value = false
+      loadingContexteLists.value = false;
     }
   }
-  if (val === 'structure') resetContexteForm()
 })
-
 
 // function consultDocument() {
 //   alert('Consulter Document clicked!');
@@ -1793,7 +1998,9 @@ async function generateContextPdfV2() {
   const blob = await html2pdf().from(pdfContent).set(opt).outputPdf('blob')
   pdfUrl.value = URL.createObjectURL(blob)
 }
-const contextEntitiesConfig: Record<ContextEntityKey, ContextEntityConfig> = {
+
+// Context entities configuration
+const contextEntitiesConfig = {
   projet: {
     label: 'Projet',
     api: '/projets/',
@@ -1847,7 +2054,7 @@ const contextEntitiesConfig: Record<ContextEntityKey, ContextEntityConfig> = {
   bet_soustraitants_etudes: {
     label: "BET Soustraitants Études",
     api: '/bet-soustraitants-etudes/',
-    idCol: 'idBetSoustraitant',
+    idCol: 'idBET',
     columns: ['ID', 'Nom', 'Description', 'Adresse', 'Téléphone', 'Email'],
     columnKeys: ['idBetSoustraitant', 'nom', 'description', 'adresse', 'telephone', 'email'],
     listRef: bureauxEtudesList,
@@ -1857,21 +2064,110 @@ const contextEntitiesConfig: Record<ContextEntityKey, ContextEntityConfig> = {
   direction_projet: {
     label: "Direction du Projet",
     api: '/directions-projets/',
-    idCol: 'idDirectionProjet',
-    columns: ['ID', 'Nom', 'Adresse'],
-    columnKeys: ['idDirectionProjet', 'nom', 'adresse'],
+    idCol: 'idDirecteur',
+    columns: ['ID', 'Nom', 'Fonction', 'Téléphone'],
+    columnKeys: ['idDirecteur', 'nomPrenomDirecteur', 'fonction', 'telephone'],
     listRef: directionsProjetsList,
     selectedRef: selectedDirectionsProjets,
     allowMultiple: true,
   }
 };
 
+// Function to load directors for an entity in Ajouter modal
+async function loadDirecteurs(entityKey: string, item: any) {
+  const dropdownId = `${entityKey}-${item[contextAjouter.value.idCol]}`
+  
+  // Toggle dropdown
+  if (activeDropdown.value === dropdownId) {
+    activeDropdown.value = null
+    return
+  }
+  
+  activeDropdown.value = dropdownId
+  loadingDirecteurs.value = true
+  directeursList.value = []
+  
+  try {
+    let endpoint = ''
+    let params = {}
+    
+    switch (entityKey) {
+      case 'maitre_ouvrage':
+        endpoint = `contexte-moa/directeurs`
+        params = { idProduit: selectedProduitId.value, idMaitreOuvrage: item.idMaitreOuvrage }
+        break
+      case 'maitre_oeuvre':
+        endpoint = `contexte-moe/directeurs`
+        params = { idProduit: selectedProduitId.value, idMaitreOeuvre: item.idMaitreOeuvre }
+        break
+      case 'bet_soustraitants_etudes':
+        endpoint = `contexte-bet/directeurs`
+        params = { idProduit: selectedProduitId.value, idBET: item.idBET }
+        break
+      default:
+        throw new Error('Type d\'entité non supporté')
+    }
+    
+    const { data } = await axios.post(`/${endpoint}/`, params)
+    // Extract directors from the nested structure
+    directeursList.value = data.directeurs || []
+  } catch (error) {
+    console.error('Erreur lors du chargement des directeurs', error)
+    directeursList.value = []
+  } finally {
+    loadingDirecteurs.value = false
+  }
+}
+
+// Function to load directors for an entity in Consulter modal
+async function loadDirecteursConsulter(entityKey: string, item: any) {
+  const dropdownId = `${entityKey}-${item[contextConsulter.value.columnKeys[0]]}`
+  
+  // Toggle dropdown
+  if (activeDropdownConsulter.value === dropdownId) {
+    activeDropdownConsulter.value = null
+    return
+  }
+  
+  activeDropdownConsulter.value = dropdownId
+  loadingDirecteursConsulter.value = true
+  directeursListConsulter.value = []
+  
+  try {
+    let endpoint = ''
+    let params = {}
+    
+    switch (entityKey) {
+      case 'maitre_ouvrage':
+        endpoint = `contexte-moa/directeurs`
+        params = { idProduit: selectedProduitId.value, idMaitreOuvrage: item.idMaitreOuvrage }
+        break
+      case 'maitre_oeuvre':
+        endpoint = `contexte-moe/directeurs`
+        params = { idProduit: selectedProduitId.value, idMaitreOeuvre: item.idMaitreOeuvre }
+        break
+      case 'bet_soustraitants_etudes':
+        endpoint = `contexte-bet/directeurs`
+        params = { idProduit: selectedProduitId.value, idBET: item.idBET }
+        break
+      default:
+        throw new Error('Type d\'entité non supporté')
+    }
+    
+    const { data } = await axios.post(`/${endpoint}/`, params)
+    // Extract directors from the nested structure
+    directeursListConsulter.value = data.directeurs || []
+  } catch (error) {
+    console.error('Erreur lors du chargement des directeurs', error)
+    directeursListConsulter.value = []
+  } finally {
+    loadingDirecteursConsulter.value = false
+  }
+}
 
 
-
-
-function getEntityConfig(key: string): ContextEntityConfig | undefined {
-  return contextEntitiesConfig[key as ContextEntityKey];
+function getEntityConfig(key: string) {
+  return contextEntitiesConfig[key as keyof typeof contextEntitiesConfig];
 }
 
 </script>
@@ -2313,5 +2609,107 @@ ul {
 .doc-table tr:hover {
   background-color: #2f3a56;
 }
+/* Dropdown styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
 
+.dropdown-btn {
+  background-color: #2196F3;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 140px;
+}
+
+.dropdown-arrow {
+  margin-left: 8px;
+  font-size: 0.8em;
+}
+
+.dropdown-content {
+  position: absolute;
+  background-color: #1a237e;
+  min-width: 200px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  right: 0;
+}
+
+.dropdown-item {
+  color: #e3eafc;
+  padding: 8px 12px;
+  text-decoration: none;
+  display: block;
+  border-bottom: 1px solid #232f4b;
+}
+
+.dropdown-item:hover {
+  background-color: #232f4b;
+}
+
+.dropdown-loading, .dropdown-empty {
+  color: #e3eafc;
+  padding: 8px 12px;
+  text-align: center;
+  font-style: italic;
+}
+.dropdown-dates {
+  font-size: 0.85em;
+  color: #bbdefb;
+  margin-top: 2px;
+}
+
+
+
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 800px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.pdf-viewer-container {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cancel {
+  margin-left: 10px;
+}
 </style>
