@@ -199,7 +199,7 @@ const router = createRouter({
 })
 
 // --- AUTHENTICATION GUARD ---
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const isPublic = to.matched.some(record => record.meta.public)
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const isLoggedIn = !!localStorage.getItem('access_token')

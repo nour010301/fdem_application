@@ -2,7 +2,10 @@ import axios from 'axios'
 import router from './router'
 
 const instance = axios.create({
-  baseURL: 'http://10.10.150.75:8000/api/', // Your backend API base URL
+  // baseURL: 'http://10.10.150.75:8000/api/',
+   //
+   //  Your backend API base URL
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -68,9 +71,12 @@ instance.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const response = await axios.post('http://10.10.150.75:8000/api/token/refresh/', {
-          refresh: refreshToken,
-        })
+        // const response = await axios.post('http://10.10.150.75:8000/api/token/refresh/', {
+        //   refresh: refreshToken,
+        // })
+          const response = await axios.post(`${import.meta.env.VITE_API_URL}token/refresh/`, {
+            refresh: refreshToken,
+          })
 
         const { access } = response.data
         localStorage.setItem('access_token', access)

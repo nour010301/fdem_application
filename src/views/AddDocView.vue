@@ -922,25 +922,25 @@ interface Document {
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-type ContextEntityKey =
-  | 'projet'
-  | 'maitre_ouvrage'
-  | 'maitre_oeuvre'
-  | 'soustraitants_tvx'
-  | 'fournisseur'
-  | 'bet_soustraitants_etudes'
-  | 'direction_projet';
+// type ContextEntityKey =
+//   | 'projet'
+//   | 'maitre_ouvrage'
+//   | 'maitre_oeuvre'
+//   | 'soustraitants_tvx'
+//   | 'fournisseur'
+//   | 'bet_soustraitants_etudes'
+//   | 'direction_projet';
 
-interface ContextEntityConfig {
-  label: string;
-  api: string;
-  idCol: string;
-  columns: string[];
-  columnKeys: string[];
-  listRef: any;
-  selectedRef: any;
-  allowMultiple: boolean;
-}
+// interface ContextEntityConfig {
+//   label: string;
+//   api: string;
+//   idCol: string;
+//   columns: string[];
+//   columnKeys: string[];
+//   listRef: any;
+//   selectedRef: any;
+//   allowMultiple: boolean;
+// }
 
 
 // --- New reactive state for context consulter modal ---
@@ -1555,69 +1555,9 @@ async function addDirecteur() {
 
 
 
-const contextBulkCreateConfig = {
-  fournisseur: {
-    url: `contexte-fournisseur/bulk-create/`,
-    listKey: "idFournisseurs",
-    extractIds: (selected: any[]) => selected.map(x => x.idFournisseur),
-  },
-  projet: {
-    url: `contexte-projet/bulk-create/`,
-    listKey: "idProjets",
-    extractIds: (selected: any[]) => selected.map(x => x.idProjet),
-  },
-  soustraitants_tvx: {
-    url: `contexte-soustraitant/bulk-create/`,
-    listKey: "idSoustraitant",
-    extractIds: (selected: any[]) => selected.map(x => x.idSoustraitant),
-  },
-  maitre_ouvrage: {
-    url: `contexte-moa/bulk-create/`,
-    listKey: "idMaitresOuvrage",
-    extractIds: (selected: any[]) => selected.map(x => x.idMaitreOuvrage),
-  },
-  maitre_oeuvre: {
-    url: `contexte-moe/bulk-create/`,
-    listKey: "idMaitresOeuvre",
-    extractIds: (selected: any[]) => selected.map(x => x.idMaitreOeuvre),
-  },
-  bet_soustraitants_etudes: {
-    url: `contexte-bureau-etude/bulk-create/`,
-    listKey: "idBETs",
-    extractIds: (selected: any[]) => selected.map(x => x.idBET ?? x.idBET ?? x.idBureauEtude), // cover all possible
-  },
-};
 
 // Utility to bulk-create context links for entity
-async function saveEntityBulkContext(entityKey: string) {
-  const cfg = contextBulkCreateConfig[entityKey as keyof typeof contextBulkCreateConfig];
-  if (!cfg) {
-    alert("Aucune configuration de bulk-create pour cette entité.");
-    return;
-  }
-  // Defensive: always grab entities from the modal (user may not have closed yet)
-  const selected = [...contextAjouter.value.selected];
-  // Defensive: only ids, skip null/undefined
-  const ids = cfg.extractIds(selected).filter(id => id != null);
 
-  if (!selectedProduitId.value || ids.length === 0) {
-    alert("Merci de sélectionner un produit et au moins un élément.");
-    return;
-  }
-  // Compose payload
-  const payload: Record<string, any> = {
-    idProduit: selectedProduitId.value,
-    [cfg.listKey]: ids,
-  };
-  try {
-    await axios.post(cfg.url, payload);
-    alert("Contexte enregistré avec succès !");
-    closeContextAjouterModal();
-  } catch (err) {
-    alert("Erreur lors de l'enregistrement du contexte.");
-    // You can log/log-to-console
-  }
-}
 
 // Update your saveSelectedContextEntities to call the above function
 function closeContextAjouterModal() {
@@ -1641,63 +1581,63 @@ function saveSelectedContextEntities() {
   closeContextAjouterModal();
 }
 
-async function onSupprimer(entityKey: string) {
-  const entityDef = contextConsulterEntityConfig[entityKey as keyof typeof contextConsulterEntityConfig];
-  const entityDeleteDef = contextEntityDeleteConfig[entityKey as keyof typeof contextEntityDeleteConfig];
+// async function onSupprimer(entityKey: string) {
+//   const entityDef = contextConsulterEntityConfig[entityKey as keyof typeof contextConsulterEntityConfig];
+//   const entityDeleteDef = contextEntityDeleteConfig[entityKey as keyof typeof contextEntityDeleteConfig];
 
-  // Basic validation: entity configuration must exist
-  if (!entityDef || !entityDeleteDef) {
-    alert('Suppression non supportée pour cette entité: ' + entityKey);
-    return;
-  }
+  
+//   if (!entityDef || !entityDeleteDef) {
+//     alert('Suppression non supportée pour cette entité: ' + entityKey);
+//     return;
+//   }
 
-  // Special case: All entities (except 'direction_projet') require a selected produit
-  if (entityKey !== 'direction_projet' && (selectedProduitId.value === null || selectedProduitId.value === undefined)) {
-    alert("Veuillez d'abord sélectionner un produit.");
-    return;
-  }
+  
+//   if (entityKey !== 'direction_projet' && (selectedProduitId.value === null || selectedProduitId.value === undefined)) {
+//     alert("Veuillez d'abord sélectionner un produit.");
+//     return;
+//   }
 
-  // Prepare modal state
-  contextDelete.value.entityKey = entityKey;
-  contextDelete.value.entityLabel = entityDef.label;
-  contextDelete.value.columns = entityDef.columns;
-  contextDelete.value.columnKeys = entityDef.columnKeys;
-  contextDelete.value.idCol = entityDef.columnKeys[0];
-  contextDelete.value.data = [];
-  contextDelete.value.error = '';
-  contextDelete.value.loading = true;
-  contextDelete.value.visible = true;
-  contextDelete.value.confirmItem = null;
+  
+//   contextDelete.value.entityKey = entityKey;
+//   contextDelete.value.entityLabel = entityDef.label;
+//   contextDelete.value.columns = entityDef.columns;
+//   contextDelete.value.columnKeys = entityDef.columnKeys;
+//   contextDelete.value.idCol = entityDef.columnKeys[0];
+//   contextDelete.value.data = [];
+//   contextDelete.value.error = '';
+//   contextDelete.value.loading = true;
+//   contextDelete.value.visible = true;
+//   contextDelete.value.confirmItem = null;
 
-  try {
-    let rows: any[] = [];
+//   try {
+//     let rows: any[] = [];
 
-    // Special handling for 'direction_projet'
-    if (entityKey === 'direction_projet') {
-      if (!selectedProjets.value.length) {
-        throw new Error('Sélectionnez un projet avant');
-      }
+    
+//     if (entityKey === 'direction_projet') {
+//       if (!selectedProjets.value.length) {
+//         throw new Error('Sélectionnez un projet avant');
+//       }
 
-      const idProjet = selectedProjets.value[0].idProjet;
-      const res = await axios.get(`directeurs-by-projet/${idProjet}`);
-      rows = Array.isArray(res.data) ? res.data : [res.data];
+//       const idProjet = selectedProjets.value[0].idProjet;
+//       const res = await axios.get(`directeurs-by-projet/${idProjet}`);
+//       rows = Array.isArray(res.data) ? res.data : [res.data];
 
-    } else {
-      // Safe assertion here because we validated selectedProduitId is not null
-      const produitId = selectedProduitId.value!;
-      const res = await axios.get(entityDef.endpoint(produitId));
-      rows = Array.isArray(res.data) ? res.data : [res.data];
-    }
+//     } else {
+      
+//       const produitId = selectedProduitId.value!;
+//       const res = await axios.get(entityDef.endpoint(produitId));
+//       rows = Array.isArray(res.data) ? res.data : [res.data];
+//     }
 
-    contextDelete.value.data = rows;
+//     contextDelete.value.data = rows;
 
-  } catch (e: any) {
-    contextDelete.value.error = 'Erreur lors du chargement des données : ' + (e?.message || '');
-    contextDelete.value.data = [];
-  } finally {
-    contextDelete.value.loading = false;
-  }
-}
+//   } catch (e: any) {
+//     contextDelete.value.error = 'Erreur lors du chargement des données : ' + (e?.message || '');
+//     contextDelete.value.data = [];
+//   } finally {
+//     contextDelete.value.loading = false;
+//   }
+// }
 
 
 // open confirmation for an item
@@ -1821,10 +1761,10 @@ const selectedDirectionsProjets = ref<any[]>([])
 
 
 
-const projectDirectorsForm = ref<Record<string, {
-  selectedDirecteurs: any[],
-  dates: Record<string, { dateDebut: string, dateFin: string }>
-}>>({});
+// const projectDirectorsForm = ref<Record<string, {
+//   selectedDirecteurs: any[],
+//   dates: Record<string, { dateDebut: string, dateFin: string }>
+// }>>({});
 
 
 // const fetchDirectionsForProjet = async (idProjet: number) => {
@@ -1887,18 +1827,7 @@ const selectedProjetNoms = computed(() =>
   selectedProjets.value.map(p => p.description)
 )
 
-function resetContexteForm() {
-  selectedBureauxEtudes.value = []
-  selectedFournisseurs.value = []
-  selectedMaitresOeuvre.value = []
-  selectedMaitresOuvrage.value = []
-  selectedSoustraitants.value = []
-  selectedProjets.value = []
-  // contexteFormSubmitted.value = false
-  pdfUrl.value = null
-  // directionsProjets.value = {}
-  projectDirectorsForm.value = {}
-}
+
 
 // Watch for mode changes
 watch(mode, async (val) => {
@@ -1952,52 +1881,52 @@ watch(mode, async (val) => {
 
 
 
-const pdfUrl = ref<string | null>(null)
-async function generateContextPdfV2() {
-  const html2pdf = (await import('html2pdf.js')).default
-  let html = `
-    <h2 style="color:#16213e;">Résumé du contexte</h2>
-    <ul>
-      <li><b>Bureau(x) d'Études:</b> ${selectedBureauxEtudes.value.map(b => b.nom).join(", ")}</li>
-      <li><b>Fournisseur(s):</b> ${selectedFournisseurs.value.map(f => f.designationFournisseur).join(", ")}</li>
-      <li><b>Maître(s) d'Œuvre:</b> ${selectedMaitresOeuvre.value.map(m => m.designationMO).join(", ")}</li>
-      <li><b>Maître(s) d'Ouvrage:</b> ${selectedMaitresOuvrage.value.map(m => m.designationMOg).join(", ")}</li>
-      <li><b>Soustraitant(s):</b> ${selectedSoustraitants.value.map(s => s.designationStt).join(", ")}</li>
-      <li><b>Projet(s):</b> ${selectedProjets.value.map(p => p.description).join(", ")}</li>
-    </ul>
-    <h3 style="margin-top:1em;">Directeurs par projet</h3>
-  `
-  for (const projet of selectedProjets.value) {
-    const pid = String(projet.idProjet)
-    html += `<div style="margin-top:0.7em;"><b>${projet.description}</b>`
-    const projForm = projectDirectorsForm.value[pid]
-    if (projForm?.selectedDirecteurs?.length) {
-      html += '<ul>'
-      for (const directeur of projForm.selectedDirecteurs) {
-        const did = String(directeur.idDirecteur)
-        const dates = projForm.dates[did]
-        html += `<li>${directeur.nomPrenomDirecteur} du ${dates?.dateDebut || '-'} au ${dates?.dateFin || '-'}</li>`
-      }
-      html += '</ul>'
-    } else {
-      html += '<div style="font-style:italic; color:#aaa;">Aucun directeur sélectionné</div>'
-    }
-    html += '</div>'
-  }
-  const pdfContent = document.createElement('div')
-  pdfContent.style.padding = '2em'
-  pdfContent.style.fontFamily = 'Inter, Arial, sans-serif'
-  pdfContent.innerHTML = html
-  const opt = {
-    margin: 0.5,
-    filename: 'contexte.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-  }
-  const blob = await html2pdf().from(pdfContent).set(opt).outputPdf('blob')
-  pdfUrl.value = URL.createObjectURL(blob)
-}
+// const pdfUrl = ref<string | null>(null)
+// async function generateContextPdfV2() {
+//   const html2pdf = (await import('html2pdf.js')).default
+//   let html = `
+//     <h2 style="color:#16213e;">Résumé du contexte</h2>
+//     <ul>
+//       <li><b>Bureau(x) d'Études:</b> ${selectedBureauxEtudes.value.map(b => b.nom).join(", ")}</li>
+//       <li><b>Fournisseur(s):</b> ${selectedFournisseurs.value.map(f => f.designationFournisseur).join(", ")}</li>
+//       <li><b>Maître(s) d'Œuvre:</b> ${selectedMaitresOeuvre.value.map(m => m.designationMO).join(", ")}</li>
+//       <li><b>Maître(s) d'Ouvrage:</b> ${selectedMaitresOuvrage.value.map(m => m.designationMOg).join(", ")}</li>
+//       <li><b>Soustraitant(s):</b> ${selectedSoustraitants.value.map(s => s.designationStt).join(", ")}</li>
+//       <li><b>Projet(s):</b> ${selectedProjets.value.map(p => p.description).join(", ")}</li>
+//     </ul>
+//     <h3 style="margin-top:1em;">Directeurs par projet</h3>
+//   `
+//   for (const projet of selectedProjets.value) {
+//     const pid = String(projet.idProjet)
+//     html += `<div style="margin-top:0.7em;"><b>${projet.description}</b>`
+//     const projForm = projectDirectorsForm.value[pid]
+//     if (projForm?.selectedDirecteurs?.length) {
+//       html += '<ul>'
+//       for (const directeur of projForm.selectedDirecteurs) {
+//         const did = String(directeur.idDirecteur)
+//         const dates = projForm.dates[did]
+//         html += `<li>${directeur.nomPrenomDirecteur} du ${dates?.dateDebut || '-'} au ${dates?.dateFin || '-'}</li>`
+//       }
+//       html += '</ul>'
+//     } else {
+//       html += '<div style="font-style:italic; color:#aaa;">Aucun directeur sélectionné</div>'
+//     }
+//     html += '</div>'
+//   }
+//   const pdfContent = document.createElement('div')
+//   pdfContent.style.padding = '2em'
+//   pdfContent.style.fontFamily = 'Inter, Arial, sans-serif'
+//   pdfContent.innerHTML = html
+//   const opt = {
+//     margin: 0.5,
+//     filename: 'contexte.pdf',
+//     image: { type: 'jpeg', quality: 0.98 },
+//     html2canvas: { scale: 2 },
+//     jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+//   }
+//   const blob = await html2pdf().from(pdfContent).set(opt).outputPdf('blob')
+//   pdfUrl.value = URL.createObjectURL(blob)
+// }
 
 // Context entities configuration
 const contextEntitiesConfig = {

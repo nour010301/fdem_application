@@ -330,7 +330,7 @@ async function fetchDocuments() {
     loading.value = false
   }
 }
-function confirmDelete(document: Document) { documentToDelete.value = document }
+// function confirmDelete(document: Document) { documentToDelete.value = document }
 async function deleteDocument() {
   if (!documentToDelete.value) return
   try {

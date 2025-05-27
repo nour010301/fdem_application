@@ -122,8 +122,21 @@ const liquidBtn = ref<HTMLElement | null>(null)
 const btnParticles = ref<HTMLElement | null>(null)
 
 // For lively particles
+// const particleStates = ref(
+//   Array.from({ length: 18 }, (_, i) => ({
+//     angle: Math.random() * Math.PI * 2,
+//     speed: 0.008 + Math.random() * 0.012,
+//     radius: 38 + Math.random() * 22,
+//     baseX: 50 + Math.random() * 30 - 15,
+//     baseY: 50 + Math.random() * 30 - 15,
+//     size: 6 + Math.random() * 10,
+//     dur: 7 + Math.random() * 6,
+//     phase: Math.random() * Math.PI * 2,
+//   }))
+// )
+
 const particleStates = ref(
-  Array.from({ length: 18 }, (_, i) => ({
+  Array.from({ length: 18 }, (_, ) => ({
     angle: Math.random() * Math.PI * 2,
     speed: 0.008 + Math.random() * 0.012,
     radius: 38 + Math.random() * 22,
@@ -134,6 +147,8 @@ const particleStates = ref(
     phase: Math.random() * Math.PI * 2,
   }))
 )
+
+
 
 function animateParticles() {
   const now = Date.now() / 1000
@@ -219,7 +234,27 @@ function scanline(which: string) {
 }
 
 // Button Liquid Ripple + Particle Burst
-function liquidRipple(e: MouseEvent) {
+// function liquidRipple(e: MouseEvent) {
+//   playRipple()
+//   const btn = liquidBtn.value
+//   if (!btn) return
+//   let ripple = btn.querySelector('.liquid-ripple')
+//   if (ripple) ripple.remove()
+//   ripple = document.createElement('span')
+//   ripple.className = 'liquid-ripple'
+//   const rect = btn.getBoundingClientRect()
+//   const size = Math.max(rect.width, rect.height)
+//   btn.appendChild(ripple)
+//   setTimeout(() => ripple && ripple.remove(), 700)
+  
+//   const burst = btnParticles.value
+//   if (burst) {
+//     burst.classList.remove('burst')
+//     void burst.offsetWidth 
+//     burst.classList.add('burst')
+//   }
+// }
+function liquidRipple(_e: MouseEvent) {
   playRipple()
   const btn = liquidBtn.value
   if (!btn) return
@@ -227,19 +262,18 @@ function liquidRipple(e: MouseEvent) {
   if (ripple) ripple.remove()
   ripple = document.createElement('span')
   ripple.className = 'liquid-ripple'
-  const rect = btn.getBoundingClientRect()
-  const size = Math.max(rect.width, rect.height)
+  // const rect = btn.getBoundingClientRect()
+  // const size = Math.max(rect.width, rect.height)
   btn.appendChild(ripple)
   setTimeout(() => ripple && ripple.remove(), 700)
-  // Particle burst
+  
   const burst = btnParticles.value
   if (burst) {
     burst.classList.remove('burst')
-    void burst.offsetWidth // force reflow
+    void burst.offsetWidth 
     burst.classList.add('burst')
   }
 }
-
 // Animated particles for background
 function particleStyle(n: number) {
   const p = particleStates.value[n - 1]
