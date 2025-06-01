@@ -289,27 +289,59 @@ function toggleSort(column: typeof sortColumn.value) {
   }
 }
 
+// const filteredDocuments = computed(() => {
+//   const s = search.value.trim().toLowerCase()
+//   const filtered = documents.value.filter((doc) =>
+//     (doc.idDocument?.toString().includes(s) ?? false) ||
+//     (doc.typeProduitDesignation ?? '').toLowerCase().includes(s) ||
+//     (doc.produitDesignation ?? '').toLowerCase().includes(s) ||
+//     (doc.structureNom ?? '').toLowerCase().includes(s) ||
+//     (doc.sectionNom ?? '').toLowerCase().includes(s) ||
+//     (doc.subDivisionNv1Nom ?? '').toLowerCase().includes(s) ||
+//     (doc.subDivisionNv2Nom ?? '').toLowerCase().includes(s) ||
+//     (doc.subDivisionNv3Nom ?? '').toLowerCase().includes(s) ||
+//     (doc.designation ?? '').toLowerCase().includes(s)
+//   )
+//   return filtered.sort((a, b) => {
+//     const fieldA = a[sortColumn.value] ?? ''
+//     const fieldB = b[sortColumn.value] ?? ''
+//     if (fieldA < fieldB) return sortAsc.value ? -1 : 1
+//     if (fieldA > fieldB) return sortAsc.value ? 1 : -1
+//     return 0
+//   })
+// })
+
+
+
 const filteredDocuments = computed(() => {
-  const s = search.value.trim().toLowerCase()
-  const filtered = documents.value.filter((doc) =>
-    (doc.idDocument?.toString().includes(s) ?? false) ||
-    (doc.typeProduitDesignation ?? '').toLowerCase().includes(s) ||
-    (doc.produitDesignation ?? '').toLowerCase().includes(s) ||
-    (doc.structureNom ?? '').toLowerCase().includes(s) ||
-    (doc.sectionNom ?? '').toLowerCase().includes(s) ||
-    (doc.subDivisionNv1Nom ?? '').toLowerCase().includes(s) ||
-    (doc.subDivisionNv2Nom ?? '').toLowerCase().includes(s) ||
-    (doc.subDivisionNv3Nom ?? '').toLowerCase().includes(s) ||
-    (doc.designation ?? '').toLowerCase().includes(s)
-  )
-  return filtered.sort((a, b) => {
-    const fieldA = a[sortColumn.value] ?? ''
-    const fieldB = b[sortColumn.value] ?? ''
-    if (fieldA < fieldB) return sortAsc.value ? -1 : 1
-    if (fieldA > fieldB) return sortAsc.value ? 1 : -1
-    return 0
-  })
-})
+  const s = search.value.trim().toLowerCase();
+  if (!s) return documents.value; // Return all documents if search term is empty
+
+  return documents.value.filter((doc) => {
+    return (
+      (doc.idDocument?.toString().toLowerCase().includes(s) || false) ||
+      (doc.typeProduitDesignation?.toLowerCase().includes(s) || false) ||
+      (doc.produitDesignation?.toLowerCase().includes(s) || false) ||
+      (doc.structureNom?.toLowerCase().includes(s) || false) ||
+      (doc.sectionNom?.toLowerCase().includes(s) || false) ||
+      (doc.subDivisionNv1Nom?.toLowerCase().includes(s) || false) ||
+      (doc.subDivisionNv2Nom?.toLowerCase().includes(s) || false) ||
+      (doc.subDivisionNv3Nom?.toLowerCase().includes(s) || false) ||
+      (doc.designation?.toLowerCase().includes(s) || false)
+    );
+  }).sort((a, b) => {
+    const fieldA = a[sortColumn.value] ?? '';
+    const fieldB = b[sortColumn.value] ?? '';
+    if (fieldA < fieldB) return sortAsc.value ? -1 : 1;
+    if (fieldA > fieldB) return sortAsc.value ? 1 : -1;
+    return 0;
+  });
+});
+
+
+
+
+
 
 const paginatedDocuments = computed(() => {
   const start = (currentPage.value - 1) * pageSize

@@ -1,67 +1,68 @@
 <template>
   <div class="profile-root">
     <div class="profile-header">
-      <h1 class="profile-title">Profile</h1>
+      <h1 class="profile-title">Profil</h1>
     </div>
 
     <div class="profile-content">
       <div class="profile-card">
         <div class="profile-info">
-          <h2>User Information</h2>
+          <h2>Informations sur l'utilisateur</h2>
           <div class="info-grid">
             <div class="info-item">
-              <span class="info-label">Username:</span>
+              <span class="info-label">Nom d'utilisateur :</span>
               <span class="info-value">{{ profile.username }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Email:</span>
+              <span class="info-label">Email :</span>
               <span class="info-value">{{ profile.email || 'N/A' }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Role:</span>
+              <span class="info-label">Rôle :</span>
               <span class="info-value">{{ profile.role }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Poste:</span>
+              <span class="info-label">Poste :</span>
               <span class="info-value">{{ profile.poste }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Telephone:</span>
+              <span class="info-label">Téléphone :</span>
               <span class="info-value">{{ profile.telephone || 'N/A' }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Departement:</span>
+              <span class="info-label">Département :</span>
               <span class="info-value">{{ profile.departement || 'N/A' }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Nom:</span>
+              <span class="info-label">Nom :</span>
               <span class="info-value">{{ profile.nom || 'N/A' }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Prenom:</span>
+              <span class="info-label">Prénom :</span>
               <span class="info-value">{{ profile.prenom || 'N/A' }}</span>
             </div>
           </div>
         </div>
 
         <div class="change-password">
-          <h2>Change Password</h2>
+          <h2>Changer le mot de passe</h2>
           <form @submit.prevent="changePassword">
             <div class="form-group">
-              <label for="old_password">Old Password</label>
+              <label for="old_password">Ancien mot de passe</label>
               <input type="password" id="old_password" v-model="oldPassword" required>
             </div>
             <div class="form-group">
-              <label for="new_password">New Password</label>
+              <label for="new_password">Nouveau mot de passe</label>
               <input type="password" id="new_password" v-model="newPassword" required>
             </div>
-            <button type="submit" class="submit-button">Change Password</button>
+            <button type="submit" class="submit-button">Changer le mot de passe</button>
           </form>
         </div>
       </div>
     </div>
   </div>
 </template>
+
 
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';

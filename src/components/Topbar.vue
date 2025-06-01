@@ -1,15 +1,15 @@
 <template>
   <header class="topbar">
-    <div class="topbar-left">
-      <span class="topbar-title">Dashboard</span>
-    </div>
+      <div class="topbar-left">
+        <span class="topbar-title">{{ title }}</span>
+      </div>
     <div class="topbar-right">
-      <button class="icon-btn" aria-label="Notifications">
+      <!-- <button class="icon-btn" aria-label="Notifications">
         <span class="icon">🔔</span>
       </button>
       <button class="icon-btn" aria-label="Settings">
         <span class="icon">⚙️</span>
-      </button>
+      </button> -->
       <router-link to="/profile" class="profile-link">
         <div class="profile">
           <img src="https://i.pravatar.cc/32?img=1" alt="User" class="profile-img" />
@@ -20,7 +20,33 @@
   </header>
 </template>
 
-<script lang="ts" setup>
+<script lang="ts">
+import { ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+
+// Define an interface for the route meta object
+interface RouteMeta {
+  title?: string;
+  requiresAuth?: boolean;
+  public?: boolean;
+}
+
+export default {
+  setup() {
+    const route = useRoute();
+    const title = ref<string>('Dashboard');
+
+    watch(() => (route.meta as RouteMeta).title, (newTitle) => {
+      if (newTitle) {
+        title.value = newTitle;
+      }
+    }, { immediate: true });
+
+    return {
+      title
+    };
+  }
+};
 </script>
 
 <style scoped>
@@ -44,6 +70,7 @@
   font-weight: bold;
   font-size: 1.2rem;
   letter-spacing: 1px;
+  padding-left: 1em;
 }
 .topbar-right {
   display: flex;

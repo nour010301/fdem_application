@@ -278,15 +278,16 @@
                 <tr v-for="item in contextAjouter.selected" :key="item[contextAjouter.idCol]">
                   <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
                   <td>
-                    <button class="delete-button" @click="removeFromSelected(contextAjouter.entityKey, item)" style="font-size:1em;">Enlever</button>
+                    <button class="delete-button" @click="removeFromSelected(contextAjouter.entityKey, item)" style="font-size:1em; margin-right: 10px;">Enlever</button>
                     <!-- Add button for adding directors in the left table -->
                     <button
                       v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'"
-                      class="save-btn"
+                      class="save-directeur-btn"
                       @click="openDirecteurModal(item)"
                       style="font-size:1em;"
                     >Ajouter Directeur</button>
                   </td>
+
                   <td v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">
                     <div class="dropdown">
                       <button class="dropdown-btn" @click="loadDirecteurs(contextAjouter.entityKey, item)">
@@ -463,7 +464,7 @@
               <tbody>
                 <tr v-for="row in contextConsulter.data" :key="row[contextConsulter.columnKeys[0]]">
                   <td v-for="colKey in contextConsulter.columnKeys" :key="colKey">{{ row[colKey] ?? '-' }}</td>
-                  <td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
+                  <!-- <td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
                     <div class="dropdown">
                       <button class="dropdown-btn" @click="loadDirecteursConsulter(contextConsulter.entityKey, row)">
                         Liste Directeurs
@@ -472,18 +473,43 @@
                       <div class="dropdown-content" v-if="activeDropdownConsulter === `${contextConsulter.entityKey}-${row[contextConsulter.columnKeys[0]]}`">
                         <div v-if="loadingDirecteursConsulter" class="dropdown-loading">Chargement...</div>
                         <div v-else-if="directeursListConsulter.length === 0" class="dropdown-empty">Aucun directeur</div>
-        <div v-else v-for="directeur in directeursListConsulter" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
-  <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
-  <div class="dropdown-dates">
-    <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
-  </div>
-</div>
-
-
+                                <div v-else v-for="directeur in directeursListConsulter" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
+                          <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
+                          <div class="dropdown-dates">
+                            <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
+                          </div>
+                        </div>
 
                       </div>
                     </div>
-                  </td>
+                  </td> -->
+                  
+
+
+<td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
+  <div class="dropdown-container">
+    <div class="dropdown">
+      <button class="dropdown-btn" @click="loadDirecteursConsulter(contextConsulter.entityKey, row)">
+        Liste Directeurs
+        <span class="dropdown-arrow">▼</span>
+      </button>
+      <div class="dropdown-content" v-if="activeDropdownConsulter === `${contextConsulter.entityKey}-${row[contextConsulter.columnKeys[0]]}`">
+        <div v-if="loadingDirecteursConsulter" class="dropdown-loading">Chargement...</div>
+        <div v-else-if="directeursListConsulter.length === 0" class="dropdown-empty">Aucun directeur</div>
+        <div v-else v-for="directeur in directeursListConsulter" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
+          <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
+          <div class="dropdown-dates">
+            <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</td>
+
+
+
+
                 </tr>
               </tbody>
             </table>
@@ -2095,6 +2121,15 @@ async function loadDirecteursConsulter(entityKey: string, item: any) {
 }
 
 
+
+
+
+
+
+
+
+
+
 function getEntityConfig(key: string) {
   return contextEntitiesConfig[key as keyof typeof contextEntitiesConfig];
 }
@@ -2464,7 +2499,7 @@ ul {
 .doc-table tr {
   height: 36px;
 }
-.view-button, .delete-button {
+.view-button, .delete-button , .save-directeur-btn{
   padding: 0.4em 1em;
   border-radius: 5px;
   font-weight: 600;
@@ -2474,6 +2509,8 @@ ul {
 .view-button:hover { background: #039be5; }
 .delete-button { background: #f44336; color: #fff; border: none; }
 .delete-button:hover { background: #d32f2f; }
+.save-directeur-btn { background: #3aaa49; color: #fff; border: none; }
+.save-directeur-btn:hover { background: #3aaa49; }
 .modal-loader { color: #51ffbf; font-weight: 700; }
 
 
@@ -2539,6 +2576,11 @@ ul {
   background-color: #2f3a56;
 }
 /* Dropdown styles */
+.doc-modal-body {
+  max-height: 420px;
+  overflow-y: auto; /* Only vertical scrolling for the modal body */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+}
 .dropdown {
   position: relative;
   display: inline-block;
@@ -2564,15 +2606,15 @@ ul {
 }
 
 .dropdown-content {
-  position: absolute;
+  position: fixed; /* Change from absolute to fixed */
   background-color: #1a237e;
-  min-width: 200px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 1;
-  border-radius: 4px;
-  max-height: 200px;
+  min-width: 250px;
+  max-width: 350px;
+  max-height: 300px;
   overflow-y: auto;
-  right: 0;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 9999; /* Very high z-index */
+  border-radius: 4px;
 }
 
 .dropdown-item {
@@ -2593,13 +2635,16 @@ ul {
   text-align: center;
   font-style: italic;
 }
+
 .dropdown-dates {
   font-size: 0.85em;
   color: #bbdefb;
   margin-top: 2px;
 }
-
-
+.dropdown-container {
+  position: relative;
+  /* min-height: 30px; */
+}
 
 
 .modal-overlay {
