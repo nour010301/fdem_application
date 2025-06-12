@@ -676,7 +676,7 @@
         </div>
         <div class="step">
           <label for="file-upload">Fichier (PDF ou TXT)</label>
-          <input id="file-upload" type="file" accept=".pdf,.txt" @change="onFileChange" />
+          <input id="file-upload" type="file"   accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi" @change="onFileChange" />
           <div v-if="uploadedFile" class="file-info">
             <span>Fichier sélectionné: {{ uploadedFile.name }}</span>
             <button @click="uploadedFile = null" type="button">Retirer</button>
@@ -686,7 +686,7 @@
       </div>
       <!-- PDF VIEWER MODAL -->
     <!-- PDF VIEWER MODAL -->
-    <div v-if="selectedDocument" class="modal-overlay">
+    <!-- <div v-if="selectedDocument" class="modal-overlay">
       <div class="modal">
         <h2>Consulter Document</h2>
         <div class="pdf-viewer-container">
@@ -696,7 +696,48 @@
           <button @click="selectedDocument = null" class="cancel">Fermer</button>
         </div>
       </div>
+    </div> -->
+    <!-- FILE VIEWER MODAL -->
+<div v-if="selectedDocument && selectedDocument.fichier_pdf" class="modal-overlay">
+  <div class="modal">
+    <h2>Consulter Document</h2>
+
+    <div class="file-viewer-container">
+      <!-- PDF -->
+      <PdfViewer
+        v-if="isPdf(selectedDocument.fichier_pdf)"
+        :pdfUrl="selectedDocument.fichier_pdf"
+      />
+
+      <!-- Image -->
+      <img
+        v-else-if="isImage(selectedDocument.fichier_pdf)"
+        :src="selectedDocument.fichier_pdf"
+        alt="Image du document"
+        style="max-width: 100%; max-height: 80vh;"
+      />
+
+      <!-- Video -->
+      <video
+        v-else-if="isVideo(selectedDocument.fichier_pdf)"
+        :src="selectedDocument.fichier_pdf"
+        controls
+        style="max-width: 100%; max-height: 80vh;"
+      />
+
+      <!-- Unsupported -->
+      <div v-else>
+        <p>Ce format de fichier ne peut pas être affiché ici.</p>
+        <a :href="selectedDocument.fichier_pdf" target="_blank" download>Télécharger le fichier</a>
+      </div>
     </div>
+
+    <div class="modal-actions">
+      <button @click="selectedDocument = null" class="cancel">Fermer</button>
+    </div>
+  </div>
+</div>
+
     </div>
   </div>
 </div>
@@ -909,6 +950,21 @@ interface Document {
 }
 
 
+function getFileExtension(url: string): string {
+  return url.split('.').pop()?.toLowerCase() || ''
+}
+
+function isPdf(url: string): boolean {
+  return getFileExtension(url) === 'pdf'
+}
+
+function isImage(url: string): boolean {
+  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(getFileExtension(url))
+}
+
+function isVideo(url: string): boolean {
+  return ['mp4', 'webm', 'mov', 'avi'].includes(getFileExtension(url))
+}
 
 
 
