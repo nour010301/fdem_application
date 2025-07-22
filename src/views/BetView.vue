@@ -9,8 +9,8 @@
         placeholder="Rechercher un bureau d'études..."
         class="search-input"
       />
-      <button @click="exportCSV" class="export-button">Exporter CSV</button>
-      <button @click="showAddPopup = true" class="add-button">+ Ajouter</button>
+      <button @click="exportCSV" class="export-button" :class="{ 'disabled': userStore.loading.value || !userStore.canExportCSV.value }" :disabled="userStore.loading.value || !userStore.canExportCSV.value">Exporter CSV</button>
+      <button @click="showAddPopup = true" class="add-button" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value">+ Ajouter</button>
     </div>
 
     <div v-if="loading" class="info">Chargement...</div>
@@ -57,7 +57,8 @@
             <td>{{ be.telephone || '—' }}</td>
             <td>{{ be.email || '—' }}</td>
             <td>
-              <button class="delete-button" @click="confirmDelete(be)">Supprimer</button>
+              <button class="update-button" @click="confirmUpdate(be)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button class="delete-button" @click="confirmDelete(be)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
         </tbody>
@@ -98,11 +99,28 @@
         </div>
       </div>
     </div>
+
+    <!-- UPDATE MODAL -->
+    <div v-if="beToUpdate" class="modal-overlay">
+      <div class="modal">
+        <h2>Modifier Bureau d'Études</h2>
+        <input v-model="beToUpdate.nom" placeholder="Nom" />
+        <textarea v-model="beToUpdate.description" placeholder="Description (optionnelle)" />
+        <input v-model="beToUpdate.adresse" placeholder="Adresse" />
+        <input v-model="beToUpdate.telephone" placeholder="Téléphone" />
+        <input v-model="beToUpdate.email" placeholder="Email" />
+        <div class="modal-actions">
+          <button @click="updateBE">Modifier</button>
+          <button @click="beToUpdate = null" class="cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
+import { useUserStore } from '../store/userStore'
 
 interface BureauEtude {
   idBET: number
@@ -127,6 +145,9 @@ const sortAsc = ref(true)
 const showAddPopup = ref(false)
 const newBE = ref({ nom: '', description: '', adresse: '', telephone: '', email: '' })
 const beToDelete = ref<BureauEtude | null>(null)
+const beToUpdate = ref<BureauEtude | null>(null)
+
+const userStore = useUserStore()
 
 function toggleSort(column: typeof sortColumn.value) {
   if (sortColumn.value === column) {
@@ -193,6 +214,31 @@ function confirmDelete(be: BureauEtude) {
   beToDelete.value = be
 }
 
+function confirmUpdate(be: BureauEtude) {
+  beToUpdate.value = { ...be }
+}
+
+async function updateBE() {
+  if (!beToUpdate.value) return
+  try {
+    const beToSend = {
+      nom: beToUpdate.value.nom,
+      description: beToUpdate.value.description,
+      adresse: beToUpdate.value.adresse,
+      telephone: beToUpdate.value.telephone,
+      email: beToUpdate.value.email
+    }
+    await axiosInstance.put(`bureaux-etudes/${beToUpdate.value.idBET}/`, beToSend)
+    const index = bes.value.findIndex(b => b.idBET === beToUpdate.value!.idBET)
+    if (index !== -1) {
+      bes.value[index] = { ...beToUpdate.value }
+    }
+    beToUpdate.value = null
+  } catch (e: any) {
+    alert('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
 async function deleteBE() {
   if (!beToDelete.value) return
   try {
@@ -230,7 +276,10 @@ function exportCSV() {
   document.body.removeChild(link)
 }
 
-onMounted(fetchBEs)
+onMounted(async () => {
+  await userStore.fetchUserProfile()
+  fetchBEs()
+})
 </script>
 <style scoped>
 .page-wrapper {
@@ -266,6 +315,11 @@ h1 {
 }
 .export-button:hover {
   background-color: #1a3a8a;
+}
+.export-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 .table-wrapper {
@@ -375,17 +429,29 @@ h1 {
 .add-button:hover {
   background-color: #218838;
 }
+.add-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
 
 .delete-button {
   padding: 5px 10px;
-  background: #dc3545;
-  color: white;
-  border: none;
+  background: white;
+  color: #dc3545;
+  border: 1px solid #dc3545;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: bold;
 }
 .delete-button:hover {
-  background: #c82333;
+  background: #dc3545;
+  color: white;
+}
+.delete-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 .modal-overlay {
@@ -439,5 +505,26 @@ h1 {
 
 .modal-actions button:first-child {
   background: #2244aa;
+}
+
+.update-button {
+  padding: 5px 10px;
+  background: #17a2b8;
+  color: white;
+  border: 1px solid #17a2b8;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.update-button:hover {
+  background: #138496;
+  border-color: #138496;
+}
+
+.update-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 </style>

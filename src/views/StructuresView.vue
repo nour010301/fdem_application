@@ -9,8 +9,8 @@
         placeholder="Rechercher une structure..."
         class="search-input"
       />
-      <button @click="exportCSV" class="export-button">Exporter CSV</button>
-      <button @click="showAddPopup = true" class="add-button">+ Ajouter</button>
+      <button @click="exportCSV" class="export-button" :class="{ 'disabled': userStore.loading.value || !userStore.canExportCSV.value }" :disabled="userStore.loading.value || !userStore.canExportCSV.value">Exporter CSV</button>
+      <button @click="showAddPopup = true" class="add-button" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value">+ Ajouter</button>
     </div>
 
     <div v-if="loading" class="info">Chargement...</div>
@@ -41,7 +41,8 @@
             <td>{{ structure.nom }}</td>
             <td>{{ structure.designation }}</td>
             <td>
-              <button class="delete-button" @click="confirmDelete(structure)">Supprimer</button>
+              <button class="update-button" @click="confirmUpdate(structure)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button class="delete-button" @click="confirmDelete(structure)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
         </tbody>
@@ -79,11 +80,25 @@
         </div>
       </div>
     </div>
+
+    <!-- UPDATE MODAL -->
+    <div v-if="structureToUpdate" class="modal-overlay">
+      <div class="modal">
+        <h2>Modifier Structure</h2>
+        <input v-model="structureToUpdate.nom" placeholder="Nom" />
+        <textarea v-model="structureToUpdate.designation" placeholder="Désignation" />
+        <div class="modal-actions">
+          <button @click="updateStructure">Modifier</button>
+          <button @click="structureToUpdate = null" class="cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import axiosInstance from '../axios'
+import { useUserStore } from '../store/userStore'
 
 interface Structure {
   idStructure: number
@@ -105,6 +120,9 @@ const sortAsc = ref(true)
 const showAddPopup = ref(false)
 const newStructure = ref({ nom: '', designation: '' })
 const structureToDelete = ref<Structure | null>(null)
+const structureToUpdate = ref<Structure | null>(null)
+
+const userStore = useUserStore()
 
 function toggleSort(column: typeof sortColumn.value) {
   if (sortColumn.value === column) {
@@ -169,6 +187,28 @@ function confirmDelete(structure: Structure) {
   structureToDelete.value = structure
 }
 
+function confirmUpdate(structure: Structure) {
+  structureToUpdate.value = { ...structure }
+}
+
+async function updateStructure() {
+  if (!structureToUpdate.value) return
+  try {
+    const structureToSend = {
+      nom: structureToUpdate.value.nom,
+      designation: structureToUpdate.value.designation
+    }
+    await axiosInstance.put(`structures/${structureToUpdate.value.idStructure}/`, structureToSend)
+    const index = structures.value.findIndex(s => s.idStructure === structureToUpdate.value!.idStructure)
+    if (index !== -1) {
+      structures.value[index] = { ...structureToUpdate.value }
+    }
+    structureToUpdate.value = null
+  } catch (e: any) {
+    alert('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
 async function deleteStructure() {
   if (!structureToDelete.value) return
   try {
@@ -202,7 +242,10 @@ function exportCSV() {
   document.body.removeChild(link)
 }
 
-onMounted(fetchStructures)
+onMounted(async () => {
+  await userStore.fetchUserProfile()
+  fetchStructures()
+})
 </script>
 <style scoped>
 .page-wrapper {
@@ -240,6 +283,11 @@ h1 {
 .export-button:hover {
   background-color: #1a3a8a;
 }
+.export-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
 
 .add-button {
   padding: 8px 16px;
@@ -251,6 +299,11 @@ h1 {
 }
 .add-button:hover {
   background-color: #218838;
+}
+.add-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 .table-wrapper {
@@ -351,14 +404,21 @@ h1 {
 
 .delete-button {
   padding: 5px 10px;
-  background: #dc3545;
-  color: white;
-  border: none;
+  background: white;
+  color: #dc3545;
+  border: 1px solid #dc3545;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: bold;
 }
 .delete-button:hover {
-  background: #c82333;
+  background: #dc3545;
+  color: white;
+}
+.delete-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 .modal-overlay {
@@ -412,5 +472,26 @@ h1 {
 
 .modal-actions button:first-child {
   background: #2244aa;
+}
+
+.update-button {
+  padding: 5px 10px;
+  background: #17a2b8;
+  color: white;
+  border: 1px solid #17a2b8;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.update-button:hover {
+  background: #138496;
+  border-color: #138496;
+}
+
+.update-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 </style>

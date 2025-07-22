@@ -1,126 +1,7 @@
 
 <template>
   <div class="add-doc-root">
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
-   <!-- SIDEBAR: Structure and Context info -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
-
-    <aside class="doc-sidebar">
-  <h3>Arborescence</h3>
-  <ul>
-    <li v-if="selectedTypeId">
-      <span class="arb-label">Type</span>
-      <span class="arb-separator">:</span>
-      <b>{{ getTypeDesignation(selectedTypeId) }}</b>
-    </li>
-    <li v-if="selectedProduitId">
-      <span class="arb-label">Produit</span>
-      <span class="arb-separator">:</span>
-      <b>{{ getProduitDesignation(selectedProduitId) }}</b>
-    </li>
-    <li v-if="selectedStructureId">
-      <span class="arb-label">Structure</span>
-      <span class="arb-separator">:</span>
-      <b>{{ getStructureDesignation(selectedStructureId) }}</b>
-    </li>
-    <li v-if="selectedSectionId">
-      <span class="arb-label">Section</span>
-      <span class="arb-separator">:</span>
-      <b>{{ getSectionDesignation(selectedSectionId) }}</b>
-    </li>
-    <li v-if="selectedDivisionId">
-      <span class="arb-label">Division Niv. 1</span>
-      <span class="arb-separator">:</span>
-      <b>{{ getDivisionDesignation(selectedDivisionId) }}</b>
-    </li>
-    <li v-if="requiresSubDiv2 && selectedSubDiv2Id">
-      <span class="arb-label">Subdivision Niv. 2</span>
-      <span class="arb-separator">:</span>
-      <b>{{ getSubDiv2Designation(selectedSubDiv2Id) }}</b>
-    </li>
-    <li v-if="selectedSubDiv3Id">
-      <span class="arb-label">Subdivision Niv. 3</span>
-      <span class="arb-separator">:</span>
-      <b>{{ getSubDiv3Designation(selectedSubDiv3Id) }}</b>
-    </li>
-    <li v-if="nonFichier">
-      <span class="arb-label">Nom fichier</span>
-      <span class="arb-separator">:</span>
-      <b>{{ nonFichier }}</b>
-    </li>
-    <li v-if="uploadedFile">
-      <span class="arb-label">Fichier</span>
-      <span class="arb-separator">:</span>
-      <b>{{ uploadedFile?.name }}</b>
-    </li>
-
-    <!-- CONTEXTE -->
-    <template v-if="mode === 'contexte'
-      || selectedBureauxEtudes.length > 0
-      || selectedFournisseurs.length > 0
-      || selectedMaitresOeuvre.length > 0
-      || selectedMaitresOuvrage.length > 0
-      || selectedSoustraitants.length > 0
-      || selectedProjets.length > 0">
-      <li style="margin-top:1.5em;">
-        <span class="arb-label" style="color:#43E97B">Contexte</span>
-        <span class="arb-separator" style="color:#43E97B">:</span>
-      </li>
-      <ul style="margin-bottom:0;">
-        <li v-if="selectedBureauEtudeNoms.length">
-          <span class="arb-label">Bureaux Études</span>
-          <span class="arb-separator">:</span>
-          <b>{{ selectedBureauEtudeNoms.join(', ') }}</b>
-        </li>
-        <li v-if="selectedFournisseurNoms.length">
-          <span class="arb-label">Fournisseurs</span>
-          <span class="arb-separator">:</span>
-          <b>{{ selectedFournisseurNoms.join(', ') }}</b>
-        </li>
-        <li v-if="selectedMaitreOeuvreNoms.length">
-          <span class="arb-label">Maîtres d'Œuvre</span>
-          <span class="arb-separator">:</span>
-          <b>{{ selectedMaitreOeuvreNoms.join(', ') }}</b>
-        </li>
-        <li v-if="selectedMaitreOuvrageNoms.length">
-          <span class="arb-label">Maîtres d'Ouvrage</span>
-          <span class="arb-separator">:</span>
-          <b>{{ selectedMaitreOuvrageNoms.join(', ') }}</b>
-        </li>
-        <li v-if="selectedSoustraitantNoms.length">
-          <span class="arb-label">Soustraitants</span>
-          <span class="arb-separator">:</span>
-          <b>{{ selectedSoustraitantNoms.join(', ') }}</b>
-        </li>
-        <li v-if="selectedProjetNoms.length">
-          <span class="arb-label">Projets</span>
-          <span class="arb-separator">:</span>
-          <b>{{ selectedProjetNoms.join(', ') }}</b>
-        </li>
-      </ul>
-    </template>
-  </ul>
-</aside>
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
-   <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
-   <!-- Main -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
-
+    <!-- Main content with forms -->
     <div class="add-doc-main">
       <h1>Créer un document</h1>
       <!-- MODE Switch -->
@@ -201,6 +82,15 @@
             </option>
           </select>
         </div>
+        <div class="step" v-if="requiresSubDiv2 && selectedSubDiv3Id && filteredSubDiv4List.length > 0">
+          <label for="subdivision-nv4">Subdivision Niveau 4</label>
+          <select id="subdivision-nv4" v-model="selectedSubDiv4Id">
+            <option value="" disabled>Choisir une sous-division Niv. 4</option>
+            <option v-for="item in filteredSubDiv4List" :key="item.id" :value="item.id">
+              {{ item.idSubDivisionNv_4?.nom }}
+            </option>
+          </select>
+        </div>
         <p v-if="!isSubDivAllowed && selectedDivisionId" style="color: #E53935;">
           Cette subdivision ne permet pas la création de documents.
         </p>
@@ -208,12 +98,13 @@
         <div
           class="button-group"
           v-if="isSubDivAllowed && (
-            (requiresSubDiv2 && selectedSubDiv2Id) ||
+            (requiresSubDiv2 && selectedSubDiv2Id && filteredSubDiv3List.length === 0) ||
             (!requiresSubDiv2 && selectedDivisionId) ||
-            (requiresSubDiv2 && selectedSubDiv3Id)
+            (requiresSubDiv2 && selectedSubDiv3Id) ||
+            (requiresSubDiv2 && selectedSubDiv4Id)
           )"
         >
-          <button class="save-btn" type="button" @click="openDocModal('create')">Ajouter Document</button>
+          <button class="save-btn" type="button" @click="openDocModal('create')" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter Document</button>
           <button class="consult-btn" type="button" @click="openDocModal('consult')">Consulter Document</button>
           <!-- <button class="delete-btn" type="button" @click="openDocModal('delete')">Supprimer Document</button> -->
         </div>
@@ -230,7 +121,7 @@
           >
             <span class="context-entity-title">{{ entity.label }}</span>
             <div class="context-actions">
-              <button @click="onAjouter(entity.key)" class="context-action add">+ Ajouter</button>
+              <button @click="onAjouter(entity.key)" class="context-action add" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">+ Ajouter</button>
               <button @click="onConsulterFunction(entity.key)" class="context-action view">Consulter</button>
             </div>
           </div>
@@ -238,11 +129,109 @@
       </div>
     </div>
 
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
+    <!-- Arborescence sidebar -->
+    <aside class="doc-sidebar">
+      <h3>Arborescence</h3>
+      <ul>
+        <li v-if="selectedTypeId">
+          <span class="arb-label">Type</span>
+          <span class="arb-separator">:</span>
+          <b>{{ getTypeDesignation(selectedTypeId) }}</b>
+        </li>
+        <li v-if="selectedProduitId">
+          <span class="arb-label">Produit</span>
+          <span class="arb-separator">:</span>
+          <b>{{ getProduitDesignation(selectedProduitId) }}</b>
+        </li>
+        <li v-if="selectedStructureId">
+          <span class="arb-label">Structure</span>
+          <span class="arb-separator">:</span>
+          <b>{{ getStructureDesignation(selectedStructureId) }}</b>
+        </li>
+        <li v-if="selectedSectionId">
+          <span class="arb-label">Section</span>
+          <span class="arb-separator">:</span>
+          <b>{{ getSectionDesignation(selectedSectionId) }}</b>
+        </li>
+        <li v-if="selectedDivisionId">
+          <span class="arb-label">Division Niv. 1</span>
+          <span class="arb-separator">:</span>
+          <b>{{ getDivisionDesignation(selectedDivisionId) }}</b>
+        </li>
+        <li v-if="requiresSubDiv2 && selectedSubDiv2Id">
+          <span class="arb-label">Subdivision Niv. 2</span>
+          <span class="arb-separator">:</span>
+          <b>{{ getSubDiv2Designation(selectedSubDiv2Id) }}</b>
+        </li>
+        <li v-if="selectedSubDiv3Id">
+          <span class="arb-label">Subdivision Niv. 3</span>
+          <span class="arb-separator">:</span>
+          <b>{{ getSubDiv3Designation(selectedSubDiv3Id) }}</b>
+        </li>
+        <li v-if="selectedSubDiv4Id">
+          <span class="arb-label">Subdivision Niv. 4</span>
+          <span class="arb-separator">:</span>
+          <b>{{ getSubDiv4Designation(selectedSubDiv4Id) }}</b>
+        </li>
+        <li v-if="nonFichier">
+          <span class="arb-label">Nom fichier</span>
+          <span class="arb-separator">:</span>
+          <b>{{ nonFichier }}</b>
+        </li>
+        <li v-if="uploadedFile">
+          <span class="arb-label">Fichier</span>
+          <span class="arb-separator">:</span>
+          <b>{{ uploadedFile?.name }}</b>
+        </li>
+
+        <!-- CONTEXTE -->
+        <template v-if="mode === 'contexte'
+          || selectedBureauxEtudes.length > 0
+          || selectedFournisseurs.length > 0
+          || selectedMaitresOeuvre.length > 0
+          || selectedMaitresOuvrage.length > 0
+          || selectedSoustraitants.length > 0
+          || selectedProjets.length > 0">
+          <li style="margin-top:1.5em;">
+            <span class="arb-label" style="color:#43E97B">Contexte</span>
+            <span class="arb-separator" style="color:#43E97B">:</span>
+          </li>
+          <ul style="margin-bottom:0;">
+            <li v-if="selectedBureauEtudeNoms.length">
+              <span class="arb-label">Bureaux Études</span>
+              <span class="arb-separator">:</span>
+              <b>{{ selectedBureauEtudeNoms.join(', ') }}</b>
+            </li>
+            <li v-if="selectedFournisseurNoms.length">
+              <span class="arb-label">Fournisseurs</span>
+              <span class="arb-separator">:</span>
+              <b>{{ selectedFournisseurNoms.join(', ') }}</b>
+            </li>
+            <li v-if="selectedMaitreOeuvreNoms.length">
+              <span class="arb-label">Maîtres d'Œuvre</span>
+              <span class="arb-separator">:</span>
+              <b>{{ selectedMaitreOeuvreNoms.join(', ') }}</b>
+            </li>
+            <li v-if="selectedMaitreOuvrageNoms.length">
+              <span class="arb-label">Maîtres d'Ouvrage</span>
+              <span class="arb-separator">:</span>
+              <b>{{ selectedMaitreOuvrageNoms.join(', ') }}</b>
+            </li>
+            <li v-if="selectedSoustraitantNoms.length">
+              <span class="arb-label">Soustraitants</span>
+              <span class="arb-separator">:</span>
+              <b>{{ selectedSoustraitantNoms.join(', ') }}</b>
+            </li>
+            <li v-if="selectedProjetNoms.length">
+              <span class="arb-label">Projets</span>
+              <span class="arb-separator">:</span>
+              <b>{{ selectedProjetNoms.join(', ') }}</b>
+            </li>
+          </ul>
+        </template>
+      </ul>
+    </aside>
+
 <!-- ADD: Contexte Ajouter Modal -->
   <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
@@ -636,7 +625,7 @@
       <div v-if="loadingDocs" class="modal-loader">Chargement...</div>
       <div v-else>
         <div v-if="docModalError" style="color:red">{{ docModalError }}</div>
-        <div style="max-height: 370px; overflow-y: auto; margin-bottom: 0.6em;" v-if="docList.length">
+        <div style="max-height: 500px; overflow-y: auto; margin-bottom: 0.6em;" v-if="docList.length">
         <table class="doc-table" v-if="docList.length">
           <thead>
             <tr>
@@ -675,14 +664,28 @@
           <input id="nonFichier-input" v-model="nonFichier" type="text" />
         </div>
         <div class="step">
-          <label for="file-upload">Fichier (PDF ou TXT)</label>
-          <input id="file-upload" type="file"   accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi" @change="onFileChange" />
+          <label for="file-upload">Fichier (PDF,TXT,PNG,MP4)</label>
+          <input id="file-upload" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi" @change="onFileChange" />
           <div v-if="uploadedFile" class="file-info">
             <span>Fichier sélectionné: {{ uploadedFile.name }}</span>
             <button @click="uploadedFile = null" type="button">Retirer</button>
           </div>
         </div>
-        <button class="save-btn" @click="submitForm" style="margin-top:1em;">Ajouter Document</button>
+        
+        <div class="step" v-if="selectedStructureId">
+          <label for="multiple-images">Ou sélectionner plusieurs images (pour créer un PDF)</label>
+          <input id="multiple-images" type="file" multiple accept="image/*" @change="onMultipleImagesChange" />
+          <div v-if="multipleImages.length > 0" class="images-preview">
+            <h4>Images sélectionnées ({{ multipleImages.length }}):</h4>
+            <div class="image-list">
+              <div v-for="(image, index) in multipleImages" :key="index" class="image-item">
+                <span>{{ image.name }}</span>
+                <button @click="removeImage(index)" type="button" class="remove-image">×</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="save-btn" @click="submitForm" style="margin-top:1em;" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter Document</button>
       </div>
       <!-- PDF VIEWER MODAL -->
     <!-- PDF VIEWER MODAL -->
@@ -707,6 +710,8 @@
       <PdfViewer
         v-if="isPdf(selectedDocument.fichier_pdf)"
         :pdfUrl="selectedDocument.fichier_pdf"
+        :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
+        :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
       />
 
       <!-- Image -->
@@ -750,9 +755,19 @@ import { ref, onMounted, watch, computed } from 'vue'
 import "vue-multiselect/dist/vue-multiselect.css";
 import axios from '../axios'
 import PdfViewer from '../components/PdfViewer.vue'
+import { useUserStore } from '../store/userStore'
 // const API_BASE = 'http://10.10.150.75:8000/api'
 
 const selectedDocument = ref<Document | null>(null)
+
+// User store for role-based access control
+const userStore = useUserStore()
+
+// Computed property to check if user can access "ajouter" buttons
+// Users with CONSULTATION profile (3) can only consult, not add
+const canAddDocuments = computed(() => {
+  return userStore.userRole.value !== userStore.ROLES.CONSULTATION
+})
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -775,6 +790,7 @@ const structures = ref<any[]>([])
 const divisionsNv1 = ref<any[]>([])
 const allSubDivs1Et2 = ref<any[]>([])
 const allSubDivs2Et3 = ref<any[]>([])
+const allSubDivs3Et4 = ref<any[]>([])
 
 const selectedTypeId = ref<number | null>(null)
 const selectedProduitId = ref<number | null>(null)
@@ -783,25 +799,31 @@ const selectedStructureId = ref<number | null>(null)
 const selectedDivisionId = ref<number | null>(null)
 const selectedSubDiv2Id = ref<number | null>(null)
 const selectedSubDiv3Id = ref<number | null>(null)
+const selectedSubDiv4Id = ref<number | null>(null)
 
 const nonFichier = ref<string>('')
 const uploadedFile = ref<File | null>(null)
+const multipleImages = ref<File[]>([])
+const showImageToPdfOption = ref(false)
 
 
 // Initial fetch
 onMounted(async () => {
+  await userStore.fetchUserProfile()
   try {
-    const [typesRes, structuresRes, subDivsRes, subDivs3Res] = await Promise.all([
+    const [typesRes, structuresRes, subDivsRes, subDivs3Res, subDivs4Res] = await Promise.all([
       // axios.get(`${API_BASE}/types/`),
       axios.get(`types/`),
       axios.get(`structures/`),
       axios.get(`subdiv1et2/`),
-      axios.get(`subdiv2et3/`)
+      axios.get(`subdiv2et3/`),
+      axios.get(`subdiv3et4/`)
     ])
     typeProduits.value = typesRes.data
     structures.value = structuresRes.data
     allSubDivs1Et2.value = subDivsRes.data
     allSubDivs2Et3.value = subDivs3Res.data
+    allSubDivs3Et4.value = subDivs4Res.data
   } catch (error) {
     console.error('Erreur lors du chargement initial', error)
   }
@@ -853,6 +875,13 @@ const filteredSubDiv3List = computed(() => {
     item => item.idSubDivisionNv_2.idSubDivisionNv_2 === selectedSubDiv2Id.value
   )
 })
+const filteredSubDiv4List = computed(() => {
+  if (!selectedSubDiv3Id.value) return []
+  const selectedSubDiv3Name = getSubDiv3Designation(selectedSubDiv3Id.value)
+  return allSubDivs3Et4.value.filter(
+    item => item.idSubDivisionNv_3?.nom === selectedSubDiv3Name && item.idSubDivisionNv_4
+  )
+})
 
 const isSubDivAllowed = computed(() => {
   if (!selectedDivisionId.value) return false
@@ -869,12 +898,94 @@ const isSubDivAllowed = computed(() => {
   if (!subDiv2Item.idSubDivisionNv_2.subDiv) return true
   const relatedSubDiv3List = filteredSubDiv3List.value
   if (relatedSubDiv3List.length === 0) return true
-  return !!selectedSubDiv3Id.value
+  // Allow subdivision level 3 selection even if there are level 4 options
+  if (selectedSubDiv3Id.value) return true
+  return false
 })
 
 function onFileChange(e: Event) {
   const files = (e.target as HTMLInputElement).files
   if (files && files.length > 0) uploadedFile.value = files[0]
+}
+
+function onMultipleImagesChange(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    multipleImages.value = Array.from(files).filter(file => 
+      file.type.startsWith('image/')
+    )
+    showImageToPdfOption.value = multipleImages.value.length > 0
+  }
+}
+
+function removeImage(index: number) {
+  multipleImages.value.splice(index, 1)
+  showImageToPdfOption.value = multipleImages.value.length > 0
+}
+
+async function convertImagesToPdf(): Promise<File> {
+  const { jsPDF } = await import('jspdf')
+  const pdf = new jsPDF('p', 'mm', 'a4')
+  
+  for (let i = 0; i < multipleImages.value.length; i++) {
+    const file = multipleImages.value[i]
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    const img = new Image()
+    
+    await new Promise((resolve) => {
+      img.onload = () => {
+        // A4 dimensions in mm: 210 x 297, with margins
+        const pageWidth = 210
+        const pageHeight = 297
+        const margin = 10
+        const maxWidth = pageWidth - (margin * 2)
+        const maxHeight = pageHeight - (margin * 2)
+        
+        // Use high resolution canvas
+        const scale = 2 // Higher scale for better quality
+        let { width, height } = img
+        
+        // Calculate dimensions to fit page while maintaining aspect ratio
+        const widthRatio = maxWidth / width
+        const heightRatio = maxHeight / height
+        const ratio = Math.min(widthRatio, heightRatio)
+        
+        const finalWidth = width * ratio
+        const finalHeight = height * ratio
+        
+        // Set canvas size with high resolution
+        canvas.width = width * scale
+        canvas.height = height * scale
+        canvas.style.width = width + 'px'
+        canvas.style.height = height + 'px'
+        
+        // Scale context for high resolution
+        ctx.scale(scale, scale)
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = 'high'
+        
+        // Draw image at original size on high-res canvas
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        // Convert to high quality JPEG
+        const imgData = canvas.toDataURL('image/jpeg', 0.95)
+        
+        if (i > 0) pdf.addPage()
+        
+        // Center image on page
+        const x = (pageWidth - finalWidth) / 2
+        const y = (pageHeight - finalHeight) / 2
+        
+        pdf.addImage(imgData, 'JPEG', x, y, finalWidth, finalHeight)
+        resolve(null)
+      }
+      img.src = URL.createObjectURL(file)
+    })
+  }
+  
+  const pdfBlob = pdf.output('blob')
+  return new File([pdfBlob], `${nonFichier.value || 'images'}.pdf`, { type: 'application/pdf' })
 }
 
 function getTypeDesignation(id: number | null) {
@@ -898,32 +1009,59 @@ function getSubDiv2Designation(id: number | null) {
 function getSubDiv3Designation(id: number | null) {
   return filteredSubDiv3List.value.find(i => i.idSubDivisionNv_3.idSubDivisionNv_3 === id)?.idSubDivisionNv_3.nom || ''
 }
+function getSubDiv4Designation(id: number | null) {
+  return filteredSubDiv4List.value.find(i => i.id === id)?.idSubDivisionNv_4?.nom || ''
+}
 
 async function submitForm() {
   const formData = new FormData();
+  
+  // Add current date for creation and modification
+  const currentDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  
   formData.append('idTypeProduit', String(selectedTypeId.value || ''));
   formData.append('idProduit', String(selectedProduitId.value || ''));
   formData.append('idStructure', String(selectedStructureId.value || ''));
   formData.append('idSection', String(selectedSectionId.value || ''));
   formData.append('idSubDivisionNv_1', String(selectedDivisionId.value || ''));
-  formData.append('idSubDivisionNv_2', String(selectedSubDiv2Id.value || ''));
-  formData.append('idSubDivisionNv_3', String(selectedSubDiv3Id.value || ''));
+  
+  // Only add subdivision fields if they have values
+  if (selectedSubDiv2Id.value) {
+    formData.append('idSubDivisionNv_2', String(selectedSubDiv2Id.value));
+  }
+  if (selectedSubDiv3Id.value) {
+    formData.append('idSubDivisionNv_3', String(selectedSubDiv3Id.value));
+  }
+  
+  if (selectedSubDiv4Id.value) {
+    formData.append('idSubDivisionNv_4', String(selectedSubDiv4Id.value));
+  }
+  
   formData.append('typeProduitDesignation', getTypeDesignation(selectedTypeId.value) || '');
   formData.append('produitDesignation', getProduitDesignation(selectedProduitId.value) || '');
   formData.append('structureNom', getStructureDesignation(selectedStructureId.value) || '');
   formData.append('sectionNom', getSectionDesignation(selectedSectionId.value) || '');
   formData.append('subDivisionNv1Nom', getDivisionDesignation(selectedDivisionId.value) || '');
   formData.append('subDivisionNv3Nom', getSubDiv3Designation(selectedSubDiv3Id.value) || '');
+  formData.append('subDivisionNv4Nom', getSubDiv4Designation(selectedSubDiv4Id.value) || '');
   formData.append('designation', nonFichier.value || '');
-  formData.append('chemin', ' No chemin'); // You can modify this as needed
-  formData.append('version', ''); // You can modify this as needed
-  formData.append('dateCreation', ''); // Use an empty string instead of null
-  formData.append('dateModification', ''); // Use an empty string instead of null
-  if (uploadedFile.value) {
-    formData.append('fichier_pdf', uploadedFile.value);
-  }
-
+  formData.append('chemin', 'No chemin'); // Remove extra space
+  formData.append('version', '1.0'); // Add default version
+  formData.append('dateCreation', currentDate);
+  formData.append('dateModification', currentDate);
+  
   try {
+    let fileToUpload = uploadedFile.value;
+    
+    // If multiple images are selected, convert them to PDF
+    if (multipleImages.value.length > 0 && !uploadedFile.value) {
+      fileToUpload = await convertImagesToPdf();
+    }
+    
+    if (fileToUpload) {
+      formData.append('fichier_pdf', fileToUpload);
+    }
+
     const response = await axios.post('documents/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -931,9 +1069,27 @@ async function submitForm() {
     });
     alert('Document créé avec succès!');
     console.log(response.data);
-  } catch (error) {
+    
+    // Reset form
+    nonFichier.value = '';
+    uploadedFile.value = null;
+    multipleImages.value = [];
+    showImageToPdfOption.value = false;
+    
+    // Close modal if open
+    if (showDocModal.value) {
+      closeDocModal();
+      fetchDocListForCurrentSelection(); // Refresh the document list
+    }
+    
+  } catch (error: any) {
     console.error('Erreur lors de la création du document', error);
-    alert('Erreur lors de la création du document');
+    if (error.response?.data) {
+      console.error('Response data:', error.response.data);
+      alert('Erreur: ' + JSON.stringify(error.response.data));
+    } else {
+      alert('Erreur lors de la création du document');
+    }
   }
 }
 
@@ -1037,50 +1193,66 @@ const contextConsulter = ref({
   data: [] as any[]
 });
 // --- Per-entity configuration. You can move this to a constants file if you want. ---
-const contextConsulterEntityConfig = {
+interface EntityConfig {
+  label: string;
+  endpoint: ProduitEndpoint | ProjetEndpoint;
+  columns: string[];
+  columnKeys: string[];
+}
+
+const contextConsulterEntityConfig: Record<string, EntityConfig> = {
   projet: {
     label: "Projet",
-    endpoint: (produitId: number) => `projets/by-produit/${produitId}`,
-    columns: ["ID", "Description", "Adresse", "Wilaya"],
-    columnKeys: ["idProjet", "description", "adresse", "wilaya"]
+    endpoint: ((produitId: number) => `projets/by-produit/${produitId}`) as ProduitEndpoint,
+    columns: ["Code", "Description", "Adresse", "Wilaya"],
+    columnKeys: ["code", "description", "adresse", "wilaya"]
   },
   fournisseur: {
     label: "Fournisseur",
-    endpoint: (produitId: number) => `fournisseur/by-produit/${produitId}`,
+    endpoint: ((produitId: number) => `fournisseur/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["ID", "Désignation", "Description", "Adresse", "Téléphone", "Email"],
     columnKeys: ["idFournisseur", "designationFournisseur", "description", "adresse", "telephone", "email"]
   },
   maitre_oeuvre: {
     label: "Maître d'Œuvre",
-    endpoint: (produitId: number) => `/moe/by-produit/${produitId}`,
+    endpoint: ((produitId: number) => `/moe/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["ID", "Désignation", "Description", "Adresse", "Email"],
     columnKeys: ["idMaitreOeuvre", "designationMO", "description", "adresse", "email"]
   },
   maitre_ouvrage: {
     label: "Maître d'Ouvrage",
-    endpoint: (produitId: number) => `moa/by-produit/${produitId}`,
+    endpoint: ((produitId: number) => `moa/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["ID", "Désignation", "Description", "Adresse", "Email"],
     columnKeys: ["idMaitreOuvrage", "designationMOg", "description", "adresse", "email"]
   },
   soustraitants_tvx: {
     label: "Soustraitants Travaux",
-    endpoint: (produitId: number) => `soustraitants/by-produit/${produitId}`,
+    endpoint: ((produitId: number) => `soustraitants/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["ID", "Désignation", "Description", "Adresse", "Téléphone", "Email"],
     columnKeys: ["idSoustraitants", "designationStt", "description", "adresse", "telephone", "email"]
   },
   bet_soustraitants_etudes: {
     label: "BET Soustraitants Études",
-    endpoint: (produitId: number) => `bet/by-produit/${produitId}`,
+    endpoint: ((produitId: number) => `bet/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["ID", "Nom", "Description", "Adresse", "Téléphone", "Email"],
     columnKeys: ["idBET", "nom", "description", "adresse", "telephone", "email"]
   },
   direction_projet: {
     label: "Direction du Projet",
-    endpoint: (projetId: number) => `directeurs-by-projet/${projetId}`,
+    endpoint: ((projetCode: string) => `directeurs-by-projet/${projetCode}`) as ProjetEndpoint,
     columns: ["ID", "Nom", "Fonction", "Téléphone"],
     columnKeys: ["idDirecteur", "nomPrenomDirecteur", "fonction", "telephone"]
   }
 };
+
+// Define interfaces for API endpoints
+interface ProduitEndpoint {
+  (produitId: number): string;
+}
+
+interface ProjetEndpoint {
+  (projetCode: string): string;
+}
 
 // Define an interface for the directeur object
 // Update the Directeur interface to match the actual data structure
@@ -1133,7 +1305,8 @@ if (entityKey === 'direction_projet') {
   contextConsulter.value.data = [];
 
   try {
-    const { data } = await axios.get(config.endpoint(selectedProjets.value[0].idProjet));
+    const code = selectedProjets.value[0].code;
+    const { data } = await axios.get((config.endpoint as ProjetEndpoint)(encodeURIComponent(code)));
     let rows = Array.isArray(data) ? data : [data];
     contextConsulter.value.data = rows;
   } catch (e) {
@@ -1159,7 +1332,7 @@ if (entityKey === 'direction_projet') {
     contextConsulter.value.data = [];
 
     try {
-      const { data } = await axios.get(config.endpoint(selectedProduitId.value));
+      const { data } = await axios.get((config.endpoint as ProduitEndpoint)(selectedProduitId.value));
       let rows = Array.isArray(data) ? data : [data];
       contextConsulter.value.data = rows;
     } catch (e) {
@@ -1196,7 +1369,7 @@ const contextDelete = ref({
 const contextEntityDeleteConfig = {
   projet: {
     endpoint: '/contexte-projet/',
-    getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idProjet: item.idProjet }),
+    getPayload: (item: any) => ({ idProduit: selectedProduitId.value, code: String(item.code) }),
   },
   maitre_oeuvre: {
     endpoint: '/contexte-moe/',
@@ -1220,7 +1393,7 @@ const contextEntityDeleteConfig = {
   },
   direction_projet: {
     endpoint: '/projets-directeurs/',
-    getPayload: (item: any) => ({ idProjet: selectedProjets.value[0]?.idProjet, idDirecteur: item.idDirecteur }),
+    getPayload: (item: any) => ({ code: String(selectedProjets.value[0]?.code), idDirecteur: item.idDirecteur }),
   }
 };
 
@@ -1284,7 +1457,7 @@ async function addDirectionProjet() {
 
   try {
     const payload = {
-      idProjet: selectedProjets.value[0].idProjet,
+      code: String(selectedProjets.value[0].code),
       idDirecteur: dateModal.value.directeur.idDirecteur,
       date_debut: dateModal.value.date_debut,
       date_fin: dateModal.value.date_fin
@@ -1309,21 +1482,21 @@ async function addDirectionProjet() {
 
 
 
-const contextSelectedEntitiesApi = {
-  projet: (produitId: number) => `projets/by-produit/${produitId}`,
-  maitre_ouvrage: (produitId: number) => `moa/by-produit/${produitId}`,
-  maitre_oeuvre: (produitId: number) => `moe/by-produit/${produitId}`,
-  fournisseur: (produitId: number) => `fournisseur/by-produit/${produitId}`,
-  soustraitants_tvx: (produitId: number) => `soustraitants/by-produit/${produitId}`,
-  bet_soustraitants_etudes: (produitId: number) => `bet/by-produit/${produitId}`,
-  direction_projet: (projetId: number) => `directeurs-by-projet/${projetId}`,
+const contextSelectedEntitiesApi: Record<string, ProduitEndpoint | ProjetEndpoint> = {
+  projet: ((produitId: number) => `projets/by-produit/${produitId}`) as ProduitEndpoint,
+  maitre_ouvrage: ((produitId: number) => `moa/by-produit/${produitId}`) as ProduitEndpoint,
+  maitre_oeuvre: ((produitId: number) => `moe/by-produit/${produitId}`) as ProduitEndpoint,
+  fournisseur: ((produitId: number) => `fournisseur/by-produit/${produitId}`) as ProduitEndpoint,
+  soustraitants_tvx: ((produitId: number) => `soustraitants/by-produit/${produitId}`) as ProduitEndpoint,
+  bet_soustraitants_etudes: ((produitId: number) => `bet/by-produit/${produitId}`) as ProduitEndpoint,
+  direction_projet: ((projetCode: string) => `directeurs-by-projet/${encodeURIComponent(projetCode)}`) as ProjetEndpoint,
 };
 
 // Helper: returns which param is needed per entity
-function getSelectedApiParam(entityKey: string): { produit?: number; projet?: number } {
+function getSelectedApiParam(entityKey: string): { produit?: number; projet?: string } {
   if (entityKey === 'direction_projet') {
-    const idProjet = selectedProjets.value[0]?.idProjet;
-    return { projet: typeof idProjet === 'number' ? idProjet : undefined };
+    const code = selectedProjets.value[0]?.code;
+    return { projet: code };
   }
   return { produit: typeof selectedProduitId.value === 'number' ? selectedProduitId.value : undefined };
 }
@@ -1362,7 +1535,9 @@ async function onAjouter(entityKey: string) {
     if (!selectedApi || (produit === undefined && projet === undefined)) {
       contextAjouter.value.selected = [];
     } else {
-      const url = produit !== undefined ? selectedApi(produit) : selectedApi(projet!);
+      const url = produit !== undefined 
+    ? (selectedApi as ProduitEndpoint)(produit) 
+    : (selectedApi as ProjetEndpoint)(projet as string);
       const { data } = await axios.get(url);
       selectedList = Array.isArray(data) ? data : [data];
       selectedList = selectedList.filter(x => typeof x === 'object' && x != null);
@@ -1434,7 +1609,7 @@ async function addToSelected(entityKey: string, item: any) {
         case 'direction_projet':
           endpoint = 'projets-directeurs';
           payload = {
-            idProjet: selectedProjets.value[0]?.idProjet,
+            code: String(selectedProjets.value[0]?.code),
             idDirecteurs: item.idDirecteur,
             date_debut: null,
             date_fin: null,
@@ -1496,7 +1671,7 @@ async function removeFromSelected(entityKey: string, item: any) {
       case 'direction_projet':
         endpoint = 'projets-directeurs';
         payload = {
-          idProjet: selectedProjets.value[0]?.idProjet,
+          code: String(selectedProjets.value[0]?.code),
           idDirecteurs: item.idDirecteur,
         };
         break;
@@ -1598,7 +1773,7 @@ async function addDirecteur() {
 
       case 'direction_projet':
         payload = {
-          idProjet: selectedProjets.value[0]?.idProjet,
+          code: String(selectedProjets.value[0]?.code),
           idDirecteurs: directeurModal.value.idEntity,
           date_debut: directeurModal.value.date_debut,
           date_fin: directeurModal.value.date_fin,
@@ -1769,21 +1944,22 @@ async function fetchDocListForCurrentSelection() {
   docModalError.value = '';
   try {
     // Compose filter query params
-    let payload:any = {
-      idTypeProduit: selectedTypeId.value,
-      idProduit: selectedProduitId.value,
-      idStructure: selectedStructureId.value,
-      idSection: selectedSectionId.value,
-      idSubDivisionNv_1: selectedDivisionId.value,
-    };
+    const params: Record<string, string | number> = {};
+    if (selectedTypeId.value) params.idTypeProduit = selectedTypeId.value;
+    if (selectedProduitId.value) params.idProduit = selectedProduitId.value;
+    if (selectedStructureId.value) params.idStructure = selectedStructureId.value;
+    if (selectedSectionId.value) params.idSection = selectedSectionId.value;
+    if (selectedDivisionId.value) params.idSubDivisionNv_1 = selectedDivisionId.value;
     if (requiresSubDiv2.value && selectedSubDiv2Id.value) {
-      payload.idSubDivisionNv_2 = selectedSubDiv2Id.value;
+      params.idSubDivisionNv_2 = selectedSubDiv2Id.value;
     }
     if (requiresSubDiv2.value && selectedSubDiv3Id.value) {
-      payload.idSubDivisionNv_3 = selectedSubDiv3Id.value;
+      params.idSubDivisionNv_3 = selectedSubDiv3Id.value;
     }
-    // POST is safer for body, but use GET if API only supports GET with params
-    const { data } = await axios.get(`documentsFilter/`, payload);
+    if (requiresSubDiv2.value && selectedSubDiv4Id.value) {
+      params.idSubDivisionNv_4 = selectedSubDiv4Id.value;
+    }
+    const { data } = await axios.get('documentsFilter/', { params });
     docList.value = data;
   } catch(e) {
     docModalError.value = "Erreur lors du chargement des documents.";
@@ -2015,9 +2191,9 @@ const contextEntitiesConfig = {
   projet: {
     label: 'Projet',
     api: '/projets/',
-    idCol: 'idProjet',
-    columns: ['ID', 'Code', 'Description', 'Adresse', 'Wilaya'],
-    columnKeys: ['idProjet', 'code', 'description', 'adresse', 'wilaya'],
+    idCol: 'code',
+    columns: ['Code', 'Description', 'Adresse', 'Wilaya'],
+    columnKeys: ['code', 'description', 'adresse', 'wilaya'],
     listRef: projetsList,
     selectedRef: selectedProjets,
     allowMultiple: false,
@@ -2203,17 +2379,18 @@ function getEntityConfig(key: string) {
   background: linear-gradient(120deg, #16213e 70%, #1a237e 100%);
   color: #e3eafc;
   font-family: 'Inter', 'Segoe UI', 'Roboto', 'Arial', sans-serif;
-  gap: 1em;
+  gap: 4em;
 }
 
 .doc-sidebar {
-  width: 450px;
+  width: 700px;
   background: rgba(22,33,62,0.98);
-  border-right: 2px solid #232f4b;
-  padding: 2em 0.7em 1em 1.2em;
+  border-left: 2px solid #232f4b;
+  padding: 2em 2.5em 1em 2.5em;
   min-height: 100vh;
-  box-shadow: 2px 0 16px 0 #151e3044;
+  box-shadow: -2px 0 16px 0 #151e3044;
   font-size: 1.3rem;
+  order: 2;
 }
 
 /* APPLY TO DIRECT CHILDREN ONLY */
@@ -2267,11 +2444,12 @@ function getEntityConfig(key: string) {
 }
 .add-doc-main {
   flex: 1;
-  padding: 2.5em 1.2em 2.5em 1.2em;
-  max-width: 700px;
-  margin: 0  0 0 15em;
+  padding: 2.5em 3em 2.5em 3em;
+  max-width: 800px;
+  margin: 0;
   display: flex;
   flex-direction: column;
+  order: 1;
 }
 .add-doc-main h1 {
   color: #90caf9;
@@ -2287,6 +2465,23 @@ function getEntityConfig(key: string) {
   padding: 1em 2em 1em 1.5em;
   box-shadow: 0 2px 12px 0 #1a237e22;
   border-left: 4px solid #2196F3;
+}
+
+/* Structure fields styling with enhanced background */
+.structure-step-form .step {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid #2196F3;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 4px 16px 0 rgba(33, 150, 243, 0.1);
+  transition: all 0.3s ease;
+}
+
+.structure-step-form .step:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 rgba(33, 150, 243, 0.15);
 }
 label {
   font-weight: 600;
@@ -2386,6 +2581,11 @@ select:focus, input:focus {
 .pdf-btn:hover, .save-btn:hover {
   background: linear-gradient(90deg, #43E97B 0%, #2196F3 100%);
 }
+.save-btn.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
 .pdf-preview {
   margin-top: 2em;
   width: 100%;
@@ -2431,14 +2631,16 @@ ul {
   .doc-sidebar {
     width: 100vw;
     min-height: unset;
-    border-right: none;
-    border-bottom: 2px solid #232f4b;
+    border-left: none;
+    border-top: 2px solid #232f4b;
     box-shadow: none;
     padding: 1.2em 1em;
+    order: 2;
   }
   .add-doc-main {
     padding: 1.2em 0.5em;
     max-width: 100vw;
+    order: 1;
   }
 }
 .context-stepper select {
@@ -2523,12 +2725,13 @@ ul {
   background: #262f4b;
   padding: 2em;
   border-radius: 10px;
-  min-width: 540px;
-  max-width: 90vw;
+  min-width: 1200px;
+  max-width: 98vw;
+  min-height: 900px;
+  max-height: 98vh;
   box-shadow: 0 8px 32px 0 #16213e99;
   color: #e3eafc;
   position: relative;
-  max-height: 90vh;
   overflow-y: auto;
 }
 .doc-modal-header {
@@ -2614,6 +2817,12 @@ ul {
 .context-action.view { background: #21b8db; }
 .context-action.delete { background: #E53935; }
 .context-action:hover { filter: brightness(1.17); }
+.context-action.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+  filter: none !important;
+}
 
 .doc-modal.selected { background-color: #e4f7ed!important; }
 .doc-table tr.selected { background: #e8ffe2;}
@@ -2633,7 +2842,7 @@ ul {
 }
 /* Dropdown styles */
 .doc-modal-body {
-  max-height: 420px;
+  max-height: 1000px;
   overflow-y: auto; /* Only vertical scrolling for the modal body */
   overflow-x: hidden; /* Prevent horizontal scrolling */
 }
@@ -2741,5 +2950,53 @@ ul {
 
 .cancel {
   margin-left: 10px;
+}
+
+.images-preview {
+  margin-top: 1em;
+  padding: 1em;
+  background: rgba(67, 233, 123, 0.1);
+  border-radius: 8px;
+  border: 1px solid #43E97B;
+}
+
+.images-preview h4 {
+  color: #43E97B;
+  margin-bottom: 0.5em;
+  font-size: 1rem;
+}
+
+.image-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.image-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5em;
+  background: rgba(26, 35, 126, 0.5);
+  border-radius: 4px;
+  color: #e3eafc;
+}
+
+.remove-image {
+  background: #E53935;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-image:hover {
+  background: #d32f2f;
 }
 </style>

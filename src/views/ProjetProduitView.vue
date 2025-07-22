@@ -9,8 +9,8 @@
         placeholder="Rechercher un projet..."
         class="search-input"
       />
-      <button @click="exportCSV" class="export-button">Exporter CSV</button>
-      <button @click="showAddPopup = true" class="add-button">+ Ajouter</button>
+      <button @click="exportCSV" class="export-button" :class="{ 'disabled': userStore.loading.value || !userStore.canExportCSV.value }" :disabled="userStore.loading.value || !userStore.canExportCSV.value">Exporter CSV</button>
+      <button @click="showAddPopup = true" class="add-button" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value">+ Ajouter</button>
     </div>
 
     <div v-if="loading" class="info">Chargement...</div>
@@ -20,10 +20,6 @@
       <table v-if="filteredProjets.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idProjet')" class="sortable">
-              ID
-              <span v-if="sortColumn === 'idProjet'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
             <th @click="toggleSort('code')" class="sortable">
               Code
               <span v-if="sortColumn === 'code'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -45,14 +41,14 @@
         </thead>
 
         <tbody>
-          <tr v-for="projet in paginatedProjets" :key="projet.idProjet">
-            <td>{{ projet.idProjet }}</td>
+          <tr v-for="projet in paginatedProjets" :key="projet.code">
             <td>{{ projet.code }}</td>
             <td>{{ projet.description || '—' }}</td>
             <td>{{ projet.adresse || '—' }}</td>
             <td>{{ projet.wilaya || '—' }}</td>
             <td>
-              <button class="delete-button" @click="confirmDelete(projet)">Supprimer</button>
+              <button class="update-button" @click="confirmUpdate(projet)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button class="delete-button" @click="confirmDelete(projet)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
         </tbody>
@@ -95,14 +91,33 @@
         </div>
       </div>
     </div>
+
+    <!-- UPDATE MODAL -->
+    <div v-if="projetToUpdate" class="modal-overlay">
+      <div class="modal">
+        <h2>Modifier Projet</h2>
+        <input v-model="projetToUpdate.code" placeholder="Code" />
+        <textarea v-model="projetToUpdate.description" placeholder="Description (optionnelle)" />
+        <input v-model="projetToUpdate.adresse" placeholder="Adresse" />
+        <select v-model="projetToUpdate.wilaya">
+          <option value="" disabled>Sélectionnez une wilaya</option>
+          <option v-for="wilaya in wilayas" :key="wilaya" :value="wilaya">{{ wilaya }}</option>
+        </select>
+        <div class="modal-actions">
+          <button @click="updateProjet">Modifier</button>
+          <button @click="projetToUpdate = null" class="cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
+
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
+import { useUserStore } from '../store/userStore'
 
 interface Projet {
-  idProjet: number
   code: string
   description: string
   adresse: string | null
@@ -117,12 +132,15 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'idProjet' | 'code' | 'description' | 'adresse' | 'wilaya'>('idProjet')
+const sortColumn = ref<'code' | 'description' | 'adresse' | 'wilaya'>('code')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
 const newProjet = ref({ code: '', description: '', adresse: '', wilaya: '' })
 const projetToDelete = ref<Projet | null>(null)
+const projetToUpdate = ref<Projet | null>(null)
+
+const userStore = useUserStore()
 
 const wilayas = [
   "Adrar", "Chlef", "Laghouat", "Oum El Bouaghi", "Batna", "Béjaïa", "Biskra", "Béchar",
@@ -143,25 +161,6 @@ function toggleSort(column: typeof sortColumn.value) {
   }
 }
 
-// const filteredProjets = computed(() => {
-//   const s = search.value.trim().toLowerCase()
-
-//   const filtered = projets.value.filter((projet) =>
-//     projet.code.toLowerCase().includes(s) ||
-//     (projet.description?.toLowerCase().includes(s) ?? false) ||
-//     (projet.adresse?.toLowerCase().includes(s) ?? false) ||
-//     (projet.wilaya?.toLowerCase().includes(s) ?? false)
-//   )
-
-//   return filtered.sort((a, b) => {
-//     const fieldA = a[sortColumn.value] ?? ''
-//     const fieldB = b[sortColumn.value] ?? ''
-
-//     if (fieldA < fieldB) return sortAsc.value ? -1 : 1
-//     if (fieldA > fieldB) return sortAsc.value ? 1 : -1
-//     return 0
-//   })
-// })
 const filteredProjets = computed(() => {
   const s = search.value.trim().toLowerCase();
 
@@ -181,7 +180,6 @@ const filteredProjets = computed(() => {
     return 0;
   });
 });
-
 
 const paginatedProjets = computed(() => {
   const start = (currentPage.value - 1) * pageSize
@@ -218,11 +216,35 @@ function confirmDelete(projet: Projet) {
   projetToDelete.value = projet
 }
 
+function confirmUpdate(projet: Projet) {
+  projetToUpdate.value = { ...projet }
+}
+
+async function updateProjet() {
+  if (!projetToUpdate.value) return
+  try {
+    const projetToSend = {
+      code: projetToUpdate.value.code,
+      description: projetToUpdate.value.description,
+      adresse: projetToUpdate.value.adresse,
+      wilaya: projetToUpdate.value.wilaya
+    }
+    await axiosInstance.put(`projets/${projetToUpdate.value.code}/`, projetToSend)
+    const index = projets.value.findIndex(p => p.code === projetToUpdate.value!.code)
+    if (index !== -1) {
+      projets.value[index] = { ...projetToUpdate.value }
+    }
+    projetToUpdate.value = null
+  } catch (e: any) {
+    alert('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
 async function deleteProjet() {
   if (!projetToDelete.value) return
   try {
-    await axiosInstance.delete(`projets/${projetToDelete.value.idProjet}/`)
-    projets.value = projets.value.filter(p => p.idProjet !== projetToDelete.value!.idProjet)
+    await axiosInstance.delete(`projets/${projetToDelete.value.code}/`)
+    projets.value = projets.value.filter(p => p.code !== projetToDelete.value!.code)
     projetToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
@@ -230,9 +252,8 @@ async function deleteProjet() {
 }
 
 function exportCSV() {
-  const headers = ['ID', 'Code', 'Description', 'Adresse', 'Wilaya']
+  const headers = ['Code', 'Description', 'Adresse', 'Wilaya']
   const rows = filteredProjets.value.map(projet => [
-    projet.idProjet,
     projet.code,
     projet.description || '',
     projet.adresse || '',
@@ -254,8 +275,12 @@ function exportCSV() {
   document.body.removeChild(link)
 }
 
-onMounted(fetchProjets)
+onMounted(async () => {
+  await userStore.fetchUserProfile()
+  fetchProjets()
+})
 </script>
+
 
 <style scoped>
 .page-wrapper {
@@ -291,6 +316,11 @@ h1 {
 }
 .export-button:hover {
   background-color: #1a3a8a;
+}
+.export-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 .table-wrapper {
@@ -400,17 +430,29 @@ h1 {
 .add-button:hover {
   background-color: #218838;
 }
+.add-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
 
 .delete-button {
   padding: 5px 10px;
-  background: #dc3545;
-  color: white;
-  border: none;
+  background: white;
+  color: #dc3545;
+  border: 1px solid #dc3545;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: bold;
 }
 .delete-button:hover {
-  background: #c82333;
+  background: #dc3545;
+  color: white;
+}
+.delete-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 .modal-overlay {
@@ -465,5 +507,26 @@ h1 {
 
 .modal-actions button:first-child {
   background: #2244aa;
+}
+
+.update-button {
+  padding: 5px 10px;
+  background: #17a2b8;
+  color: white;
+  border: 1px solid #17a2b8;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.update-button:hover {
+  background: #138496;
+  border-color: #138496;
+}
+
+.update-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 </style>

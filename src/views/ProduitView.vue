@@ -9,8 +9,22 @@
         placeholder="Rechercher un produit..."
         class="search-input"
       />
-      <button @click="exportCSV" class="export-button">Exporter CSV</button>
-      <button @click="showAddPopup = true" class="add-button">+ Ajouter</button>
+      <button 
+        @click="exportCSV" 
+        class="export-button"
+        :class="{ 'disabled': userStore.loading.value || !userStore.canExportCSV.value }"
+        :disabled="userStore.loading.value || !userStore.canExportCSV.value"
+      >
+        Exporter CSV
+      </button>
+      <button 
+        @click="showAddPopup = true" 
+        class="add-button"
+        :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }"
+        :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value"
+      >
+        + Ajouter
+      </button>
     </div>
 
     <div v-if="loading" class="info">Chargement...</div>
@@ -46,7 +60,24 @@
             <td>{{ produit.designation }}</td>
             <td>{{ produit.description || '—' }}</td>
             <td>
-              <button class="delete-button" @click="confirmDelete(produit)">Supprimer</button>
+              <button 
+                class="update-button" 
+                @click="confirmUpdate(produit)"
+                :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }"
+                :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value"
+                title="Modifier"
+              >
+                ✎
+              </button>
+              <button 
+                class="delete-button" 
+                @click="confirmDelete(produit)"
+                :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }"
+                :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value"
+                title="Supprimer"
+              >
+                ✕
+              </button>
             </td>
           </tr>
         </tbody>
@@ -88,6 +119,25 @@
         </div>
       </div>
     </div>
+
+    <!-- UPDATE MODAL -->
+    <div v-if="produitToUpdate" class="modal-overlay">
+      <div class="modal">
+        <h2>Modifier Produit</h2>
+        <select v-model="produitToUpdate.idTypeProduit">
+          <option disabled value="">-- Type de Produit --</option>
+          <option v-for="type in types" :key="type.idTypeProduit" :value="type.idTypeProduit">
+            {{ type.designation }}
+          </option>
+        </select>
+        <input v-model="produitToUpdate.designation" placeholder="Désignation" />
+        <textarea v-model="produitToUpdate.description" placeholder="Description (optionnelle)" />
+        <div class="modal-actions">
+          <button @click="updateProduit">Modifier</button>
+          <button @click="produitToUpdate = null" class="cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -95,6 +145,7 @@
 import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
 import { watch } from 'vue'
+import { useUserStore } from '../store/userStore'
 
 interface TypeProduit {
   idTypeProduit: number
@@ -123,6 +174,7 @@ const sortColumn = ref<'idProduit' | 'typeProduitDesignation' | 'designation' | 
 const sortAsc = ref(true)
 
 const produitToDelete = ref<Produit | null>(null)
+const produitToUpdate = ref<Produit | null>(null)
 const types = ref<TypeProduit[]>([])
 
 const showAddPopup = ref(false)
@@ -136,6 +188,9 @@ const newProduit = ref<{
   designation: '',
   description: ''
 })
+
+// User store for role-based access control
+const userStore = useUserStore()
 
 async function fetchTypes() {
   try {
@@ -160,7 +215,7 @@ async function fetchProduits() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('produits/')
+    const response = await axiosInstance.get('Allproduits/')
     const produitsWithTypes = await Promise.all(
       response.data.map(async (produit: Produit) => {
         const typeDetails = await fetchTypeDetails(produit.idTypeProduit)
@@ -253,6 +308,33 @@ function confirmDelete(produit: Produit) {
   produitToDelete.value = produit
 }
 
+function confirmUpdate(produit: Produit) {
+  produitToUpdate.value = { ...produit }
+}
+
+async function updateProduit() {
+  if (!produitToUpdate.value) return
+  try {
+    const produitToSend = {
+      idTypeProduit: produitToUpdate.value.idTypeProduit,
+      designation: produitToUpdate.value.designation,
+      description: produitToUpdate.value.description
+    }
+    await axiosInstance.put(`produits/${produitToUpdate.value.idProduit}/`, produitToSend)
+    const index = produits.value.findIndex(p => p.idProduit === produitToUpdate.value!.idProduit)
+    if (index !== -1) {
+      const typeDetails = await fetchTypeDetails(produitToUpdate.value.idTypeProduit)
+      produits.value[index] = {
+        ...produitToUpdate.value,
+        typeProduitDesignation: typeDetails.designation
+      }
+    }
+    produitToUpdate.value = null
+  } catch (e: any) {
+    alert('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
 async function deleteProduit() {
   if (!produitToDelete.value) return
   try {
@@ -289,7 +371,8 @@ function exportCSV() {
   document.body.removeChild(link)
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await userStore.fetchUserProfile()
   fetchProduits()
   fetchTypes()
 })
@@ -440,16 +523,57 @@ h1 {
   background-color: #218838;
 }
 
+.add-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
 .delete-button {
   padding: 5px 10px;
-  background: #dc3545;
-  color: white;
-  border: none;
+  background: white;
+  color: #dc3545;
+  border: 1px solid #dc3545;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: bold;
 }
 .delete-button:hover {
-  background: #c82333;
+  background: #dc3545;
+  color: white;
+}
+
+.delete-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.update-button {
+  padding: 5px 10px;
+  background: #17a2b8;
+  color: white;
+  border: 1px solid #17a2b8;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.update-button:hover {
+  background: #138496;
+  border-color: #138496;
+}
+
+.update-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.export-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 .modal-overlay {

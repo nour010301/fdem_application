@@ -9,8 +9,22 @@
           placeholder="Rechercher un type de produit..."
           class="search-input"
         />
-        <button @click="exportCSV" class="export-button">Exporter CSV</button>
-        <button @click="showAddPopup = true" class="add-button">+ Ajouter</button>
+        <button 
+          @click="exportCSV" 
+          class="export-button"
+          :class="{ 'disabled': userStore.loading.value || !userStore.canExportCSV.value }"
+          :disabled="userStore.loading.value || !userStore.canExportCSV.value"
+        >
+          Exporter CSV
+        </button>
+        <button 
+          @click="showAddPopup = true" 
+          class="add-button"
+          :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }"
+          :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value"
+        >
+          + Ajouter
+        </button>
       </div>
   
       <div v-if="loading" class="info">Chargement...</div>
@@ -42,7 +56,24 @@
               <td>{{ type.designation }}</td>
               <td>{{ type.description || '—' }}</td>
               <td>
-              <button class="delete-button" @click="confirmDelete(type)">Supprimer</button>
+              <button 
+                class="update-button" 
+                @click="confirmUpdate(type)"
+                :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }"
+                :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value"
+                title="Modifier"
+              >
+                ✎
+              </button>
+              <button 
+                class="delete-button" 
+                @click="confirmDelete(type)"
+                :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }"
+                :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value"
+                title="Supprimer"
+              >
+                ✕
+              </button>
             </td>
             </tr>
           </tbody>
@@ -79,11 +110,25 @@
         </div>
       </div>
 
+    <!-- UPDATE MODAL -->
+    <div v-if="typeToUpdate" class="modal-overlay">
+      <div class="modal">
+        <h2>Modifier Type de Produit</h2>
+        <input v-model="typeToUpdate.designation" placeholder="Désignation" />
+        <textarea v-model="typeToUpdate.description" placeholder="Description (optionnelle)" />
+        <div class="modal-actions">
+          <button @click="updateType">Modifier</button>
+          <button @click="typeToUpdate = null" class="cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
+
     </div>
   </template>
   <script lang="ts" setup>
   import { ref, onMounted, computed } from 'vue'
   import axiosInstance from '../axios'
+  import { useUserStore } from '../store/userStore'
   
   interface TypeProduit {
     idTypeProduit: number
@@ -106,6 +151,10 @@
   const showAddPopup = ref(false)
   const newType = ref({ designation: '', description: '' })
   const typeToDelete = ref<TypeProduit | null>(null)
+  const typeToUpdate = ref<TypeProduit | null>(null)
+
+  // User store for role-based access control
+  const userStore = useUserStore()
 
   function toggleSort(column: typeof sortColumn.value) {
     if (sortColumn.value === column) {
@@ -145,7 +194,7 @@
     loading.value = true
     error.value = null
     try {
-      const response = await axiosInstance.get('types/')
+      const response = await axiosInstance.get('Alltypes/')
       types.value = response.data
     } catch (e: any) {
       error.value = e?.message || 'Erreur inconnue'
@@ -171,6 +220,28 @@
 
 function confirmDelete(type: TypeProduit) {
   typeToDelete.value = type
+}
+
+function confirmUpdate(type: TypeProduit) {
+  typeToUpdate.value = { ...type }
+}
+
+async function updateType() {
+  if (!typeToUpdate.value) return
+  try {
+    const typeToSend = {
+      designation: typeToUpdate.value.designation,
+      description: typeToUpdate.value.description
+    }
+    await axiosInstance.put(`types/${typeToUpdate.value.idTypeProduit}/`, typeToSend)
+    const index = types.value.findIndex(t => t.idTypeProduit === typeToUpdate.value!.idTypeProduit)
+    if (index !== -1) {
+      types.value[index] = { ...typeToUpdate.value }
+    }
+    typeToUpdate.value = null
+  } catch (e: any) {
+    alert('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'))
+  }
 }
 
 async function deleteType() {
@@ -212,7 +283,10 @@ async function deleteType() {
     document.body.removeChild(link)
   }
   
-  onMounted(fetchTypes)
+  onMounted(async () => {
+    await userStore.fetchUserProfile()
+    fetchTypes()
+  })
   </script>
   
   <style scoped>
@@ -371,16 +445,36 @@ h1 {
   background-color: #218838;
 }
 
+.add-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
 .delete-button {
   padding: 5px 10px;
-  background: #dc3545;
-  color: white;
-  border: none;
+  background: white;
+  color: #dc3545;
+  border: 1px solid #dc3545;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: bold;
 }
 .delete-button:hover {
-  background: #c82333;
+  background: #dc3545;
+  color: white;
+}
+
+.delete-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.export-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 .modal-overlay {
@@ -434,5 +528,26 @@ h1 {
 
 .modal-actions button:first-child {
   background: #2244aa;
+}
+
+.update-button {
+  padding: 5px 10px;
+  background: #17a2b8;
+  color: white;
+  border: 1px solid #17a2b8;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.update-button:hover {
+  background: #138496;
+  border-color: #138496;
+}
+
+.update-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 </style>

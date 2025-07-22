@@ -1,6 +1,6 @@
 <template>
   <div class="page-wrapper">
-    <h1>Subdivisions Niveau 2</h1>
+    <h1>Subdivisions Niveau 4</h1>
 
     <div class="controls">
       <input
@@ -20,9 +20,9 @@
       <table v-if="filteredSubdivs.length" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idSubDivisionNv_2')" class="sortable">
+            <th @click="toggleSort('idSubDivisionNv_4')" class="sortable">
               ID
-              <span v-if="sortColumn === 'idSubDivisionNv_2'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-if="sortColumn === 'idSubDivisionNv_4'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
             <th @click="toggleSort('nom')" class="sortable">
               Nom
@@ -32,19 +32,14 @@
               Désignation
               <span v-if="sortColumn === 'designation'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
-            <th @click="toggleSort('subDiv')" class="sortable">
-              SubDiv
-              <span v-if="sortColumn === 'subDiv'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in paginatedSubdivs" :key="item.idSubDivisionNv_2">
-            <td>{{ item.idSubDivisionNv_2 }}</td>
+          <tr v-for="item in paginatedSubdivs" :key="item.idSubDivisionNv_4">
+            <td>{{ item.idSubDivisionNv_4 }}</td>
             <td>{{ item.nom }}</td>
             <td>{{ item.designation || '—' }}</td>
-            <td>{{ item.subDiv ? 'Oui' : 'Non' }}</td>
             <td>
               <button class="update-button" @click="confirmUpdate(item)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
               <button class="delete-button" @click="confirmDelete(item)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
@@ -67,16 +62,11 @@
         <h2>Ajouter une Subdivision</h2>
         <input v-model="newSubdivision.nom" placeholder="Nom" />
         <textarea v-model="newSubdivision.designation" placeholder="Désignation (optionnelle)" />
-        <select v-model="newSubdivision.idSubDivisionNv_1">
-          <option value="" disabled>Sélectionnez une subdivision Niveau 1</option>
-          <option v-for="subdiv in subdivisionsNv1" :key="subdiv.idSubDivisionNv_1" :value="subdiv.idSubDivisionNv_1">
+        <select v-model="newSubdivision.idSubDivisionNv_3">
+          <option value="" disabled>Sélectionnez une subdivision Niveau 3</option>
+          <option v-for="subdiv in subdivisionsNv3" :key="subdiv.idSubDivisionNv_3" :value="subdiv.idSubDivisionNv_3">
             {{ subdiv.nom }}
           </option>
-        </select>
-        <select v-model="newSubdivision.subDiv">
-          <option value="" disabled>Sélectionnez une valeur</option>
-          <option :value="true">Oui</option>
-          <option :value="false">Non</option>
         </select>
         <div class="modal-actions">
           <button @click="addSubdivision">Ajouter</button>
@@ -103,16 +93,11 @@
         <h2>Modifier Subdivision</h2>
         <input v-model="subdivisionToUpdate.nom" placeholder="Nom" />
         <textarea v-model="subdivisionToUpdate.designation" placeholder="Désignation (optionnelle)" />
-        <select v-model="subdivisionToUpdate.idSubDivisionNv_1">
-          <option value="" disabled>Sélectionnez une subdivision Niveau 1</option>
-          <option v-for="subdiv in subdivisionsNv1" :key="subdiv.idSubDivisionNv_1" :value="subdiv.idSubDivisionNv_1">
+        <select v-model="subdivisionToUpdate.idSubDivisionNv_3">
+          <option value="" disabled>Sélectionnez une subdivision Niveau 3</option>
+          <option v-for="subdiv in subdivisionsNv3" :key="subdiv.idSubDivisionNv_3" :value="subdiv.idSubDivisionNv_3">
             {{ subdiv.nom }}
           </option>
-        </select>
-        <select v-model="subdivisionToUpdate.subDiv">
-          <option value="" disabled>Sélectionnez une valeur</option>
-          <option :value="true">Oui</option>
-          <option :value="false">Non</option>
         </select>
         <div class="modal-actions">
           <button @click="updateSubdivision">Modifier</button>
@@ -127,23 +112,21 @@ import { ref, onMounted, computed, watch } from 'vue'
 import axiosInstance from '../axios'
 import { useUserStore } from '../store/userStore'
 
-interface SubdivisionNv2 {
-  idSubDivisionNv_2: number
+interface SubdivisionNv4 {
+  idSubDivisionNv_4: number
   nom: string
   designation: string | null
-  subDiv: boolean
-  idSubDivisionNv_1: number
+  idSubDivisionNv_3: number
 }
 
-interface SubdivisionNv1 {
-  idSubDivisionNv_1: number
+interface SubdivisionNv3 {
+  idSubDivisionNv_3: number
   nom: string
   designation: string | null
-  subDiv: boolean
 }
 
-const data = ref<SubdivisionNv2[]>([])
-const subdivisionsNv1 = ref<SubdivisionNv1[]>([])
+const data = ref<SubdivisionNv4[]>([])
+const subdivisionsNv3 = ref<SubdivisionNv3[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -151,17 +134,17 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<keyof SubdivisionNv2>('idSubDivisionNv_2')
+const sortColumn = ref<keyof SubdivisionNv4>('idSubDivisionNv_4')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
-const newSubdivision = ref({ nom: '', designation: '', subDiv: true, idSubDivisionNv_1: null })
-const subdivisionToDelete = ref<SubdivisionNv2 | null>(null)
-const subdivisionToUpdate = ref<SubdivisionNv2 | null>(null)
+const newSubdivision = ref({ nom: '', designation: '', idSubDivisionNv_3: null })
+const subdivisionToDelete = ref<SubdivisionNv4 | null>(null)
+const subdivisionToUpdate = ref<SubdivisionNv4 | null>(null)
 
 const userStore = useUserStore()
 
-function toggleSort(column: keyof SubdivisionNv2) {
+function toggleSort(column: keyof SubdivisionNv4) {
   if (sortColumn.value === column) {
     sortAsc.value = !sortAsc.value
   } else {
@@ -204,7 +187,7 @@ async function fetchData() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('subdivision-nv2/')
+    const response = await axiosInstance.get('subdivision-nv4/')
     data.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -213,10 +196,10 @@ async function fetchData() {
   }
 }
 
-async function fetchSubdivisionsNv1() {
+async function fetchSubdivisionsNv3() {
   try {
-    const response = await axiosInstance.get('subdivision-nv1/')
-    subdivisionsNv1.value = response.data
+    const response = await axiosInstance.get('subdivision-nv3/')
+    subdivisionsNv3.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
   }
@@ -224,20 +207,20 @@ async function fetchSubdivisionsNv1() {
 
 async function addSubdivision() {
   try {
-    const res = await axiosInstance.post('subdivision-nv2/', newSubdivision.value)
+    const res = await axiosInstance.post('subdivision-nv4/', newSubdivision.value)
     data.value.push(res.data)
     showAddPopup.value = false
-    newSubdivision.value = { nom: '', designation: '', subDiv: true, idSubDivisionNv_1: null }
+    newSubdivision.value = { nom: '', designation: '', idSubDivisionNv_3: null }
   } catch (e: any) {
-    alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
+    alert(`Erreur lors de l'ajout : ${e?.message || 'Erreur inconnue'}`)
   }
 }
 
-function confirmDelete(subdivision: SubdivisionNv2) {
+function confirmDelete(subdivision: SubdivisionNv4) {
   subdivisionToDelete.value = subdivision
 }
 
-function confirmUpdate(subdivision: SubdivisionNv2) {
+function confirmUpdate(subdivision: SubdivisionNv4) {
   subdivisionToUpdate.value = { ...subdivision }
 }
 
@@ -247,38 +230,36 @@ async function updateSubdivision() {
     const subdivisionToSend = {
       nom: subdivisionToUpdate.value.nom,
       designation: subdivisionToUpdate.value.designation,
-      subDiv: subdivisionToUpdate.value.subDiv,
-      idSubDivisionNv_1: subdivisionToUpdate.value.idSubDivisionNv_1
+      idSubDivisionNv_3: subdivisionToUpdate.value.idSubDivisionNv_3
     }
-    await axiosInstance.put(`subdivision-nv2/${subdivisionToUpdate.value.idSubDivisionNv_2}/`, subdivisionToSend)
-    const index = data.value.findIndex(s => s.idSubDivisionNv_2 === subdivisionToUpdate.value!.idSubDivisionNv_2)
+    await axiosInstance.put(`subdivision-nv4/${subdivisionToUpdate.value.idSubDivisionNv_4}/`, subdivisionToSend)
+    const index = data.value.findIndex(s => s.idSubDivisionNv_4 === subdivisionToUpdate.value!.idSubDivisionNv_4)
     if (index !== -1) {
       data.value[index] = { ...subdivisionToUpdate.value }
     }
     subdivisionToUpdate.value = null
   } catch (e: any) {
-    alert('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'))
+    alert(`Erreur lors de la modification : ${e?.message || 'Erreur inconnue'}`)
   }
 }
 
 async function deleteSubdivision() {
   if (!subdivisionToDelete.value) return
   try {
-    await axiosInstance.delete(`subdivision-nv2/${subdivisionToDelete.value.idSubDivisionNv_2}/`)
-    data.value = data.value.filter(s => s.idSubDivisionNv_2 !== subdivisionToDelete.value!.idSubDivisionNv_2)
+    await axiosInstance.delete(`subdivision-nv4/${subdivisionToDelete.value.idSubDivisionNv_4}/`)
+    data.value = data.value.filter(s => s.idSubDivisionNv_4 !== subdivisionToDelete.value!.idSubDivisionNv_4)
     subdivisionToDelete.value = null
   } catch (e: any) {
-    alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
+    alert(`Erreur lors de la suppression : ${e?.message || 'Erreur inconnue'}`)
   }
 }
 
 function exportCSV() {
-  const headers = ['ID', 'Nom', 'Désignation', 'SubDiv']
+  const headers = ['ID', 'Nom', 'Désignation']
   const rows = filteredSubdivs.value.map(item => [
-    item.idSubDivisionNv_2,
+    item.idSubDivisionNv_4,
     item.nom,
-    item.designation || '—',
-    item.subDiv ? 'Oui' : 'Non'
+    item.designation || '—'
   ])
   const csvContent =
     'data:text/csv;charset=utf-8,' +
@@ -287,7 +268,7 @@ function exportCSV() {
       .join('\n')
   const link = document.createElement('a')
   link.setAttribute('href', encodeURI(csvContent))
-  link.setAttribute('download', 'subdivision_nv2.csv')
+  link.setAttribute('download', 'subdivision_nv4.csv')
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -296,7 +277,7 @@ function exportCSV() {
 onMounted(async () => {
   await userStore.fetchUserProfile()
   fetchData()
-  fetchSubdivisionsNv1()
+  fetchSubdivisionsNv3()
 })
 </script>
 <style scoped>

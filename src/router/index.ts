@@ -22,7 +22,8 @@ import StructuresView from '../views/StructuresView.vue'
 import SubDivisionNv_1View from '../views/SubDivisionNv_1View.vue'
 import SubDivisionNv_2View from '../views/SubDivisionNv_2View.vue'
 import SubDivisionNv_3View from '../views/SubDivisionNv_3View.vue'
-import CreateAccountView from '../views/CreateAccountView.vue'
+import SubDivisionNv_4View from '../views/SubDivisionNv_4View.vue'
+import UsersView from '../views/UsersView.vue'
 import ProfileView from '../views/ProfileView.vue'
 
 const routes: Array<RouteRecordRaw> = [
@@ -171,10 +172,16 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true, title: 'Subdivisions Niveau 3' },
       },
       {
-        path: '/create_account',
-        name: 'create_account',
-        component: CreateAccountView,
-        meta: { requiresAuth: true, title: 'Create Account' },
+        path: '/subdivisions_niv4',
+        name: 'subdivisions_niv4',
+        component: SubDivisionNv_4View,
+        meta: { requiresAuth: true, title: 'Subdivisions Niveau 4' },
+      },
+      {
+        path: '/users',
+        name: 'users',
+        component: UsersView,
+        meta: { requiresAuth: true, title: 'Gestion des utilisateurs' },
       },
       {
         path: '/profile',

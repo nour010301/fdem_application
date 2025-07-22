@@ -9,12 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.832.0",
     "@tailwindcss/vite": "^4.1.4",
     "@vue/runtime-dom": "^3.5.13",
     "@vueform/multiselect": "^2.6.11",
     "axios": "^1.8.4",
     "chart.js": "^4.4.9",
     "html2pdf.js": "^0.10.3",
+    "jspdf": "^2.5.1",
     "pdfjs-dist": "^5.2.133",
     "sass": "^1.87.0",
     "vue": "^3.5.13",

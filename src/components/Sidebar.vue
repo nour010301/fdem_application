@@ -26,7 +26,7 @@
       <!-- BIBLIOTHEQUE -->
       <div class="bibliotheque-group">
         <button class="nav-link bibliotheque-btn"
-                :class="{active: bibliothequeOpen}"
+                :class="{active: isBibliothequeActive}"
                 @click="toggleBibliotheque"
                 type="button">
           <span class="icon">📚</span>
@@ -39,14 +39,14 @@
               <!-- Arborescence Submenu -->
               <div>
                 <button class="nav-link sublink"
-                        :class="{ active: subMenu === 'arboresence' }"
+                        :class="{ active: isArborescenceActive }"
                         @click="selectSubMenu('arboresence')"
                         type="button">
                   <span class="icon">🌳</span>
                   <span>Arborescence</span>
                   <span
                     class="arrow-indicator"
-                    v-if="subMenu === 'arboresence'"
+                    v-if="isArborescenceActive"
                     aria-hidden="true"
                   ></span>
                 </button>
@@ -65,22 +65,25 @@
                       <span class="icon">🔲</span>
                       <span>Sections</span>
                     </router-link>
-                    <router-link to="/structures" class="nav-link sublink2" active-class="active">
+                    <router-link v-if="!loading && canViewStructurePages" to="/structures" class="nav-link sublink2" active-class="active">
                       <span class="icon">📁</span>
                       <span>Structures</span>
                     </router-link>
-                    <router-link to="/subdivisions_niv1" class="nav-link sublink2" active-class="active">
+                    <router-link v-if="!loading && canViewStructurePages" to="/subdivisions_niv1" class="nav-link sublink2" active-class="active">
                       <span class="icon">📄</span>
                       <span>Subdivisions_Niv1</span>
                     </router-link>
-                    
-                    <router-link to="/subdivisions_niv2" class="nav-link sublink2" active-class="active">
+                    <router-link v-if="!loading && canViewStructurePages" to="/subdivisions_niv2" class="nav-link sublink2" active-class="active">
                       <span class="icon">📄</span>
                       <span>Subdivisions_Niv2</span>
                     </router-link>
-                    <router-link to="/subdivisions_niv3" class="nav-link sublink2" active-class="active">
+                    <router-link v-if="!loading && canViewStructurePages" to="/subdivisions_niv3" class="nav-link sublink2" active-class="active">
                       <span class="icon">📄</span>
                       <span>Subdivisions_Niv3</span>
+                    </router-link>
+                     <router-link v-if="!loading && canViewStructurePages" to="/subdivisions_niv4" class="nav-link sublink2" active-class="active">
+                      <span class="icon">📄</span>
+                      <span>Subdivisions_Niv4</span>
                     </router-link>
                     
                   </div>
@@ -89,14 +92,14 @@
               <!-- Context Submenu -->
               <div>
                 <button class="nav-link sublink"
-                        :class="{ active: subMenu === 'context' }"
+                        :class="{ active: isContextActive }"
                         @click="selectSubMenu('context')"
                         type="button">
                   <span class="icon">🗂️</span>
                   <span>Contexte</span>
                   <span
                     class="arrow-indicator"
-                    v-if="subMenu === 'context'"
+                    v-if="isContextActive"
                     aria-hidden="true"
                   ></span>
                 </button>
@@ -139,9 +142,9 @@
         </transition>
       </div>
       <!-- END BIBLIOTHEQUE -->
-      <router-link to="/create_account" class="nav-link" active-class="active">
-           <span class="icon">👔</span>
-           <span>Create Account</span>
+      <router-link v-if="!loading && canManageUsers" to="/users" class="nav-link" active-class="active">
+           <span class="icon">👥</span>
+           <span>Utilisateurs</span>
       </router-link>
       <router-link to="/parametre" class="nav-link" active-class="active">
                       <span class="icon">⚙️</span>
@@ -156,12 +159,51 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue"
+import { ref, onMounted, computed } from "vue"
+import { useRoute } from 'vue-router'
+import { useUserStore } from '../store/userStore'
 
 defineProps<{ visible: boolean }>()
 
+const route = useRoute()
+
+// User store for role-based access control
+const userStore = useUserStore()
+const { canManageUsers, canViewStructurePages, loading } = userStore
+
 const bibliothequeOpen = ref(false)
 const subMenu = ref<'arboresence' | 'context'>("arboresence")
+
+// Routes that belong to Bibliothèque
+const bibliothequeRoutes = [
+  '/produit', '/type_produit', '/sections', '/structures', 
+  '/subdivisions_niv1', '/subdivisions_niv2', '/subdivisions_niv3',
+  '/bur-etude-list', '/list-fournisseur', '/list-directeur', 
+  '/list-projet-produit', '/maitre-oeuvre-list', '/maitre-ouvrage-list', '/soustraitants'
+]
+
+const arborescenceRoutes = [
+  '/produit', '/type_produit', '/sections', '/structures', 
+  '/subdivisions_niv1', '/subdivisions_niv2', '/subdivisions_niv3'
+]
+
+const contextRoutes = [
+  '/bur-etude-list', '/list-fournisseur', '/list-directeur', 
+  '/list-projet-produit', '/maitre-oeuvre-list', '/maitre-ouvrage-list', '/soustraitants'
+]
+
+// Computed properties for active states
+const isBibliothequeActive = computed(() => 
+  bibliothequeRoutes.includes(route.path)
+)
+
+const isArborescenceActive = computed(() => 
+  arborescenceRoutes.includes(route.path)
+)
+
+const isContextActive = computed(() => 
+  contextRoutes.includes(route.path)
+)
 
 function toggleBibliotheque() {
   bibliothequeOpen.value = !bibliothequeOpen.value
@@ -169,9 +211,23 @@ function toggleBibliotheque() {
     subMenu.value = 'arboresence'
   }
 }
+
 function selectSubMenu(name: 'arboresence' | 'context') {
   subMenu.value = name
 }
+
+onMounted(async () => {
+  await userStore.fetchUserProfile()
+  // Auto-open Bibliothèque if we're on a related route
+  if (isBibliothequeActive.value) {
+    bibliothequeOpen.value = true
+    if (isContextActive.value) {
+      subMenu.value = 'context'
+    } else {
+      subMenu.value = 'arboresence'
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -180,7 +236,8 @@ function selectSubMenu(name: 'arboresence' | 'context') {
   top: 0;
   left: 0;
   height: 100vh;
-  width: 270px;
+  width: min(270px, 25vw);
+  max-width: 300px;
   background: linear-gradient(135deg, #16213e 70%, #1a237e 100%);
   color: #fff;
   display: flex;
@@ -192,6 +249,8 @@ function selectSubMenu(name: 'arboresence' | 'context') {
   border-right: 1.5px solid #232f4b;
   backdrop-filter: blur(10px) saturate(140%);
   -webkit-backdrop-filter: blur(10px) saturate(140%);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .sidebar-hidden {
   transform: translateX(-100%);
@@ -218,26 +277,33 @@ function selectSubMenu(name: 'arboresence' | 'context') {
   display: flex;
   flex-direction: column;
   margin-top: 1rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 1rem;
 }
 .nav-link {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1.25rem;
+  padding: 0.5rem 0.75rem;
   color: #e3eafc;
   text-decoration: none;
-  font-size: 1.05rem;
+  font-size: clamp(0.85rem, 2.5vw, 1.05rem);
   transition: background 0.2s, border-color 0.2s, color 0.2s;
   border-left: 4px solid transparent;
   border-radius: 0 8px 8px 0;
-  margin: 0 0.2rem;
+  margin: 0.3rem 0.2rem;
   cursor: pointer;
   background: none;
   border: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nav-link .icon {
-  margin-right: 1rem;
-  font-size: 1.2rem;
+  margin-right: 0.5rem;
+  font-size: clamp(1rem, 3vw, 1.2rem);
   filter: drop-shadow(0 0 8px #1a237e44);
+  flex-shrink: 0;
 }
 .nav-link.active, .nav-link.router-link-exact-active {
   background: linear-gradient(90deg, #232f4b 60%, #1a237e 100%);
@@ -251,6 +317,7 @@ function selectSubMenu(name: 'arboresence' | 'context') {
 .bibliotheque-group {
   display: flex;
   flex-direction: column;
+  margin-bottom: 0.5rem;
 }
 .bibliotheque-btn {
   font-weight: bold;
@@ -262,8 +329,9 @@ function selectSubMenu(name: 'arboresence' | 'context') {
   padding-left: 0.5em;
   display: flex;
   flex-direction: column;
-  gap: 0.2em;
+  gap: 0.3em;
   position: relative;
+  margin-bottom: 0.5rem;
 }
 .bibliotheque-submenu-arrow,
 .submenu-arbo-arrow,
@@ -374,7 +442,7 @@ div[aria-label="Main navigation"] .submenu-context-arrow .sublink.active .arrow-
 .submenu-buttons {
   display: flex;
   flex-direction: column;
-  gap: 0.1em;
+  gap: 0.3em;
 }
 .sublink {
   padding-left: 2.15em;
@@ -383,6 +451,7 @@ div[aria-label="Main navigation"] .submenu-context-arrow .sublink.active .arrow-
   border: none;
   text-align: left;
   position: relative;
+  margin-bottom: 0.2em;
 }
 .sublink.active {
   color: #3ff780;
@@ -393,13 +462,14 @@ div[aria-label="Main navigation"] .submenu-context-arrow .sublink.active {
 .submenu-links {
   display: flex;
   flex-direction: column;
-  gap: 0.09em;
-  margin-top: 0.04em;
-  margin-bottom: 0.35em;
+  gap: 0.2em;
+  margin-top: 0.2em;
+  margin-bottom: 0.5em;
 }
 .sublink2 {
   padding-left: 2.8em;
   font-size: 0.95em;
+  margin-bottom: 0.1em;
 }
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.18s;
@@ -409,7 +479,28 @@ div[aria-label="Main navigation"] .submenu-context-arrow .sublink.active {
 }
 @media (max-width: 900px) {
   .sidebar {
-    width: 180px;
+    width: min(200px, 30vw);
+  }
+  .nav-link {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  .nav-link .icon {
+    margin-right: 0.4rem;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    width: min(180px, 35vw);
+  }
+  .nav-link {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.8rem;
+  }
+  .sidebar-title {
+    font-size: 1rem;
   }
 }
 </style>

@@ -96,6 +96,40 @@
       <audio ref="focusSound" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae7e8.mp3" preload="auto"></audio>
       <audio ref="rippleSound" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae7e8.mp3" preload="auto"></audio>
     </div>
+
+    <!-- OTP Modal -->
+    <div v-if="showOtpModal" class="otp-modal-backdrop">
+      <div class="otp-modal">
+        <div class="otp-modal-header">
+          <h3>Vérification en deux étapes</h3>
+          <button @click="closeOtpModal" class="close-btn">&times;</button>
+        </div>
+        <div class="otp-modal-body">
+          <p>Un code à 6 chiffres a été envoyé à votre email.</p>
+          <div class="otp-input-group">
+            <label for="otp-code">Code de vérification</label>
+            <input
+              id="otp-code"
+              v-model="otpCode"
+              type="text"
+              maxlength="6"
+              placeholder="000000"
+              :class="{ 'input-error': otpError }"
+              @keyup.enter="handleOtpSubmit"
+            />
+          </div>
+          <p v-if="otpError" class="otp-error">{{ otpError }}</p>
+          <button
+            @click="handleOtpSubmit"
+            :disabled="otpLoading"
+            class="otp-submit-btn"
+          >
+            <span v-if="otpLoading" class="otp-loader"></span>
+            <span v-else>Vérifier</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -120,6 +154,12 @@ const focusSound = ref<HTMLAudioElement | null>(null)
 const rippleSound = ref<HTMLAudioElement | null>(null)
 const liquidBtn = ref<HTMLElement | null>(null)
 const btnParticles = ref<HTMLElement | null>(null)
+
+// OTP Modal state
+const showOtpModal = ref(false)
+const otpCode = ref('')
+const otpError = ref('')
+const otpLoading = ref(false)
 
 // For lively particles
 // const particleStates = ref(
@@ -183,25 +223,15 @@ const handleLogin = async () => {
   loading.value = true
 
   try {
-    // Send the login request
-    const response = await instance.post('/api/login/', {
+    // Step 1: Send username and password
+    await instance.post('/api/login-step1/', {
       username: username.value,
       password: password.value
     })
 
-    const { access, refresh } = response.data
-
-    // Save tokens in localStorage
-  localStorage.setItem('access_token', access)
-localStorage.setItem('refresh_token', refresh)
-
-
-    playRipple()
-
-    // Redirect to the home page after animation
-    setTimeout(() => {
-      router.push({ name: 'Accueil' }) // Make sure your route is correctly named
-    }, 900)
+    // Show OTP modal
+    showOtpModal.value = true
+    loading.value = false
 
   } catch (err: any) {
     if (err.response && err.response.status === 401) {
@@ -209,8 +239,7 @@ localStorage.setItem('refresh_token', refresh)
     } else {
       error.value = 'Erreur de connexion. Veuillez réessayer.'
     }
-  } finally {
-    setTimeout(() => loading.value = false, 900)
+    loading.value = false
   }
 }
 
@@ -219,14 +248,14 @@ function playFocus() {
   if (focusSound.value) {
     focusSound.value.currentTime = 0
     focusSound.value.volume = 0.13
-    focusSound.value.play()
+    focusSound.value.play().catch(() => {})
   }
 }
 function playRipple() {
   if (rippleSound.value) {
     rippleSound.value.currentTime = 0
     rippleSound.value.volume = 0.09
-    rippleSound.value.play()
+    rippleSound.value.play().catch(() => {})
   }
 }
 function scanline(which: string) {
@@ -275,6 +304,54 @@ function liquidRipple(_e: MouseEvent) {
   }
 }
 // Animated particles for background
+const handleOtpSubmit = async () => {
+  otpError.value = ''
+  
+  if (!otpCode.value.trim() || otpCode.value.length !== 6) {
+    otpError.value = 'Veuillez entrer le code à 6 chiffres'
+    return
+  }
+
+  otpLoading.value = true
+
+  try {
+    // Step 2: Send username and OTP code
+    const response = await instance.post('/api/login-step2/', {
+      username: username.value,
+      code: otpCode.value
+    })
+
+    const { access, refresh } = response.data
+
+    // Save tokens in localStorage
+    localStorage.setItem('access_token', access)
+    localStorage.setItem('refresh_token', refresh)
+
+    playRipple()
+    showOtpModal.value = false
+
+    // Redirect to the home page after animation
+    setTimeout(() => {
+      router.push({ name: 'Accueil' })
+    }, 900)
+
+  } catch (err: any) {
+    if (err.response && err.response.status === 401) {
+      otpError.value = 'Code incorrect ou expiré'
+    } else {
+      otpError.value = 'Erreur de vérification. Veuillez réessayer.'
+    }
+  } finally {
+    otpLoading.value = false
+  }
+}
+
+const closeOtpModal = () => {
+  showOtpModal.value = false
+  otpCode.value = ''
+  otpError.value = ''
+}
+
 function particleStyle(n: number) {
   const p = particleStates.value[n - 1]
   const x = p.baseX + Math.cos(p.angle + p.phase) * p.radius
@@ -661,6 +738,141 @@ label {
   }
 }
 
+/* OTP Modal Styles */
+.otp-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(22, 33, 62, 0.9);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
 
+.otp-modal {
+  background: linear-gradient(135deg, #16213ee9 75%, #1a237eea 100%);
+  border: 2px solid #232f4bcc;
+  border-radius: 20px;
+  padding: 3rem;
+  max-width: 550px;
+  width: 90%;
+  min-height: 350px;
+  box-shadow: 0 8px 40px 0 #16213e33;
+  color: #e3eafc;
+}
+
+.otp-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.otp-modal-header h3 {
+  color: #90caf9;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #90caf9;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.otp-modal-body p {
+  color: #bbdefb;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.otp-input-group {
+  margin-bottom: 1.5rem;
+}
+
+.otp-input-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #90caf9;
+  font-weight: 600;
+}
+
+.otp-input-group input {
+  width: 100%;
+  padding: 1.2rem;
+  border: 2px solid #2196F3;
+  border-radius: 8px;
+  background: rgba(34, 47, 75, 0.3);
+  color: #e3eafc;
+  font-size: 1.5rem;
+  text-align: center;
+  letter-spacing: 0.3em;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.otp-input-group input:focus {
+  border-color: #90caf9;
+  box-shadow: 0 0 10px 0 #2196F366;
+}
+
+.otp-error {
+  color: #E53935;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.otp-submit-btn {
+  width: 100%;
+  padding: 1.2rem;
+  background: linear-gradient(90deg, #2196F3 0%, #16213e 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+  margin-top: 1rem;
+}
+
+.otp-submit-btn:hover {
+  background: linear-gradient(90deg, #90caf9 0%, #232f4b 100%);
+}
+
+.otp-submit-btn:disabled {
+  background: #4e5c7e;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.otp-loader {
+  border: 2px solid #16213e;
+  border-top: 2px solid #2196F3;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: spin 0.7s linear infinite;
+}
 
 </style>
