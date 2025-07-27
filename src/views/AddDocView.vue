@@ -700,49 +700,28 @@
         </div>
       </div>
     </div> -->
-    <!-- FILE VIEWER MODAL -->
-<div v-if="selectedDocument && selectedDocument.fichier_pdf" class="modal-overlay">
-  <div class="modal">
-    <h2>Consulter Document</h2>
+    
 
-    <div class="file-viewer-container">
-      <!-- PDF -->
-      <PdfViewer
-        v-if="isPdf(selectedDocument.fichier_pdf)"
-        :pdfUrl="selectedDocument.fichier_pdf"
-        :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
-        :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
-      />
-
-      <!-- Image -->
-      <img
-        v-else-if="isImage(selectedDocument.fichier_pdf)"
-        :src="selectedDocument.fichier_pdf"
-        alt="Image du document"
-        style="max-width: 100%; max-height: 80vh;"
-      />
-
-      <!-- Video -->
-      <video
-        v-else-if="isVideo(selectedDocument.fichier_pdf)"
-        :src="selectedDocument.fichier_pdf"
-        controls
-        style="max-width: 100%; max-height: 80vh;"
-      />
-
-      <!-- Unsupported -->
-      <div v-else>
-        <p>Ce format de fichier ne peut pas être affiché ici.</p>
-        <a :href="selectedDocument.fichier_pdf" target="_blank" download>Télécharger le fichier</a>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button @click="selectedDocument = null" class="cancel">Fermer</button>
     </div>
   </div>
 </div>
 
+<!-- FILE VIEWER MODAL -->
+<div v-if="selectedDocument && selectedDocument.fichier" class="modal-overlay">
+  <div class="modal">
+    <h2>Consulter Document</h2>
+
+    <div class="file-viewer-container">
+      <PdfViewer
+        v-if="selectedDocument.fichier"
+        :pdfUrl="selectedDocument.fichier"
+        :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
+        :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
+      />
+    </div>
+
+    <div class="modal-actions">
+      <button @click="closeDocumentViewer" class="cancel">Fermer</button>
     </div>
   </div>
 </div>
@@ -758,10 +737,16 @@ import PdfViewer from '../components/PdfViewer.vue'
 import { useUserStore } from '../store/userStore'
 // const API_BASE = 'http://10.10.150.75:8000/api'
 
-const selectedDocument = ref<Document | null>(null)
+interface Document {
+  idDocument: number
+  fichier?: string | null
+}
+
+
 
 // User store for role-based access control
 const userStore = useUserStore()
+const selectedDocument = ref<Document | null>(null)
 
 // Computed property to check if user can access "ajouter" buttons
 // Users with CONSULTATION profile (3) can only consult, not add
@@ -1059,10 +1044,10 @@ async function submitForm() {
     }
     
     if (fileToUpload) {
-      formData.append('fichier_pdf', fileToUpload);
+      formData.append('fichier', fileToUpload);
     }
 
-    const response = await axios.post('documents/', formData, {
+    const response = await axios.post('documents/create-with-file/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -1101,26 +1086,10 @@ const docList = ref<any[]>([]);
 const docModalError = ref('');
 
 
-interface Document {
-  fichier_pdf?: string | null
-}
 
 
-function getFileExtension(url: string): string {
-  return url.split('.').pop()?.toLowerCase() || ''
-}
 
-function isPdf(url: string): boolean {
-  return getFileExtension(url) === 'pdf'
-}
 
-function isImage(url: string): boolean {
-  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(getFileExtension(url))
-}
-
-function isVideo(url: string): boolean {
-  return ['mp4', 'webm', 'mov', 'avi'].includes(getFileExtension(url))
-}
 
 
 
@@ -1990,8 +1959,20 @@ async function handleDeleteDocument(document: any) {
   }
 }
 
-function viewDocument(document: Document) {
-  selectedDocument.value = document
+async function viewDocument(document: Document) {
+  try {
+    const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
+    const blob = await response.blob()
+    const fileUrl = URL.createObjectURL(blob)
+    
+    selectedDocument.value = {
+      ...document,
+      fichier: fileUrl
+    }
+  } catch (error) {
+    console.error('Error loading document:', error)
+    alert('Erreur lors du chargement du document')
+  }
 }
 
 // ==== Context directors logic: string keys for TS safety ====
@@ -2364,6 +2345,13 @@ async function loadDirecteursConsulter(entityKey: string, item: any) {
 
 function getEntityConfig(key: string) {
   return contextEntitiesConfig[key as keyof typeof contextEntitiesConfig];
+}
+
+function closeDocumentViewer() {
+  if (selectedDocument.value?.fichier) {
+    URL.revokeObjectURL(selectedDocument.value.fichier)
+  }
+  selectedDocument.value = null
 }
 
 </script>

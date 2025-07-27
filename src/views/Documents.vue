@@ -158,48 +158,7 @@
       </div>
     </div>
 
-    <!-- FILE VIEWER MODAL -->
-    <div v-if="selectedDocument && selectedDocument.fichier_pdf" class="modal-overlay">
-      <div class="modal pdf-modal">
-        <h2>Consulter Document</h2>
-        
-        <div class="file-viewer-container">
-          <!-- PDF -->
-          <PdfViewer
-            v-if="isPdf(selectedDocument.fichier_pdf)"
-            :pdfUrl="`http://10.10.150.75:8000${selectedDocument.fichier_pdf}`"
-            :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
-            :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
-          />
-          
-          <!-- Image -->
-          <img
-            v-else-if="isImage(selectedDocument.fichier_pdf)"
-            :src="`http://10.10.150.75:8000${selectedDocument.fichier_pdf}`"
-            alt="Image du document"
-            style="max-width: 100%; max-height: 80vh;"
-          />
-          
-          <!-- Video -->
-          <video
-            v-else-if="isVideo(selectedDocument.fichier_pdf)"
-            :src="`http://10.10.150.75:8000${selectedDocument.fichier_pdf}`"
-            controls
-            style="max-width: 100%; max-height: 80vh;"
-          />
-          
-          <!-- Unsupported -->
-          <div v-else>
-            <p>Ce format de fichier ne peut pas être affiché ici.</p>
-            <a :href="`http://10.10.150.75:8000${selectedDocument.fichier_pdf}`" target="_blank" download>Télécharger le fichier</a>
-          </div>
-        </div>
-        
-        <div class="modal-actions">
-          <button @click="selectedDocument = null" class="cancel">Fermer</button>
-        </div>
-      </div>
-    </div>
+
 
     <!-- UPDATE MODAL -->
     <div v-if="documentToUpdate" class="modal-overlay">
@@ -213,8 +172,8 @@
           <div class="form-grid">
             <div class="form-group">
               <label>Fichier actuel</label>
-              <div class="current-file-info" v-if="documentToUpdate?.fichier_pdf">
-                <span>{{ getFileName(documentToUpdate.fichier_pdf) }}</span>
+              <div class="current-file-info" v-if="documentToUpdate?.fichier">
+                <span>{{ getFileName(documentToUpdate.fichier) }}</span>
               </div>
               <div v-else class="no-file-info">Aucun fichier</div>
             </div>
@@ -354,6 +313,26 @@
         </div>
       </div>
     </div>
+
+    <!-- FILE VIEWER MODAL -->
+    <div v-if="selectedDocument && selectedDocument.fichier" class="modal-overlay">
+      <div class="modal pdf-modal">
+        <h2>Consulter Document</h2>
+        
+        <div class="file-viewer-container">
+          <PdfViewer
+            v-if="selectedDocument.fichier"
+            :pdfUrl="selectedDocument.fichier"
+            :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
+            :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
+          />
+        </div>
+        
+        <div class="modal-actions">
+          <button @click="closeDocumentViewer" class="cancel">Fermer</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -363,7 +342,7 @@
 import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
 import { useRouter } from 'vue-router'
-import PdfViewer from '../components/PdfViewer.vue' // Import the PdfViewer component
+import PdfViewer from '../components/PdfViewer.vue'
 import { useUserStore } from '../store/userStore'
 
 // State for table and basic features (search, sort, etc.)
@@ -390,7 +369,7 @@ interface Document {
   version?: string | null
   dateCreation?: string | null
   dateModification?: string | null
-  fichier_pdf?: string | null
+  fichier?: string | null
 }
 
 const documents = ref<Document[]>([])
@@ -410,6 +389,7 @@ const showImageToPdfOption = ref(false)
 const router = useRouter()
 const selectedDocument = ref<Document | null>(null)
 
+
 // User store for role-based access control
 const userStore = useUserStore()
 
@@ -419,22 +399,7 @@ const canAddDocuments = computed(() => {
   return userStore.userRole.value !== userStore.ROLES.CONSULTATION
 })
 
-// Helper functions to detect file types
-function getFileExtension(url: string): string {
-  return url.split('.').pop()?.toLowerCase() || ''
-}
 
-function isPdf(url: string): boolean {
-  return getFileExtension(url) === 'pdf'
-}
-
-function isImage(url: string): boolean {
-  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(getFileExtension(url))
-}
-
-function isVideo(url: string): boolean {
-  return ['mp4', 'webm', 'mov', 'avi'].includes(getFileExtension(url))
-}
 
 // --- Filters State ---
 const typesProduit = ref<any[]>([])
@@ -693,8 +658,20 @@ async function deleteDocument() {
   }
 }
 function redirectToAddDocument() { router.push('/add-document') }
-function viewDocument(document: Document) {
-  selectedDocument.value = document
+async function viewDocument(document: Document) {
+  try {
+    const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
+    const blob = await response.blob()
+    const fileUrl = URL.createObjectURL(blob)
+    
+    selectedDocument.value = {
+      ...document,
+      fichier: fileUrl
+    }
+  } catch (error) {
+    console.error('Error loading document:', error)
+    alert('Erreur lors du chargement du document')
+  }
 }
 
 function confirmUpdate(document: Document) {
@@ -825,7 +802,7 @@ async function updateDocument() {
     }
     
     if (fileToUpload) {
-      formData.append('fichier_pdf', fileToUpload)
+      formData.append('fichier', fileToUpload)
     }
     
     await axiosInstance.put(`documents/${documentToUpdate.value.idDocument}/`, formData, {
@@ -861,6 +838,13 @@ async function moveDocument() {
   } catch (e: any) {
     alert('Erreur lors du déplacement : ' + (e?.message || 'Erreur inconnue'))
   }
+}
+
+function closeDocumentViewer() {
+  if (selectedDocument.value?.fichier) {
+    URL.revokeObjectURL(selectedDocument.value.fichier)
+  }
+  selectedDocument.value = null
 }
 
 onMounted(async () => {
