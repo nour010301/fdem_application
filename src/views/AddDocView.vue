@@ -3,17 +3,10 @@
   <div class="add-doc-root">
     <!-- Main content with forms -->
     <div class="add-doc-main">
-      <h1>Créer un document</h1>
-      <!-- MODE Switch -->
-      <div v-if="selectedTypeId && selectedProduitId" class="step">
-        <label>Mode</label>
-        <div class="mode-switch">
-          <button :class="{ active: mode === 'structure' }" @click="mode = 'structure'" type="button">Structure</button>
-          <button :class="{ active: mode === 'contexte' }" @click="mode = 'contexte'" type="button">Contexte</button>
-        </div>
-      </div>
-      <!-- STRUCTURE MODE FORM -->
-      <form v-if="mode === 'structure'" class="structure-step-form" @submit.prevent="submitForm">
+      <h1>Fond Documentaire</h1>
+
+      <!-- INITIAL FORM FIELDS -->
+      <form v-if="mode !== 'contexte'" class="structure-step-form" @submit.prevent="submitForm">
         <div class="step">
           <label for="type-produit">Type de Produit</label>
           <select id="type-produit" v-model="selectedTypeId">
@@ -32,20 +25,18 @@
             </option>
           </select>
         </div>
-        <!-- <div class="step" v-if="selectedProduitId" ">
-          <label for="designation">Désignation</label>
-          <input id="designation" v-model="designation" type="text" />
-        </div> -->
-
         <div class="step" v-if="selectedProduitId">
-          <label for="structure">Structure</label>
-          <select id="structure" v-model="selectedStructureId">
+          <label for="structure">Structure fond documentaire</label>
+          <select id="structure" v-model="selectedStructureId" @change="onStructureChange">
             <option value="" disabled>Choisir une structure</option>
             <option v-for="structure in structures" :key="structure.idStructure" :value="structure.idStructure">
               {{ structure.designation }}
             </option>
           </select>
         </div>
+
+        <!-- STRUCTURE MODE FIELDS -->
+        <template v-if="mode === 'structure'">
         <div class="step" v-if="selectedStructureId">
           <label for="section">Section</label>
           <select id="section" v-model="selectedSectionId" :disabled="!sections.length">
@@ -56,7 +47,7 @@
           </select>
         </div>
         <div class="step" v-if="selectedSectionId">
-          <label for="division-nv1">Division Niveau 1</label>
+          <label for="division-nv1">Subdivision 1</label>
           <select id="division-nv1" v-model="selectedDivisionId" :disabled="!divisionsNv1.length">
             <option value="" disabled>Choisir une division</option>
             <option v-for="div in divisionsNv1" :key="div.idSubDivisionNv_1" :value="div.idSubDivisionNv_1">
@@ -65,7 +56,7 @@
           </select>
         </div>
         <div class="step" v-if="selectedDivisionId && requiresSubDiv2">
-          <label for="subdivision-nv2">Subdivision Niveau 2</label>
+          <label for="subdivision-nv2">Subdivision 2</label>
           <select id="subdivision-nv2" v-model="selectedSubDiv2Id">
             <option value="" disabled>Choisir une sous-division</option>
             <option v-for="item in filteredSubDiv2List" :key="item.idSubDivisionNv_2.idSubDivisionNv_2" :value="item.idSubDivisionNv_2.idSubDivisionNv_2">
@@ -74,7 +65,7 @@
           </select>
         </div>
         <div class="step" v-if="requiresSubDiv2 && selectedSubDiv2Id">
-          <label for="subdivision-nv3">Subdivision Niveau 3</label>
+          <label for="subdivision-nv3">Subdivision 3</label>
           <select id="subdivision-nv3" v-model="selectedSubDiv3Id">
             <option value="" disabled>Choisir une sous-division Niv. 3</option>
             <option v-for="item in filteredSubDiv3List" :key="item.idSubDivisionNv_3.idSubDivisionNv_3" :value="item.idSubDivisionNv_3.idSubDivisionNv_3">
@@ -104,15 +95,20 @@
             (requiresSubDiv2 && selectedSubDiv4Id)
           )"
         >
-          <button class="save-btn" type="button" @click="openDocModal('create')" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter Document</button>
-          <button class="consult-btn" type="button" @click="openDocModal('consult')">Consulter Document</button>
+          <button class="save-btn" type="button" @click="openStructureDocContent" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter </button>
+          <button class="consulter-btn" type="button" @click="showSuccessMessage">Consulter</button>
+          <!-- <button v-if="isPiecesGraphiques" class="import-btn" type="button" @click="openImportModal" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Importer Dossier Source</button> -->
           <!-- <button class="delete-btn" type="button" @click="openDocModal('delete')">Supprimer Document</button> -->
         </div>
+        </template>
       </form>
       <!-- CONTEXT MODE FORM: Multi-directeurs per project and date -->
       <!-- CONTEXT MODE FORM: Multi-directeurs per project and date -->
    <div v-if="mode === 'contexte'" class="step context-stepper">
-        <h2>Sélection du Contexte</h2>
+        <div class="context-header">
+          <button @click="goBackToForm" class="back-btn">← Retour</button>
+          <h2>Contexte du Produit</h2>
+        </div>
         <div class="context-cards">
           <div
             v-for="entity in contextEntities"
@@ -121,7 +117,7 @@
           >
             <span class="context-entity-title">{{ entity.label }}</span>
             <div class="context-actions">
-              <button @click="onAjouter(entity.key)" class="context-action add" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">+ Ajouter</button>
+              <button @click="onAjouter(entity.key)" class="context-action add" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">+ Ajouter/Maj</button>
               <button @click="onConsulterFunction(entity.key)" class="context-action view">Consulter</button>
             </div>
           </div>
@@ -129,216 +125,147 @@
       </div>
     </div>
 
-    <!-- Arborescence sidebar -->
-    <aside class="doc-sidebar">
-      <h3>Arborescence</h3>
-      <ul>
-        <li v-if="selectedTypeId">
-          <span class="arb-label">Type</span>
-          <span class="arb-separator">:</span>
-          <b>{{ getTypeDesignation(selectedTypeId) }}</b>
-        </li>
-        <li v-if="selectedProduitId">
-          <span class="arb-label">Produit</span>
-          <span class="arb-separator">:</span>
-          <b>{{ getProduitDesignation(selectedProduitId) }}</b>
-        </li>
-        <li v-if="selectedStructureId">
-          <span class="arb-label">Structure</span>
-          <span class="arb-separator">:</span>
-          <b>{{ getStructureDesignation(selectedStructureId) }}</b>
-        </li>
-        <li v-if="selectedSectionId">
-          <span class="arb-label">Section</span>
-          <span class="arb-separator">:</span>
-          <b>{{ getSectionDesignation(selectedSectionId) }}</b>
-        </li>
-        <li v-if="selectedDivisionId">
-          <span class="arb-label">Division Niv. 1</span>
-          <span class="arb-separator">:</span>
-          <b>{{ getDivisionDesignation(selectedDivisionId) }}</b>
-        </li>
-        <li v-if="requiresSubDiv2 && selectedSubDiv2Id">
-          <span class="arb-label">Subdivision Niv. 2</span>
-          <span class="arb-separator">:</span>
-          <b>{{ getSubDiv2Designation(selectedSubDiv2Id) }}</b>
-        </li>
-        <li v-if="selectedSubDiv3Id">
-          <span class="arb-label">Subdivision Niv. 3</span>
-          <span class="arb-separator">:</span>
-          <b>{{ getSubDiv3Designation(selectedSubDiv3Id) }}</b>
-        </li>
-        <li v-if="selectedSubDiv4Id">
-          <span class="arb-label">Subdivision Niv. 4</span>
-          <span class="arb-separator">:</span>
-          <b>{{ getSubDiv4Designation(selectedSubDiv4Id) }}</b>
-        </li>
-        <li v-if="nonFichier">
-          <span class="arb-label">Nom fichier</span>
-          <span class="arb-separator">:</span>
-          <b>{{ nonFichier }}</b>
-        </li>
-        <li v-if="uploadedFile">
-          <span class="arb-label">Fichier</span>
-          <span class="arb-separator">:</span>
-          <b>{{ uploadedFile?.name }}</b>
-        </li>
+    <!-- Right sidebar for context and structure modes -->
+    <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess">
 
-        <!-- CONTEXTE -->
-        <template v-if="mode === 'contexte'
-          || selectedBureauxEtudes.length > 0
-          || selectedFournisseurs.length > 0
-          || selectedMaitresOeuvre.length > 0
-          || selectedMaitresOuvrage.length > 0
-          || selectedSoustraitants.length > 0
-          || selectedProjets.length > 0">
-          <li style="margin-top:1.5em;">
-            <span class="arb-label" style="color:#43E97B">Contexte</span>
-            <span class="arb-separator" style="color:#43E97B">:</span>
-          </li>
-          <ul style="margin-bottom:0;">
-            <li v-if="selectedBureauEtudeNoms.length">
-              <span class="arb-label">Bureaux Études</span>
-              <span class="arb-separator">:</span>
-              <b>{{ selectedBureauEtudeNoms.join(', ') }}</b>
-            </li>
-            <li v-if="selectedFournisseurNoms.length">
-              <span class="arb-label">Fournisseurs</span>
-              <span class="arb-separator">:</span>
-              <b>{{ selectedFournisseurNoms.join(', ') }}</b>
-            </li>
-            <li v-if="selectedMaitreOeuvreNoms.length">
-              <span class="arb-label">Maîtres d'Œuvre</span>
-              <span class="arb-separator">:</span>
-              <b>{{ selectedMaitreOeuvreNoms.join(', ') }}</b>
-            </li>
-            <li v-if="selectedMaitreOuvrageNoms.length">
-              <span class="arb-label">Maîtres d'Ouvrage</span>
-              <span class="arb-separator">:</span>
-              <b>{{ selectedMaitreOuvrageNoms.join(', ') }}</b>
-            </li>
-            <li v-if="selectedSoustraitantNoms.length">
-              <span class="arb-label">Soustraitants</span>
-              <span class="arb-separator">:</span>
-              <b>{{ selectedSoustraitantNoms.join(', ') }}</b>
-            </li>
-            <li v-if="selectedProjetNoms.length">
-              <span class="arb-label">Projets</span>
-              <span class="arb-separator">:</span>
-              <b>{{ selectedProjetNoms.join(', ') }}</b>
-            </li>
-          </ul>
-        </template>
-      </ul>
-    </aside>
+      <!-- Success Message in Sidebar -->
+      <div v-if="showSuccess" class="success-message-sidebar">
+        ✓ Consulter action completed successfully!
+      </div>
 
-<!-- ADD: Contexte Ajouter Modal -->
-  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
-
-
-
-<!-- ADD: Contexte Ajouter Modal -->
- <!-- ADD: Contexte Ajouter Modal -->
-    <div v-if="contextAjouter.visible" class="doc-modal-backdrop">
-      <div class="doc-modal" style="width: 90vw; max-height: 90vh; overflow-y: auto; font-size: 1.25rem;">
-        <div class="doc-modal-header">
-          <h3 style="font-size: 1.6rem;">
-            Ajouter {{ contextAjouter.entityLabel }}
-          </h3>
-          <button @click="closeContextAjouterModal" class="close-modal" style="font-size:1.5em;">&times;</button>
+      <!-- Consulter content in sidebar -->
+      <div v-if="showSuccess" class="sidebar-content modal-section">
+        <div class="sidebar-header">
+          <h3>Consulter Documents</h3>
+          <button @click="showSuccess = false" class="close-btn">&times;</button>
         </div>
-        <div class="doc-modal-body" style="display: flex; gap: 1em; flex-wrap: wrap;">
-          <!-- LEFT: Selected Table -->
-        <div style="flex:1 1 25%;">
-            <h4 style="font-size: 1.15em;">Votre sélection</h4>
-            <table class="doc-table" style="font-size:1em;">
-              <thead>
-                <tr>
-                  <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
-                  <th>Actions</th>
-                  <th v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in contextAjouter.selected" :key="item[contextAjouter.idCol]">
-                  <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
-                  <td>
-                    <button class="delete-button" @click="removeFromSelected(contextAjouter.entityKey, item)" style="font-size:1em; margin-right: 10px;">Enlever</button>
-                    <!-- Add button for adding directors in the left table -->
-                    <button
-                      v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'"
-                      class="save-directeur-btn"
-                      @click="openDirecteurModal(item)"
-                      style="font-size:1em;"
-                    >Ajouter Directeur</button>
-                  </td>
-
-                  <td v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">
-                    <div class="dropdown">
-                      <button class="dropdown-btn" @click="loadDirecteurs(contextAjouter.entityKey, item)">
-                        Liste Directeurs
-                        <span class="dropdown-arrow">▼</span>
-                      </button>
-                      <div class="dropdown-content" v-if="activeDropdown === `${contextAjouter.entityKey}-${item[contextAjouter.idCol]}`">
-                        <div v-if="loadingDirecteurs" class="dropdown-loading">Chargement...</div>
-                        <div v-else-if="directeursList.length === 0" class="dropdown-empty">Aucun directeur</div>
-                 <div v-else v-for="directeur in directeursList" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
-  <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
-  <div class="dropdown-dates">
-    <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
-  </div>
-</div>
-
-
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="!contextAjouter.selected.length">
-                  <td :colspan="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes' ? contextAjouter.columns.length + 2 : contextAjouter.columns.length + 1" style="text-align:center; font-style:italic;">
-                    Aucune sélection pour l'instant.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        <div class="sidebar-body">
+          <div v-if="loadingDocs" class="loading">Chargement...</div>
+          <div v-else>
+            <div v-if="docModalError" class="error">{{ docModalError }}</div>
+            <div class="section">
+              <h4>Documents existants</h4>
+              <div class="table-container">
+                <table v-if="docList.length" class="sidebar-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Type Document</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="document in docList" :key="document.idDocument">
+                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td>{{ getDocumentType(document) }}</td>
+                      <td>
+                        <button @click="viewDocument(document)" class="consulter-view-btn">Consulter</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else class="no-data">
+                  Aucun document trouvé pour l'arborescence sélectionnée.
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
 
-          <!-- RIGHT: All Items Table (scrollable 10 rows max)-->
-          <div style="flex:1 1 55%;">
-            <h4 style="font-size: 1.15em;">{{ contextAjouter.entityLabel }} disponibles</h4>
-            <table class="doc-table" style="font-size:1em;">
-              <thead>
-                <tr>
-                  <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
-                  <th></th>
-                </tr>
-              </thead>
-            </table>
-            <div style="max-height: 430px; overflow-y: auto;">
-              <table class="doc-table" style="margin: 0; font-size:1em;">
+      <!-- Show Arborescence only in context mode -->
+      <div v-if="mode === 'contexte'" class="arborescence-section">
+        <h3>Arborescence</h3>
+        
+        <!-- Tree structure for Type Produit and Produit -->
+        <div class="tree-structure">
+          <div v-if="selectedTypeId" class="tree-node">
+            <span class="tree-icon">📁</span>
+            <span class="tree-label">{{ getTypeDesignation(selectedTypeId) }}</span>
+            <div v-if="selectedProduitId" class="tree-child">
+              <span class="tree-icon">📄</span>
+              <span class="tree-label selected-produit">{{ getProduitDesignation(selectedProduitId) }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <ul>
+          <!-- CONTEXTE -->
+          <template v-if="selectedBureauxEtudes.length > 0
+            || selectedFournisseurs.length > 0
+            || selectedMaitresOeuvre.length > 0
+            || selectedMaitresOuvrage.length > 0
+            || selectedSoustraitants.length > 0
+            || selectedProjets.length > 0">
+            <div class="arb-content">
+              <div v-if="selectedProjetNoms.length" class="arb-line">
+                <span class="arb-label">Projets:</span>
+                <span class="arb-value">{{ selectedProjetNoms.join(', ') }}<span v-if="hasMoreProjets" class="more-indicator"> (+plus...)</span></span>
+              </div>
+              <div v-if="selectedBureauEtudeNoms.length" class="arb-line">
+                <span class="arb-label">Bureaux Études:</span>
+                <span class="arb-value">{{ selectedBureauEtudeNoms.join(', ') }}<span v-if="hasMoreBET" class="more-indicator"> (+plus...)</span></span>
+              </div>
+              <div v-if="selectedFournisseurNoms.length" class="arb-line">
+                <span class="arb-label">Fournisseurs:</span>
+                <span class="arb-value">{{ selectedFournisseurNoms.join(', ') }}<span v-if="hasMoreFournisseurs" class="more-indicator"> (+plus...)</span></span>
+              </div>
+              <div v-if="selectedMaitreOeuvreNoms.length" class="arb-line">
+                <span class="arb-label">Maîtres d'Œuvre:</span>
+                <span class="arb-value">{{ selectedMaitreOeuvreNoms.join(', ') }}<span v-if="hasMoreMOE" class="more-indicator"> (+plus...)</span></span>
+              </div>
+              <div v-if="selectedMaitreOuvrageNoms.length" class="arb-line">
+                <span class="arb-label">Maîtres d'Ouvrage:</span>
+                <span class="arb-value">{{ selectedMaitreOuvrageNoms.join(', ') }}<span v-if="hasMoreMOA" class="more-indicator"> (+plus...)</span></span>
+              </div>
+              <div v-if="selectedSoustraitantNoms.length" class="arb-line">
+                <span class="arb-label">Soustraitants:</span>
+                <span class="arb-value">{{ selectedSoustraitantNoms.join(', ') }}<span v-if="hasMoreSoustraitants" class="more-indicator"> (+plus...)</span></span>
+              </div>
+              <div v-if="selectedDirectionsProjets.length" class="arb-line">
+                <span class="arb-label">Directeurs:</span>
+                <span class="arb-value">{{ selectedDirectionsProjets.map(d => d.nomPrenomDirecteur || `${d.nom} ${d.prenom}`).join(', ') }}<span v-if="hasMoreDirecteurs" class="more-indicator"> (+plus...)</span></span>
+              </div>
+            </div>
+          </template>
+        </ul>
+      </div>
+
+      <!-- Ajouter content in sidebar -->
+      <div v-if="contextAjouter.visible" class="sidebar-content modal-section">
+        <div class="sidebar-header">
+          <h3>Ajouter {{ contextAjouter.entityLabel }}</h3>
+          <button @click="closeContextAjouterModal" class="close-btn">&times;</button>
+        </div>
+        <div class="sidebar-body">
+          <!-- LEFT: All Items Table -->
+          <div class="section">
+            <h4>Liste de {{ contextAjouter.entityLabel }}</h4>
+            <div class="table-container">
+              <table class="sidebar-table">
+                <thead>
+                  <tr>
+                    <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <tr
                     v-for="item in contextAjouter.all"
                     :key="item[contextAjouter.idCol]"
                     :class="{ selected: isAlreadySelected(contextAjouter.entityKey, item) }"
-                    style="cursor: pointer;"
                   >
                     <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
                     <td>
                       <button
-                        class="save-btn"
+                        class="add-btn"
                         @click="contextAjouter.entityKey === 'direction_projet' ? openDateModal(item) : addToSelected(contextAjouter.entityKey, item)"
                         :disabled="isAlreadySelected(contextAjouter.entityKey, item) || (!getEntityConfig(contextAjouter.entityKey)?.allowMultiple && contextAjouter.selected.length >= 1)"
-                        style="font-size:1em;"
                       >Ajouter</button>
                     </td>
                   </tr>
                   <tr v-if="!contextAjouter.all.length">
-                    <td :colspan="contextAjouter.columns.length + 1" style="text-align:center; font-style:italic;">
+                    <td :colspan="contextAjouter.columns.length + 1" class="no-data">
                       Aucun élément à afficher.
                     </td>
                   </tr>
@@ -346,12 +273,234 @@
               </table>
             </div>
           </div>
+          
+          <!-- RIGHT: Selected Table -->
+          <div class="section">
+            <h4>Votre sélection</h4>
+            <div class="table-container">
+              <table class="sidebar-table">
+                <thead>
+                  <tr>
+                    <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
+                    <th>Actions</th>
+                    <th v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in contextAjouter.selected" :key="item[contextAjouter.idCol]">
+                    <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
+                    <td>
+                      <button class="remove-btn" @click="removeFromSelected(contextAjouter.entityKey, item)">Enlever</button>
+                      <button
+                        v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'"
+                        class="add-director-btn"
+                        @click="openDirecteurModal(item)"
+                      >Ajouter Directeur</button>
+                    </td>
+                    <td v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">
+                      <div class="dropdown">
+                        <button class="dropdown-btn" @click="loadDirecteurs(contextAjouter.entityKey, item)">
+                          Liste Directeurs
+                          <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="dropdown-content" v-if="activeDropdown === `${contextAjouter.entityKey}-${item[contextAjouter.idCol]}`">
+                          <div v-if="loadingDirecteurs" class="dropdown-loading">Chargement...</div>
+                          <div v-else-if="directeursList.length === 0" class="dropdown-empty">Aucun directeur</div>
+                          <div v-else v-for="directeur in directeursList" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
+                            <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
+                            <div class="dropdown-dates">
+                              <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="!contextAjouter.selected.length">
+                    <td :colspan="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes' ? contextAjouter.columns.length + 2 : contextAjouter.columns.length + 1" class="no-data">
+                      Aucune sélection pour l'instant.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div class="doc-modal-footer" style="text-align:right; margin-top:1em;">
-          <button class="save-btn" @click="saveSelectedContextEntities" style="font-size:1em;">Valider sélection</button>
+        <div class="sidebar-footer">
+          <button class="validate-btn" @click="saveSelectedContextEntities">Valider sélection</button>
+        </div>
+      </div>
+
+      <!-- Consulter content in sidebar -->
+      <div v-if="contextConsulter.visible" class="sidebar-content modal-section">
+        <div class="sidebar-header">
+          <h3>Consulter - {{ contextConsulter.entityLabel }}</h3>
+          <button @click="closeContextConsulterModal" class="close-btn">&times;</button>
+        </div>
+        <div class="sidebar-body">
+          <div v-if="contextConsulter.loading" class="loading">Chargement...</div>
+          <div v-else-if="contextConsulter.error" class="error">{{ contextConsulter.error }}</div>
+          <div v-else class="section">
+            <div class="table-container">
+              <table v-if="contextConsulter.data.length" class="sidebar-table">
+                <thead>
+                  <tr>
+                    <th v-for="col in contextConsulter.columns" :key="col">{{ col }}</th>
+                    <th v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in contextConsulter.data" :key="row[contextConsulter.columnKeys[0]]">
+                    <td v-for="colKey in contextConsulter.columnKeys" :key="colKey">{{ row[colKey] ?? '-' }}</td>
+                    <td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
+                      <div class="dropdown">
+                        <button class="dropdown-btn" @click="loadDirecteursConsulter(contextConsulter.entityKey, row)">
+                          Liste Directeurs
+                          <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="dropdown-content" v-if="activeDropdownConsulter === `${contextConsulter.entityKey}-${row[contextConsulter.columnKeys[0]]}`">
+                          <div v-if="loadingDirecteursConsulter" class="dropdown-loading">Chargement...</div>
+                          <div v-else-if="directeursListConsulter.length === 0" class="dropdown-empty">Aucun directeur</div>
+                          <div v-else v-for="directeur in directeursListConsulter" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
+                            <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
+                            <div class="dropdown-dates">
+                              <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div v-if="!contextConsulter.data.length" class="no-data">
+                Aucun élément à afficher.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Structure mode document content in sidebar -->
+      <div v-if="showStructureDocContent" class="sidebar-content modal-section">
+        <div class="sidebar-header">
+          <h3>Ajouter Document</h3>
+          <button @click="closeStructureDocContent" class="close-btn">&times;</button>
+        </div>
+        <div class="sidebar-body">
+          <div v-if="loadingDocs" class="loading">Chargement...</div>
+          <div v-else>
+            <div v-if="docModalError" class="error">{{ docModalError }}</div>
+            <div class="section">
+              <h4>Documents existants</h4>
+              <div class="table-container">
+                <table v-if="docList.length" class="sidebar-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Type Document</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                    <tbody>
+                    <tr v-for="document in docList" :key="document.idDocument">
+                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td>{{ getDocumentType(document) }}</td>
+                      <td>
+                        <button @click="viewDocument(document)" class="consulter-view-btn">Consulter</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else class="no-data">
+                  Aucun document trouvé pour l'arborescence sélectionnée.
+                </div>
+              </div>
+            </div>
+            
+            <!-- Form for Create Mode -->
+            <div v-if="isSubDivAllowed" class="section">
+              <h4>Créer un nouveau document</h4>
+              <div class="step" id="nonFichier">
+                <label for="nonFichier">Description</label>
+                <input id="nonFichier-input" v-model="nonFichier" type="text" />
+              </div>
+              <div class="step">
+                <label for="file-upload">Fichier (PDF,Image,Video)</label>
+                <input id="file-upload" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi" @change="onFileChange" />
+                <div v-if="uploadedFile" class="file-info">
+                  <span>Fichier sélectionné: {{ uploadedFile.name }}</span>
+                  <button @click="uploadedFile = null" type="button">Retirer</button>
+                </div>
+              </div>
+              
+              <!-- <div class="step" v-if="selectedStructureId">
+                <label for="multiple-images">Ou sélectionner plusieurs images (pour créer un PDF)</label>
+                <input id="multiple-images" type="file" multiple accept="image/*" @change="onMultipleImagesChange" />
+                <div v-if="multipleImages.length > 0" class="images-preview">
+                  <h4>Images sélectionnées ({{ multipleImages.length }}):</h4>
+                  <div class="image-list">
+                    <div v-for="(image, index) in multipleImages" :key="index" class="image-item">
+                      <span>{{ image.name }}</span>
+                      <button @click="removeImage(index)" type="button" class="remove-image">×</button>
+                    </div>
+                  </div>
+                </div>
+              </div> -->
+            </div>
+        </div>
+        <div class="sidebar-footer">
+          <button class="validate-btn" @click="submitForm" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter Document</button>
+        </div>
+      </div>
+
+      <!-- NEW SEPARATE CONSULTER PANEL -->
+      <!-- <div v-show="showConsulterPanel" style="background: rgba(255, 255, 255, 0.95); color: #333; padding: 20px; margin: 10px 0; border-radius: 8px; border: 2px solid #43E97B;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #43E97B;">
+    <h3 style="color: #43E97B; margin: 0; font-size: 1.3rem; font-weight: 600;">Consulter Documents</h3>
+    <button @click="closeConsulterPanel" style="background: none; border: none; color: #333; font-size: 1.5rem; cursor: pointer; padding: 5px; border-radius: 4px;">&times;</button>
+  </div>
+  <div style="max-height: 70vh; overflow-y: auto;">
+    <div v-if="consulterLoading" style="text-align: center; color: #43E97B; font-weight: 600; padding: 2em;">Chargement...</div>
+    <div v-else>
+      <div v-if="consulterError" style="text-align: center; color: #E53935; padding: 2em;">{{ consulterError }}</div>
+      <div v-else>
+        <h4 style="color: #333; margin-bottom: 10px; font-size: 1.1rem; font-weight: 600;">Documents existants</h4>
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
+          <table v-if="consulterDocList && consulterDocList.length" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+              <tr>
+                <th style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; background: #f8f9fa; color: #333; font-weight: 600; position: sticky; top: 0;">ID</th>
+                <th style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; background: #f8f9fa; color: #333; font-weight: 600; position: sticky; top: 0;">Chemin</th>
+                <th style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; background: #f8f9fa; color: #333; font-weight: 600; position: sticky; top: 0;">Désignation</th>
+                <th style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; background: #f8f9fa; color: #333; font-weight: 600; position: sticky; top: 0;">Consulter</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="document in consulterDocList" :key="document.idDocument">
+                <td style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd;">{{ document.idDocument }}</td>
+                <td style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd;">{{ document.chemin }}</td>
+                <td style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd;">{{ document.designation || '(non renseigné)' }}</td>
+                <td style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd;">
+                  <button @click="viewDocument(document)" style="background: #29b6f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">Consulter</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else style="text-align: center; font-style: italic; color: #666; padding: 2em;">Aucun document trouvé pour l'arborescence sélectionnée.</div>
         </div>
       </div>
     </div>
+  </div>
+</div> -->
+
+
+
+
+    </div>
+    </aside>
+
+<!-- Ajouter content is now displayed in the sidebar -->
 
     <!-- New Modal for Adding Directors -->
     <div v-if="directeurModal.visible" class="doc-modal-backdrop">
@@ -419,96 +568,7 @@
     </div>
 
 
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
-<!-- Consulter context modal  -->
-  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
- <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
-<!-- Consulter context modal with Director Dropdown -->
-    <div v-if="contextConsulter.visible" class="doc-modal-backdrop">
-      <div class="doc-modal" style="min-width:700px;min-height:350px">
-        <div class="doc-modal-header">
-          <h3>
-            Consulter - {{ contextConsulter.entityLabel }}
-          </h3>
-          <button @click="closeContextConsulterModal" class="close-modal">&times;</button>
-        </div>
-        <div class="doc-modal-body" style="max-height:420px; overflow-x:auto;">
-          <div v-if="contextConsulter.loading">Chargement...</div>
-          <div v-else-if="contextConsulter.error" style="color:red;">{{ contextConsulter.error }}</div>
-          <div v-else>
-            <table v-if="contextConsulter.data.length" class="doc-table">
-              <thead>
-                <tr>
-                  <th v-for="col in contextConsulter.columns" :key="col">{{ col }}</th>
-                  <th v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in contextConsulter.data" :key="row[contextConsulter.columnKeys[0]]">
-                  <td v-for="colKey in contextConsulter.columnKeys" :key="colKey">{{ row[colKey] ?? '-' }}</td>
-                  <!-- <td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
-                    <div class="dropdown">
-                      <button class="dropdown-btn" @click="loadDirecteursConsulter(contextConsulter.entityKey, row)">
-                        Liste Directeurs
-                        <span class="dropdown-arrow">▼</span>
-                      </button>
-                      <div class="dropdown-content" v-if="activeDropdownConsulter === `${contextConsulter.entityKey}-${row[contextConsulter.columnKeys[0]]}`">
-                        <div v-if="loadingDirecteursConsulter" class="dropdown-loading">Chargement...</div>
-                        <div v-else-if="directeursListConsulter.length === 0" class="dropdown-empty">Aucun directeur</div>
-                                <div v-else v-for="directeur in directeursListConsulter" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
-                          <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
-                          <div class="dropdown-dates">
-                            <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
-                          </div>
-                        </div>
-
-                      </div>
-                    </div>
-                  </td> -->
-                  
-
-
-<td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
-  <div class="dropdown-container">
-    <div class="dropdown">
-      <button class="dropdown-btn" @click="loadDirecteursConsulter(contextConsulter.entityKey, row)">
-        Liste Directeurs
-        <span class="dropdown-arrow">▼</span>
-      </button>
-      <div class="dropdown-content" v-if="activeDropdownConsulter === `${contextConsulter.entityKey}-${row[contextConsulter.columnKeys[0]]}`">
-        <div v-if="loadingDirecteursConsulter" class="dropdown-loading">Chargement...</div>
-        <div v-else-if="directeursListConsulter.length === 0" class="dropdown-empty">Aucun directeur</div>
-        <div v-else v-for="directeur in directeursListConsulter" :key="directeur.id || directeur.idDirecteur" class="dropdown-item">
-          <div><strong>{{ directeur.nom || directeur.nomDirecteur }} {{ directeur.prenom || directeur.prenomDirecteur }}</strong></div>
-          <div class="dropdown-dates">
-            <small>Début: {{ directeur.date_debut || 'Non défini' }} | Fin: {{ directeur.date_fin || 'Non défini' }}</small>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</td>
-
-
-
-
-                </tr>
-              </tbody>
-            </table>
-            <div v-if="!contextConsulter.data.length" style="text-align:center; font-style:italic;">
-              Aucun élément à afficher.
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+<!-- Consulter content is now displayed in the sidebar -->
 
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
  <!-- :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: -->
@@ -685,7 +745,7 @@
             </div>
           </div>
         </div>
-        <button class="save-btn" @click="submitForm" style="margin-top:1em;" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter Document</button>
+        <button class="save-btn" @click="submitForm" style="margin-top:1em;" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter </button>
       </div>
       <!-- PDF VIEWER MODAL -->
     <!-- PDF VIEWER MODAL -->
@@ -712,16 +772,107 @@
     <h2>Consulter Document</h2>
 
     <div class="file-viewer-container">
+      <!-- PDF Viewer -->
       <PdfViewer
-        v-if="selectedDocument.fichier"
+        v-if="selectedDocument.fichier && getFileType(selectedDocument) === 'pdf'"
         :pdfUrl="selectedDocument.fichier"
         :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
         :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
       />
+      
+      <!-- Image Viewer -->
+      <div v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'" class="image-viewer">
+        <img 
+          :src="selectedDocument.fichier" 
+          alt="Document" 
+          class="document-image"
+        />
+        <div class="image-actions">
+          <button 
+            @click="downloadFile(selectedDocument)" 
+            :class="['btn', { 'btn-disabled': (userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement) }]" 
+            :disabled="(userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement)"
+            title="Télécharger"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+            </svg>
+          </button>
+          <button 
+            @click="printImage(selectedDocument)" 
+            :class="['btn', { 'btn-disabled': (userStore.user.value?.profil !== 2 && !userStore.user.value?.impression) }]" 
+            :disabled="(userStore.user.value?.profil !== 2 && !userStore.user.value?.impression)"
+            title="Imprimer"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Video Viewer -->
+      <div v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'" class="video-viewer">
+        <video 
+          :src="selectedDocument.fichier" 
+          controls 
+          class="document-video"
+        >
+          Votre navigateur ne supporte pas la lecture vidéo.
+        </video>
+        <div class="video-actions">
+          <button 
+            @click="downloadFile(selectedDocument)" 
+            :class="['btn', { 'btn-disabled': (userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement) }]" 
+            :disabled="(userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement)"
+            title="Télécharger"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="modal-actions">
       <button @click="closeDocumentViewer" class="cancel">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Dossier Source Modal -->
+<div v-if="showImportModal" class="doc-modal-backdrop">
+  <div class="doc-modal">
+    <div class="doc-modal-header">
+      <h3>Importer Dossier Source</h3>
+      <button @click="closeImportModal" class="close-modal">&times;</button>
+    </div>
+    <div class="doc-modal-body">
+      <div class="step">
+        <label for="import-nom-fichier">Nom du Dossier</label>
+        <input id="import-nom-fichier" v-model="importNomFichier" type="text" placeholder="Nom du dossier source" />
+      </div>
+      <div class="step">
+        <label>Ajouter des fichiers (plans)</label>
+        <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
+          <input ref="fileInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi" @change="addSingleFile" style="display: none;" />
+          <button @click="fileInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Fichier</button>
+          <span style="color: #bbdefb; font-size: 0.9em;">{{ importFiles.length }} fichier(s) sélectionné(s)</span>
+        </div>
+        <div v-if="importFiles.length > 0" class="files-preview">
+          <h4>Fichiers sélectionnés ({{ importFiles.length }}):</h4>
+          <div class="file-list">
+            <div v-for="(file, index) in importFiles" :key="index" class="file-item">
+              <span>{{ file.name }}</span>
+              <button @click="removeImportFile(index)" type="button" class="remove-file" title="Retirer ce fichier">Retirer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="doc-modal-footer" style="text-align:right; margin-top:1em;">
+        <button class="save-btn" @click="submitImportForm" :disabled="!importFiles.length || !importNomFichier" style="font-size:1em;">Importer Dossier</button>
+      </div>
     </div>
   </div>
 </div>
@@ -735,11 +886,14 @@ import "vue-multiselect/dist/vue-multiselect.css";
 import axios from '../axios'
 import PdfViewer from '../components/PdfViewer.vue'
 import { useUserStore } from '../store/userStore'
+
+
 // const API_BASE = 'http://10.10.150.75:8000/api'
 
 interface Document {
   idDocument: number
   fichier?: string | null
+  detectedType?: string
 }
 
 
@@ -791,6 +945,12 @@ const uploadedFile = ref<File | null>(null)
 const multipleImages = ref<File[]>([])
 const showImageToPdfOption = ref(false)
 
+// Import Dossier Source variables
+const showImportModal = ref(false)
+const importFiles = ref<File[]>([])
+const importNomFichier = ref<string>('')
+const fileInput = ref<HTMLInputElement>()
+
 
 // Initial fetch
 onMounted(async () => {
@@ -832,6 +992,27 @@ watch(selectedTypeId, async (newTypeId) => {
     }
   }
 })
+
+// Add structure change handler
+function onStructureChange() {
+  selectedDivisionId.value = null
+  divisionsNv1.value = []
+  
+  // Set mode based on selected structure
+  if (selectedStructureId.value === 5) {
+    // CONTEXTE structure
+    mode.value = 'contexte'
+  } else {
+    // Any other structure
+    mode.value = 'structure'
+  }
+}
+
+// Function to go back to form selection
+function goBackToForm() {
+  mode.value = ''
+  selectedStructureId.value = null
+}
 
 watch(selectedStructureId, async (newStructureId) => {
   selectedDivisionId.value = null
@@ -887,6 +1068,12 @@ const isSubDivAllowed = computed(() => {
   if (selectedSubDiv3Id.value) return true
   return false
 })
+
+// const isPiecesGraphiques = computed(() => {
+//   if (!selectedDivisionId.value) return false
+//   const division = divisionsNv1.value.find(d => d.idSubDivisionNv_1 === selectedDivisionId.value)
+//   return division?.nom?.toUpperCase().includes('PIECES GRAPHIQUES') || division?.nom?.toUpperCase().includes('PIECE GRAPHIQUES') || false
+// })
 
 function onFileChange(e: Event) {
   const files = (e.target as HTMLInputElement).files
@@ -988,9 +1175,12 @@ function getSectionDesignation(id: number | null) {
 function getDivisionDesignation(id: number | null) {
   return divisionsNv1.value.find(d => d.idSubDivisionNv_1 === id)?.nom || ''
 }
-function getSubDiv2Designation(id: number | null) {
-  return filteredSubDiv2List.value.find(i => i.idSubDivisionNv_2.idSubDivisionNv_2 === id)?.idSubDivisionNv_2.nom || ''
-}
+// function getSubDiv2Designation(id: number | null) {
+//   return filteredSubDiv2List.value.find(i => i.idSubDivisionNv_2.idSubDivisionNv_2 === id)?.idSubDivisionNv_2.nom || ''
+// }
+// function getSubDiv2Designation(id: number | null) {
+//   return filteredSubDiv2List.value.find(i => i.idSubDivisionNv_2.idSubDivisionNv_2 === id)?.idSubDivisionNv_2.nom || ''
+// }
 function getSubDiv3Designation(id: number | null) {
   return filteredSubDiv3List.value.find(i => i.idSubDivisionNv_3.idSubDivisionNv_3 === id)?.idSubDivisionNv_3.nom || ''
 }
@@ -1035,6 +1225,11 @@ async function submitForm() {
   formData.append('dateCreation', currentDate);
   formData.append('dateModification', currentDate);
   
+  // Add the current user's ID as creerPar
+  if (userStore.user.value?.idUser) {
+    formData.append('creerPar', String(userStore.user.value.idUser));
+  }
+  
   try {
     let fileToUpload = uploadedFile.value;
     
@@ -1061,9 +1256,12 @@ async function submitForm() {
     multipleImages.value = [];
     showImageToPdfOption.value = false;
     
-    // Close modal if open
+    // Close modal or sidebar if open
     if (showDocModal.value) {
       closeDocModal();
+      fetchDocListForCurrentSelection(); // Refresh the document list
+    } else if (showStructureConsulterContent.value || showStructureDocContent.value) {
+    // else if (showStructureDocContent.value || showStructureConsulterContent.value) {
       fetchDocListForCurrentSelection(); // Refresh the document list
     }
     
@@ -1084,6 +1282,19 @@ const docModalMode = ref<'create'|'consult'|'delete'|''>('');
 const loadingDocs = ref(false);
 const docList = ref<any[]>([]);
 const docModalError = ref('');
+
+// Structure mode sidebar content
+const showStructureDocContent = ref(false);
+const showStructureConsulterContent = ref(false);
+
+// SUCCESS MESSAGE VARIABLE
+const showSuccess = ref(false);
+
+// NEW SEPARATE CONSULTER VARIABLES
+const showConsulterPanel = ref(false);
+// const consulterDocList = ref<any[]>([]);
+// const consulterLoading = ref(false);
+// const consulterError = ref('');
 
 
 
@@ -1251,6 +1462,9 @@ const activeDropdownConsulter = ref<string | null>(null);
 
 // --- Function to open the consulter popup and fetch data ---
 async function onConsulterFunction(entityKey: string) {
+  // Close ajouter modal if open
+  contextAjouter.value.visible = false;
+  
   const config = contextConsulterEntityConfig[entityKey as keyof typeof contextConsulterEntityConfig];
   if (!config) {
     alert(`Consulter config manquante pour: ${entityKey}`);
@@ -1472,6 +1686,9 @@ function getSelectedApiParam(entityKey: string): { produit?: number; projet?: st
 
 // Modify the onAjouter function
 async function onAjouter(entityKey: string) {
+  // Close consulter modal if open
+  contextConsulter.value.visible = false;
+  
   const config = contextEntitiesConfig[entityKey as keyof typeof contextEntitiesConfig];
   if (!config) {
     alert(`Config manquante pour: ${entityKey}`);
@@ -1903,12 +2120,18 @@ async function performEntityDelete(item:any) {
 
 
 
+let fetchInProgress = false;
+
 async function fetchDocListForCurrentSelection() {
+  if (fetchInProgress) return;
+  
   // Only fetch if essential IDs are selected
   if (!selectedTypeId.value || !selectedProduitId.value || !selectedStructureId.value || !selectedSectionId.value || !selectedDivisionId.value) {
     docList.value = [];
     return;
   }
+  
+  fetchInProgress = true;
   loadingDocs.value = true;
   docModalError.value = '';
   try {
@@ -1929,25 +2152,102 @@ async function fetchDocListForCurrentSelection() {
       params.idSubDivisionNv_4 = selectedSubDiv4Id.value;
     }
     const { data } = await axios.get('documentsFilter/', { params });
-    docList.value = data;
-  } catch(e) {
+    docList.value = Array.isArray(data) ? data : [];
+  } catch(e: any) {
     docModalError.value = "Erreur lors du chargement des documents.";
     docList.value = [];
   } finally {
     loadingDocs.value = false;
+    fetchInProgress = false;
   }
 }
 
-function openDocModal(mode: 'create'|'consult'|'delete') {
-  docModalMode.value = mode;
-  showDocModal.value = true;
-  fetchDocListForCurrentSelection();
-}
+// function openDocModal(mode: 'create'|'consult'|'delete') {
+//   docModalMode.value = mode;
+//   showDocModal.value = true;
+//   fetchDocListForCurrentSelection();
+// }
 
 function closeDocModal() {
   showDocModal.value = false;
   docModalError.value = '';
 }
+
+// Structure mode sidebar functions
+function openStructureDocContent() {
+  showSuccess.value = false; // Close success message if open
+  showConsulterPanel.value = false; // Close NEW consulter if open
+  showStructureDocContent.value = true;
+  showStructureConsulterContent.value = false; // Close consulter if open
+  fetchDocListForCurrentSelection();
+}
+
+function closeStructureDocContent() {
+  showStructureDocContent.value = false;
+  docModalError.value = '';
+}
+
+// SUCCESS MESSAGE FUNCTION
+function showSuccessMessage() {
+  showSuccess.value = true;
+  fetchDocListForCurrentSelection();
+}
+
+
+// async function loadConsulterDocs() {
+//   console.log('Loading consulter docs');
+//   if (!selectedTypeId.value || !selectedProduitId.value || !selectedStructureId.value || !selectedSectionId.value) {
+//     console.log('Missing required IDs');
+//     consulterDocList.value = [];
+//     return;
+//   }
+
+//   consulterLoading.value = true;
+//   consulterError.value = '';
+//   try {
+//     const params: Record<string, string | number> = {
+//       idTypeProduit: selectedTypeId.value,
+//       idProduit: selectedProduitId.value,
+//       idStructure: selectedStructureId.value,
+//       idSection: selectedSectionId.value
+//     };
+
+//     if (selectedDivisionId.value) params.idSubDivisionNv_1 = selectedDivisionId.value;
+//     if (requiresSubDiv2.value && selectedSubDiv2Id.value) {
+//       params.idSubDivisionNv_2 = selectedSubDiv2Id.value;
+//     }
+//     if (requiresSubDiv2.value && selectedSubDiv3Id.value) {
+//       params.idSubDivisionNv_3 = selectedSubDiv3Id.value;
+//     }
+//     if (requiresSubDiv2.value && selectedSubDiv4Id.value) {
+//       params.idSubDivisionNv_4 = selectedSubDiv4Id.value;
+//     }
+
+//     console.log('Params:', params);
+//     const { data } = await axios.get('documentsFilter/', { params });
+//     console.log('API Response:', data);
+//     consulterDocList.value = Array.isArray(data) ? data : [];
+//     console.log('consulterDocList:', consulterDocList.value); // Add this line
+//   } catch(e: any) {
+//     console.error('Error loading consulter docs:', e);
+//     consulterError.value = "Erreur lors du chargement des documents.";
+//     consulterDocList.value = [];
+//   } finally {
+//     consulterLoading.value = false;
+//   }
+// }
+
+
+// function openStructureConsulterContent() {
+//   showStructureConsulterContent.value = true;
+//   showStructureDocContent.value = false; // Close ajouter if open
+//   fetchDocListForCurrentSelection();
+// }
+
+// function closeStructureConsulterContent() {
+//   showStructureConsulterContent.value = false;
+//   docModalError.value = '';
+// }
 async function handleDeleteDocument(document: any) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) return;
   try {
@@ -1965,9 +2265,18 @@ async function viewDocument(document: Document) {
     const blob = await response.blob()
     const fileUrl = URL.createObjectURL(blob)
     
+    // Detect file type from blob content-type
+    let detectedType = 'pdf'
+    if (blob.type.startsWith('image/')) {
+      detectedType = 'image'
+    } else if (blob.type.startsWith('video/')) {
+      detectedType = 'video'
+    }
+    
     selectedDocument.value = {
       ...document,
-      fichier: fileUrl
+      fichier: fileUrl,
+      detectedType: detectedType
     }
   } catch (error) {
     console.error('Error loading document:', error)
@@ -1977,7 +2286,7 @@ async function viewDocument(document: Document) {
 
 // ==== Context directors logic: string keys for TS safety ====
 // Context mode variables
-const mode = ref<'structure' | 'contexte' | ''>('structure')
+const mode = ref<'structure' | 'contexte' | ''>('')
 const loadingContexteLists = ref(false)
 const bureauxEtudesList = ref<any[]>([])
 const fournisseursList = ref<any[]>([])
@@ -2066,6 +2375,15 @@ const selectedProjetNoms = computed(() =>
   selectedProjets.value.map(p => p.description)
 )
 
+// Computed properties to check if there are more items than displayed
+const hasMoreProjets = ref(false)
+const hasMoreBET = ref(false)
+const hasMoreFournisseurs = ref(false)
+const hasMoreMOE = ref(false)
+const hasMoreMOA = ref(false)
+const hasMoreSoustraitants = ref(false)
+const hasMoreDirecteurs = ref(false)
+
 
 
 // Watch for mode changes
@@ -2097,6 +2415,9 @@ watch(mode, async (val) => {
       soustraitantsList.value = sttRes.data;
       projetsList.value = projetsRes.data;
       directionsProjetsList.value = directionsRes.data;
+      
+      // Auto-load existing context data for arborescence
+      await loadExistingContextData();
     } catch (e) {
       alert("Erreur de chargement des listes de contexte.");
     } finally {
@@ -2166,6 +2487,84 @@ watch(mode, async (val) => {
 //   const blob = await html2pdf().from(pdfContent).set(opt).outputPdf('blob')
 //   pdfUrl.value = URL.createObjectURL(blob)
 // }
+
+// Auto-load existing context data when entering context mode
+async function loadExistingContextData() {
+  if (!selectedProduitId.value) return;
+  
+  try {
+    // Load existing context entities (limit to 3 items each)
+    const contextPromises = [
+      loadExistingEntity('projet', 'projets/by-produit/', selectedProjets),
+      loadExistingEntity('fournisseur', 'fournisseur/by-produit/', selectedFournisseurs),
+      loadExistingEntity('maitre_ouvrage', 'moa/by-produit/', selectedMaitresOuvrage),
+      loadExistingEntity('maitre_oeuvre', 'moe/by-produit/', selectedMaitresOeuvre),
+      loadExistingEntity('soustraitants_tvx', 'soustraitants/by-produit/', selectedSoustraitants),
+      loadExistingEntity('bet_soustraitants_etudes', 'bet/by-produit/', selectedBureauxEtudes)
+    ];
+    
+    await Promise.all(contextPromises);
+    
+    // Load direction projet if projet is selected
+    if (selectedProjets.value.length > 0) {
+      await loadExistingDirectionProjet();
+    }
+  } catch (e) {
+    console.error('Error loading existing context data:', e);
+  }
+}
+
+async function loadExistingEntity(entityKey: string, endpoint: string, targetRef: any) {
+  try {
+    const { data } = await axios.get(`${endpoint}${selectedProduitId.value}`);
+    const items = Array.isArray(data) ? data : [data];
+    const validItems = items.filter(item => item && typeof item === 'object');
+    
+    // Set "more" flags based on entity type
+    switch (entityKey) {
+      case 'projet':
+        hasMoreProjets.value = validItems.length > 3;
+        break;
+      case 'bet_soustraitants_etudes':
+        hasMoreBET.value = validItems.length > 3;
+        break;
+      case 'fournisseur':
+        hasMoreFournisseurs.value = validItems.length > 3;
+        break;
+      case 'maitre_oeuvre':
+        hasMoreMOE.value = validItems.length > 3;
+        break;
+      case 'maitre_ouvrage':
+        hasMoreMOA.value = validItems.length > 3;
+        break;
+      case 'soustraitants_tvx':
+        hasMoreSoustraitants.value = validItems.length > 3;
+        break;
+    }
+    
+    // Limit to 3 items for initial display
+    targetRef.value = validItems.slice(0, 3);
+  } catch (e) {
+    targetRef.value = [];
+  }
+}
+
+async function loadExistingDirectionProjet() {
+  if (!selectedProjets.value.length) return;
+  
+  try {
+    const code = selectedProjets.value[0].code;
+    const { data } = await axios.get(`directeurs-by-projet/${encodeURIComponent(code)}`);
+    const items = Array.isArray(data) ? data : [data];
+    const validItems = items.filter(item => item && typeof item === 'object');
+    
+    hasMoreDirecteurs.value = validItems.length > 3;
+    selectedDirectionsProjets.value = validItems.slice(0, 3);
+  } catch (e) {
+    selectedDirectionsProjets.value = [];
+    hasMoreDirecteurs.value = false;
+  }
+}
 
 // Context entities configuration
 const contextEntitiesConfig = {
@@ -2347,11 +2746,201 @@ function getEntityConfig(key: string) {
   return contextEntitiesConfig[key as keyof typeof contextEntitiesConfig];
 }
 
+function getFileType(document: any): string {
+  // Use detected type if available
+  if (document.detectedType) {
+    return document.detectedType
+  }
+  
+  if (!document.fichier) return 'pdf'
+  
+  const url = document.fichier.toLowerCase()
+  if (url.includes('png') || url.includes('jpg') || url.includes('jpeg') || url.includes('gif')) return 'image'
+  if (url.includes('mp4') || url.includes('mov') || url.includes('avi')) return 'video'
+  return 'pdf'
+}
+
+function getDocumentType(document: any): string {
+  if (!document.nomFichier) return 'Document'
+  
+  const fileName = document.nomFichier.toLowerCase()
+  if (fileName.endsWith('.pdf')) return 'PDF'
+  if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.gif')) return 'Image'
+  if (fileName.endsWith('.mp4') || fileName.endsWith('.mov') || fileName.endsWith('.avi')) return 'Vidéo'
+  if (fileName.endsWith('.txt')) return 'Texte'
+  if (fileName.endsWith('.zip')) return 'Archive'
+  return 'Document'
+}
+
+
+
+async function downloadFile(doc: any) {
+  if (!doc.fichier) return
+  
+  try {
+    const response = await fetch(doc.fichier)
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `document-${doc.idDocument}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Download failed:', error)
+    alert('Erreur lors du téléchargement')
+  }
+}
+
+function printImage(doc: any) {
+  const printWindow = window.open('', '_blank')
+  if (printWindow) {
+    printWindow.document.write(`
+      <html>
+        <head><title>Print Image</title></head>
+        <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;">
+          <img src="${doc.fichier}" style="max-width:100%;max-height:100%;"/>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
+    printWindow.close()
+  }
+}
+
 function closeDocumentViewer() {
   if (selectedDocument.value?.fichier) {
     URL.revokeObjectURL(selectedDocument.value.fichier)
   }
   selectedDocument.value = null
+}
+
+// Import Dossier Source functions
+// function openImportModal() {
+//   showImportModal.value = true
+//   importFiles.value = []
+//   importNomFichier.value = ''
+// }
+
+function closeImportModal() {
+  showImportModal.value = false
+  importFiles.value = []
+  importNomFichier.value = ''
+}
+
+function addSingleFile(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    // Add the selected file to existing ones
+    const newFile = files[0]
+    importFiles.value = [...importFiles.value, newFile]
+    // Clear the input so the same file can be selected again
+    ;(e.target as HTMLInputElement).value = ''
+  }
+}
+
+function removeImportFile(index: number) {
+  importFiles.value.splice(index, 1)
+}
+
+async function createZipFile(files: File[], zipName: string): Promise<File> {
+  // @ts-ignore
+  const JSZip = (await import('jszip')).default
+  // @ts-ignore
+  const zip = new JSZip()
+  
+  // Add each file to the zip
+  for (const file of files) {
+    zip.file(file.name, file)
+  }
+  
+  // Generate the zip file
+  const zipBlob = await zip.generateAsync({ type: 'blob' })
+  return new File([zipBlob], `${zipName}.zip`, { type: 'application/zip' })
+}
+
+async function submitImportForm() {
+  if (!importFiles.value.length || !importNomFichier.value) {
+    alert('Veuillez sélectionner des fichiers et saisir un nom de dossier')
+    return
+  }
+
+  const formData = new FormData()
+  
+  // Add current date for creation and modification
+  const currentDate = new Date().toISOString().split('T')[0]
+  
+  formData.append('idTypeProduit', String(selectedTypeId.value || ''))
+  formData.append('idProduit', String(selectedProduitId.value || ''))
+  formData.append('idStructure', String(selectedStructureId.value || ''))
+  formData.append('idSection', String(selectedSectionId.value || ''))
+  formData.append('idSubDivisionNv_1', String(selectedDivisionId.value || ''))
+  
+  // Only add subdivision fields if they have values
+  if (selectedSubDiv2Id.value) {
+    formData.append('idSubDivisionNv_2', String(selectedSubDiv2Id.value))
+  }
+  if (selectedSubDiv3Id.value) {
+    formData.append('idSubDivisionNv_3', String(selectedSubDiv3Id.value))
+  }
+  if (selectedSubDiv4Id.value) {
+    formData.append('idSubDivisionNv_4', String(selectedSubDiv4Id.value))
+  }
+  
+  formData.append('typeProduitDesignation', getTypeDesignation(selectedTypeId.value) || '')
+  formData.append('produitDesignation', getProduitDesignation(selectedProduitId.value) || '')
+  formData.append('structureNom', getStructureDesignation(selectedStructureId.value) || '')
+  formData.append('sectionNom', getSectionDesignation(selectedSectionId.value) || '')
+  formData.append('subDivisionNv1Nom', getDivisionDesignation(selectedDivisionId.value) || '')
+  formData.append('subDivisionNv3Nom', getSubDiv3Designation(selectedSubDiv3Id.value) || '')
+  formData.append('subDivisionNv4Nom', getSubDiv4Designation(selectedSubDiv4Id.value) || '')
+  formData.append('designation', importNomFichier.value || '')
+  formData.append('chemin', 'No chemin')
+  formData.append('version', '1.0')
+  formData.append('dateCreation', currentDate)
+  formData.append('dateModification', currentDate)
+  
+  // Add the current user's ID as creerPar
+  if (userStore.user.value?.idUser) {
+    formData.append('creerPar', String(userStore.user.value.idUser))
+  }
+  
+  try {
+    // Create zip file from selected files
+    const zipFile = await createZipFile(importFiles.value, importNomFichier.value)
+    formData.append('plan', zipFile)
+
+    const response = await axios.post('http://10.10.150.75:8000/api/documents/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    alert('Dossier source importé avec succès!')
+    console.log(response.data)
+    
+    // Reset form and close modal
+    closeImportModal()
+    
+    // Refresh document list if modal or sidebar is open
+    if (showDocModal.value || showStructureDocContent.value || showStructureConsulterContent.value) {
+      fetchDocListForCurrentSelection()
+    }
+    
+  } catch (error: any) {
+    console.error('Erreur lors de l\'importation du dossier source', error)
+    if (error.response?.data) {
+      console.error('Response data:', error.response.data)
+      alert('Erreur: ' + JSON.stringify(error.response.data))
+    } else {
+      alert('Erreur lors de l\'importation du dossier source')
+    }
+  }
 }
 
 </script>
@@ -2367,73 +2956,310 @@ function closeDocumentViewer() {
   background: linear-gradient(120deg, #16213e 70%, #1a237e 100%);
   color: #e3eafc;
   font-family: 'Inter', 'Segoe UI', 'Roboto', 'Arial', sans-serif;
-  gap: 4em;
+  gap: 1em;
 }
 
 .doc-sidebar {
-  width: 700px;
+  width: 900px;
   background: rgba(22,33,62,0.98);
   border-left: 2px solid #232f4b;
-  padding: 2em 2.5em 1em 2.5em;
+  padding: 1.5em 2em 1em 2em;
   min-height: 100vh;
   box-shadow: -2px 0 16px 0 #151e3044;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   order: 2;
+  overflow-y: auto;
 }
 
-/* APPLY TO DIRECT CHILDREN ONLY */
-.doc-sidebar ul > li {
-  display: grid;
-  grid-template-columns: 135px 60px 1fr;
-  align-items: start;
+/* Arborescence section */
+.arborescence-section {
+  margin-bottom: 0.3em;
+  padding-bottom: 0.2em;
+  border-bottom: 2px solid #232f4b;
+}
+
+.arborescence-section h3 {
+  color: #43E97B;
   margin-bottom: 0.5em;
-}
-
-.doc-sidebar .arb-label {
-  font-weight: 600;
+  font-size: 1.3rem;
   text-align: left;
-  white-space: nowrap;
-  color: #bbdefb;
+  margin-left: 0;
+  padding-left: 0;
 }
 
-.doc-sidebar .arb-separator {
-  text-align: center;
-  color: #bbdefb;
+/* Tree structure styles */
+.tree-structure {
+  margin-bottom: 0.5em;
+  padding: 0.2em;
+  background: rgba(67, 233, 123, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #43E97B;
 }
 
-.doc-sidebar li > b {
+.tree-node {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.2em;
+  font-size: 1rem;
+}
+
+.tree-child {
+  display: flex;
+  align-items: center;
+  margin-left: 2em;
+  margin-top: 0.5em;
+  padding-left: 1em;
+  border-left: 2px solid #43E97B;
+  position: relative;
+}
+
+.tree-child::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 1em;
+  height: 2px;
+  background: #43E97B;
+}
+
+.tree-icon {
+  margin-right: 0.5em;
+  font-size: 1.1em;
+}
+
+.tree-label {
+  color: #bbdefb;
+  font-weight: 600;
+}
+
+.selected-produit {
+  color: #43E97B !important;
+  font-weight: 700;
+}
+
+.arb-content {
+  padding-left: 0;
+  text-align: left;
+}
+
+.arb-line {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0.4em;
+  line-height: 1.3;
+}
+
+.arb-label {
+  font-weight: 600;
+  color: #bbdefb;
+  min-width: 130px;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.arb-value {
   font-weight: 700;
   color: #43E97B;
-  text-align: left;
-  display: block; /* important for forcing alignment */
-  width: 100%;     /* fills the grid cell */
+  flex: 1;
+  word-wrap: break-word;
+  font-size: 1rem;
 }
 
+/* Modal section */
+.modal-section {
+  margin-top: 0.3em;
+}
 
+/* Sidebar content styles */
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
 
-
-
-
-
-
-
-/* Nested for context */
-.doc-sidebar ul ul > li {
-  display: grid;
-  grid-template-columns: max-content 1fr;
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5em;
-  margin-bottom: 0.4em;
-  padding-left: 0.5em;
+  margin-bottom: 0.5em;
+  padding-bottom: 0.2em;
+  border-bottom: 2px solid #232f4b;
 }
-.doc-sidebar ul ul > li > .arb-label {
+
+.sidebar-header h3 {
+  color: #43E97B;
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #e3eafc;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.2em;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.section {
+  margin-bottom: 0.8em;
+}
+
+.section h4 {
   color: #bbdefb;
-  font-weight: 500;
+  margin-bottom: 0.6em;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.table-container {
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid #232f4b;
+  border-radius: 6px;
+  margin-bottom: 1em;
+}
+
+.sidebar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+.sidebar-table th,
+.sidebar-table td {
+  padding: 0.8em 1em;
+  text-align: left;
+  border-bottom: 1px solid #232f4b;
+}
+
+.sidebar-table th {
+  background: rgba(33, 150, 243, 0.1);
+  color: #bbdefb;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.sidebar-table tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-table tr.selected {
+  background: rgba(67, 233, 123, 0.1);
+}
+
+.add-btn, .remove-btn, .add-director-btn, .validate-btn {
+  padding: 0.5em 1em;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 0.5em;
+}
+
+.add-btn {
+  background: #43E97B;
+  color: #111;
+}
+
+.add-btn:hover:not(:disabled) {
+  background: #3bc96a;
+  transform: translateY(-1px);
+}
+
+.add-btn:disabled {
+  background: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.remove-btn {
+  background: #E53935;
+  color: white;
+}
+
+.remove-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+}
+
+.add-director-btn {
+  background: #2196F3;
+  color: white;
+}
+
+.add-director-btn:hover {
+  background: #1976d2;
+  transform: translateY(-1px);
+}
+
+.validate-btn {
+  background: linear-gradient(90deg, #2196F3 0%, #43E97B 100%);
+  color: white;
+  padding: 1em 2.5em;
+  font-size: 1.1rem;
+  margin-top: 1.2em;
+}
+
+.validate-btn:hover {
+  background: linear-gradient(90deg, #43E97B 0%, #2196F3 100%);
+  transform: translateY(-1px);
+}
+
+.sidebar-footer {
+  padding-top: 0.8em;
+  border-top: 2px solid #232f4b;
+  text-align: center;
+}
+
+.no-data {
+  text-align: center;
+  font-style: italic;
+  color: #888;
+  padding: 1em;
+}
+
+.loading {
+  text-align: center;
+  color: #43E97B;
+  font-weight: 600;
+  padding: 2em;
+}
+
+.error {
+  text-align: center;
+  color: #E53935;
+  padding: 2em;
+}
+
+.more-indicator {
+  color: #bbdefb;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 0.85em;
+  opacity: 0.8;
 }
 .add-doc-main {
   flex: 1;
-  padding: 2.5em 3em 2.5em 3em;
-  max-width: 800px;
+  padding: 0.1em 2em 0.3em 3em;
+  max-width: 700px;
   margin: 0;
   display: flex;
   flex-direction: column;
@@ -2443,7 +3269,7 @@ function closeDocumentViewer() {
   color: #90caf9;
   font-size: 2rem;
   font-weight: 800;
-  margin-bottom: 1.5em;
+  margin-bottom: 0.5em;
   letter-spacing: 1px;
 }
 .step {
@@ -2453,6 +3279,29 @@ function closeDocumentViewer() {
   padding: 1em 2em 1em 1.5em;
   box-shadow: 0 2px 12px 0 #1a237e22;
   border-left: 4px solid #2196F3;
+}
+
+/* Structure mode: side by side layout */
+.structure-step-form .step {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 2em;
+  align-items: start;
+  padding: 1.2em 2em;
+}
+
+.structure-step-form .step label {
+  margin-bottom: 0;
+  text-align: left;
+  font-weight: 600;
+  color: #bbdefb;
+  padding-left: 0;
+  padding-top: 10px;
+}
+
+.structure-step-form .step select,
+.structure-step-form .step input {
+  margin-bottom: 0;
 }
 
 /* Structure fields styling with enhanced background */
@@ -2489,6 +3338,19 @@ select, input[type="text"], input[type="date"], input[type="email"], input[type=
   margin-bottom: 1em;
   transition: border 0.2s, box-shadow 0.2s;
   outline: none;
+  box-sizing: border-box;
+}
+
+/* Fix select specific styling */
+select {
+  padding-left: 1em;
+  padding-right: 1em;
+  text-indent: 0;
+  appearance: none;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23ffffff" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 1em center;
+  background-size: 12px;
 }
 
 select:focus, input:focus {
@@ -2519,27 +3381,7 @@ select:focus, input:focus {
 
 
 
-.mode-switch {
-  display: flex;
-  gap: 1em;
-  margin-top: 0.7em;
-}
-.mode-switch button {
-  flex: 1;
-  padding: 0.7em 0;
-  border: none;
-  border-radius: 6px;
-  background: #232f4b;
-  color: #bbdefb;
-  font-weight: 700;
-  font-size: 1.1rem;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-.mode-switch button.active, .mode-switch button:hover {
-  background: linear-gradient(90deg, #2196F3 0%, #43E97B 100%);
-  color: #fff;
-}
+
 .file-info {
   margin-top: 0.5em;
   display: flex;
@@ -2612,23 +3454,92 @@ ul {
   list-style-type: disc;
   padding-left: 1.8em;
 }
+@media (max-width: 1200px) {
+  .doc-sidebar {
+    width: 500px;
+  }
+  
+  .sidebar-table {
+    font-size: 0.8rem;
+  }
+  
+  .sidebar-table th,
+  .sidebar-table td {
+    padding: 0.5em 0.6em;
+  }
+}
+
 @media (max-width: 900px) {
   .add-doc-root {
     flex-direction: column;
+    gap: 0;
   }
+  
   .doc-sidebar {
     width: 100vw;
-    min-height: unset;
+    min-height: 50vh;
+    max-height: 70vh;
     border-left: none;
     border-top: 2px solid #232f4b;
     box-shadow: none;
     padding: 1.2em 1em;
     order: 2;
+    font-size: 1rem;
   }
+  
   .add-doc-main {
     padding: 1.2em 0.5em;
     max-width: 100vw;
     order: 1;
+  }
+  
+  .sidebar-header h3 {
+    font-size: 1.2rem;
+  }
+  
+  .section h4 {
+    font-size: 1rem;
+  }
+  
+  .table-container {
+    max-height: 250px;
+  }
+  
+  .sidebar-table {
+    font-size: 0.75rem;
+  }
+  
+  .sidebar-table th,
+  .sidebar-table td {
+    padding: 0.4em 0.5em;
+  }
+  
+  .add-btn, .remove-btn, .add-director-btn {
+    padding: 0.3em 0.6em;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .doc-sidebar {
+    padding: 1em 0.5em;
+  }
+  
+  .sidebar-table th,
+  .sidebar-table td {
+    padding: 0.3em 0.4em;
+  }
+  
+  .add-btn, .remove-btn, .add-director-btn {
+    padding: 0.25em 0.5em;
+    font-size: 0.7rem;
+    margin-right: 0.25em;
+  }
+  
+  .dropdown-btn {
+    min-width: 100px;
+    font-size: 0.7rem;
+    padding: 4px 8px;
   }
 }
 .context-stepper select {
@@ -2646,6 +3557,40 @@ ul {
   margin-bottom: 0.5em;
   font-weight: 700;
   color: #51ffbf;
+}
+
+.context-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.back-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.8em 1.5em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.back-btn:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.context-header h2 {
+  margin: 0;
+  color: #43E97B;
 }
 
 
@@ -2666,22 +3611,7 @@ ul {
   align-items: center; /* Vertically align buttons */
 }
 
-.consult-btn {
-  background: #4caf50; /* Green */
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 0.8em 1.5em;
-  font-weight: 700;
-  font-size: 1.1rem;
-  cursor: pointer;
-  margin-left: 1em;
-  transition: background 0.2s;
-}
 
-.consult-btn:hover {
-  background: #45a049;
-}
 
 .delete-btn {
   background: #f44336; /* Red */
@@ -2739,7 +3669,7 @@ ul {
   margin-bottom: 1em;
 }
 .doc-table th, .doc-table td {
-  border: 1px solid #1a237e;
+  border: 2px solid #1662f0;
   padding: 0.5em 0.7em;
   text-align: left;
 }
@@ -2754,6 +3684,7 @@ ul {
 }
 .view-button { background: #29b6f6; color: #fff; border: none; }
 .view-button:hover { background: #039be5; }
+.view-button { padding: 0.4em 1em; border-radius: 5px; font-weight: 600; cursor: pointer; }
 .delete-button { background: #f44336; color: #fff; border: none; }
 .delete-button:hover { background: #d32f2f; }
 .save-directeur-btn { background: #3aaa49; color: #fff; border: none; }
@@ -2778,7 +3709,7 @@ ul {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.1em 1.7em;
+  padding: 0.5em 1.7em;
 }
 .context-entity-title {
   font-size: 1.15em;
@@ -2830,7 +3761,7 @@ ul {
 }
 /* Dropdown styles */
 .doc-modal-body {
-  max-height: 1000px;
+  max-height: 900px;
   overflow-y: auto; /* Only vertical scrolling for the modal body */
   overflow-x: hidden; /* Prevent horizontal scrolling */
 }
@@ -2859,15 +3790,18 @@ ul {
 }
 
 .dropdown-content {
-  position: fixed; /* Change from absolute to fixed */
+  position: absolute;
   background-color: #1a237e;
-  min-width: 250px;
-  max-width: 350px;
-  max-height: 300px;
+  min-width: 200px;
+  max-width: 300px;
+  max-height: 200px;
   overflow-y: auto;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 9999; /* Very high z-index */
+  z-index: 100;
   border-radius: 4px;
+  right: 0;
+  top: 100%;
+  margin-top: 2px;
 }
 
 .dropdown-item {
@@ -2917,9 +3851,9 @@ ul {
   background-color: white;
   padding: 20px;
   border-radius: 8px;
-  max-width: 800px;
+  max-width: 95vw;
   width: 90%;
-  max-height: 80vh;
+  max-height: 95vh;
   overflow-y: auto;
 }
 
@@ -2987,4 +3921,287 @@ ul {
 .remove-image:hover {
   background: #d32f2f;
 }
+
+.import-btn {
+  background: linear-gradient(90deg, #FF9800 0%, #FF5722 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.8em 1.5em;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.import-btn:hover {
+  background: linear-gradient(90deg, #FF5722 0%, #FF9800 100%);
+}
+
+.import-btn.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.consulter-btn {
+  background: linear-gradient(90deg, #9C27B0 0%, #673AB7 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.8em 1.5em;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.consulter-btn:hover {
+  background: linear-gradient(90deg, #673AB7 0%, #9C27B0 100%);
+}
+
+.files-preview {
+  margin-top: 1em;
+  padding: 1em;
+  background: rgba(255, 152, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid #FF9800;
+}
+
+.files-preview h4 {
+  color: #FF9800;
+  margin-bottom: 0.5em;
+  font-size: 1rem;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5em;
+  background: rgba(26, 35, 126, 0.5);
+  border-radius: 4px;
+  color: #e3eafc;
+}
+
+.remove-file {
+  background: #E53935;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.3em 0.8em;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.85em;
+  transition: background 0.2s;
+}
+
+.remove-file:hover {
+  background: #d32f2f;
+}
+
+.image-viewer, .video-viewer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.document-image {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 1rem auto;
+}
+
+.document-video {
+  max-width: 100%;
+  max-height: 80vh;
+  display: block;
+  margin: 0 auto 1rem auto;
+}
+
+.image-actions, .video-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.btn {
+  padding: 0.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
+.btn:hover:not(.btn-disabled) {
+  background-color: #2563eb;
+}
+
+.btn-disabled {
+  background-color: #9ca3af !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+/* NEW CONSULTER PANEL STYLES */
+.consulter-panel-wrapper {
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  padding: 20px;
+  margin: 10px 0;
+  border-radius: 8px;
+  border: 2px solid #43E97B;
+}
+
+.consulter-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #43E97B;
+}
+
+.consulter-panel-title {
+  color: #43E97B;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.consulter-close-btn {
+  background: none;
+  border: none;
+  color: #333;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+}
+
+.consulter-close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.consulter-panel-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.consulter-loading {
+  text-align: center;
+  color: #43E97B;
+  font-weight: 600;
+  padding: 2em;
+}
+
+.consulter-error {
+  text-align: center;
+  color: #E53935;
+  padding: 2em;
+}
+
+.consulter-section-title {
+  color: #333;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.consulter-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.consulter-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.consulter-table th,
+.consulter-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.consulter-table th {
+  background: #f8f9fa;
+  color: #333;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.consulter-table tr:hover {
+  background: rgba(67, 233, 123, 0.1);
+}
+
+.consulter-view-btn {
+  background: #29b6f6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.consulter-view-btn:hover {
+  background: #039be5;
+}
+
+.consulter-no-data {
+  text-align: center;
+  font-style: italic;
+  color: #666;
+  padding: 2em;
+}
+
+/* Success Message Styles */
+.success-message-sidebar {
+  background: linear-gradient(90deg, #43E97B 0%, #4CAF50 100%);
+  color: white;
+  padding: 1.5em 2em;
+  border-radius: 12px;
+  margin-bottom: 1.5em;
+  font-weight: 600;
+  font-size: 1.2rem;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(67, 233, 123, 0.4);
+  animation: slideInRight 0.4s ease-out;
+  border: 2px solid #4CAF50;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 </style>

@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import axiosInstance from '../axios'
 
 interface UserProfile {
+  idUser: number
   username: string
   email: string
   poste: string
@@ -14,6 +15,7 @@ interface UserProfile {
   produits: number[]
   impression?: boolean
   telechargement?: boolean
+  plan?: boolean
 }
 
 const currentUser = ref<UserProfile | null>(null)

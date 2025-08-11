@@ -27,8 +27,9 @@
         <img :src="cosiderLogo" alt="Cosider Logo" style="max-width: 290px; max-height: 290px;" />
       </div>
       <h1 class="futuristic-title">
-        <span>Connectez-vous</span>
-        <span class="brand">fdem</span>
+        <span class="brand">FOND</span>
+        <span class="brand"> DOCUMENTAIRE </span>
+         <span class="brand">ETUDES & METHODES</span>
       </h1>
       <form @submit.prevent="handleLogin" novalidate>
         <div class="futuristic-form-group">
@@ -485,7 +486,7 @@ function particleStyle(n: number) {
   text-align: center;
   margin-bottom: 2.1rem;
   color: #90caf9;
-  font-size: 2.1rem;
+  font-size: 1.7rem;
   font-weight: 780;
   letter-spacing: 1.2px;
   position: relative;
@@ -497,10 +498,10 @@ function particleStyle(n: number) {
 }
 .brand {
   color: #2196F3;
-  font-weight: 900;
+  font-weight: 400;
   letter-spacing: 2px;
   text-shadow: 0 2px 8px #2196f388;
-  font-size: 2.1rem;
+  font-size: 1.5rem;
 }
 
 /* Inputs - blue accent */
@@ -514,11 +515,12 @@ label {
   color: #90caf9;
   font-weight: 600;
   letter-spacing: 0.01em;
+  text-align: left;
 }
 .futuristic-input-wrapper {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items:flex-start ;
 }
 .futuristic-input-wrapper input {
   width: 100%;

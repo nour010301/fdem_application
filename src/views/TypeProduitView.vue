@@ -90,10 +90,21 @@
       <div v-if="showAddPopup" class="modal-overlay">
         <div class="modal">
           <h2>Ajouter un Type de Produit</h2>
-          <input v-model="newType.designation" placeholder="Désignation" />
-          <textarea v-model="newType.description" placeholder="Description (optionnelle)" />
+          <div class="form-group">
+            <label>Désignation *</label>
+            <input 
+              v-model="newType.designation" 
+              placeholder="Désignation" 
+              :class="{ 'error': validationErrors.designation }"
+            />
+            <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea v-model="newType.description" placeholder="Description (optionnelle)" />
+          </div>
           <div class="modal-actions">
-            <button @click="addType">Ajouter</button>
+            <button @click="validateAndAddType">Ajouter</button>
             <button @click="showAddPopup = false" class="cancel">Annuler</button>
           </div>
         </div>
@@ -152,6 +163,11 @@
   const newType = ref({ designation: '', description: '' })
   const typeToDelete = ref<TypeProduit | null>(null)
   const typeToUpdate = ref<TypeProduit | null>(null)
+
+  // Validation errors
+  const validationErrors = ref({
+    designation: ''
+  })
 
   // User store for role-based access control
   const userStore = useUserStore()
@@ -213,6 +229,7 @@
     types.value.push(res.data)
     showAddPopup.value = false
     newType.value = { designation: '', description: '' }
+    validationErrors.value = { designation: '' }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -260,6 +277,30 @@ async function deleteType() {
 
 
   
+  // Validate required fields
+  function validateRequiredFields() {
+    const errors = {
+      designation: ''
+    }
+    
+    let isValid = true
+    
+    if (!newType.value.designation.trim()) {
+      errors.designation = 'La désignation est requise'
+      isValid = false
+    }
+    
+    validationErrors.value = errors
+    return isValid
+  }
+
+  // Validate and add Type
+  function validateAndAddType() {
+    if (validateRequiredFields()) {
+      addType()
+    }
+  }
+
   function exportCSV() {
     const headers = ['ID Type', 'Désignation', 'Description']
     const rows = filteredTypes.value.map(type => [
@@ -549,5 +590,29 @@ h1 {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.6;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.form-group input.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  font-weight: 500;
 }
 </style>

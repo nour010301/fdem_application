@@ -60,16 +60,39 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter une Subdivision</h2>
-        <input v-model="newSubdivision.nom" placeholder="Nom" />
-        <textarea v-model="newSubdivision.designation" placeholder="Désignation (optionnelle)" />
-        <select v-model="newSubdivision.idSubDivisionNv_3">
-          <option value="" disabled>Sélectionnez une subdivision Niveau 3</option>
-          <option v-for="subdiv in subdivisionsNv3" :key="subdiv.idSubDivisionNv_3" :value="subdiv.idSubDivisionNv_3">
-            {{ subdiv.nom }}
-          </option>
-        </select>
+        <div class="form-group">
+          <label>Nom *</label>
+          <input 
+            v-model="newSubdivision.nom" 
+            placeholder="Nom" 
+            :class="{ 'error': validationErrors.nom }"
+          />
+          <div v-if="validationErrors.nom" class="error-message">{{ validationErrors.nom }}</div>
+        </div>
+        <div class="form-group">
+          <label>Désignation *</label>
+          <textarea 
+            v-model="newSubdivision.designation" 
+            placeholder="Désignation" 
+            :class="{ 'error': validationErrors.designation }"
+          />
+          <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div>
+        </div>
+        <div class="form-group">
+          <label>Subdivision Niveau 3 *</label>
+          <select 
+            v-model="newSubdivision.idSubDivisionNv_3"
+            :class="{ 'error': validationErrors.idSubDivisionNv_3 }"
+          >
+            <option value="" disabled>Sélectionnez une subdivision Niveau 3</option>
+            <option v-for="subdiv in subdivisionsNv3" :key="subdiv.idSubDivisionNv_3" :value="subdiv.idSubDivisionNv_3">
+              {{ subdiv.nom }}
+            </option>
+          </select>
+          <div v-if="validationErrors.idSubDivisionNv_3" class="error-message">{{ validationErrors.idSubDivisionNv_3 }}</div>
+        </div>
         <div class="modal-actions">
-          <button @click="addSubdivision">Ajouter</button>
+          <button @click="validateAndAddSubdivision">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
         </div>
       </div>
@@ -139,6 +162,13 @@ const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
 const newSubdivision = ref({ nom: '', designation: '', idSubDivisionNv_3: null })
+
+// Validation errors
+const validationErrors = ref({
+  nom: '',
+  designation: '',
+  idSubDivisionNv_3: ''
+})
 const subdivisionToDelete = ref<SubdivisionNv4 | null>(null)
 const subdivisionToUpdate = ref<SubdivisionNv4 | null>(null)
 
@@ -211,6 +241,7 @@ async function addSubdivision() {
     data.value.push(res.data)
     showAddPopup.value = false
     newSubdivision.value = { nom: '', designation: '', idSubDivisionNv_3: null }
+    validationErrors.value = { nom: '', designation: '', idSubDivisionNv_3: '' }
   } catch (e: any) {
     alert(`Erreur lors de l'ajout : ${e?.message || 'Erreur inconnue'}`)
   }
@@ -279,6 +310,42 @@ onMounted(async () => {
   fetchData()
   fetchSubdivisionsNv3()
 })
+
+// Validate required fields
+function validateRequiredFields() {
+  const errors = {
+    nom: '',
+    designation: '',
+    idSubDivisionNv_3: ''
+  }
+  
+  let isValid = true
+  
+  if (!newSubdivision.value.nom.trim()) {
+    errors.nom = 'Le nom est requis'
+    isValid = false
+  }
+  
+  if (!newSubdivision.value.designation.trim()) {
+    errors.designation = 'La désignation est requise'
+    isValid = false
+  }
+  
+  if (!newSubdivision.value.idSubDivisionNv_3) {
+    errors.idSubDivisionNv_3 = 'La subdivision Niveau 3 est requise'
+    isValid = false
+  }
+  
+  validationErrors.value = errors
+  return isValid
+}
+
+// Validate and add subdivision
+function validateAndAddSubdivision() {
+  if (validateRequiredFields()) {
+    addSubdivision()
+  }
+}
 </script>
 <style scoped>
 .page-wrapper {
@@ -527,5 +594,30 @@ h1 {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.6;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  font-weight: 500;
 }
 </style>

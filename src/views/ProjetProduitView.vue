@@ -66,15 +66,41 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter un Projet</h2>
-        <input v-model="newProjet.code" placeholder="Code" />
-        <textarea v-model="newProjet.description" placeholder="Description (optionnelle)" />
-        <input v-model="newProjet.adresse" placeholder="Adresse" />
-        <select v-model="newProjet.wilaya">
-          <option value="" disabled>Sélectionnez une wilaya</option>
-          <option v-for="wilaya in wilayas" :key="wilaya" :value="wilaya">{{ wilaya }}</option>
-        </select>
+        <div class="form-group">
+          <label>Code *</label>
+          <input 
+            v-model="newProjet.code" 
+            placeholder="Code" 
+            :class="{ 'error': validationErrors.code }"
+          />
+          <div v-if="validationErrors.code" class="error-message">{{ validationErrors.code }}</div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea v-model="newProjet.description" placeholder="Description (optionnelle)" />
+        </div>
+        <div class="form-group">
+          <label>Adresse *</label>
+          <input 
+            v-model="newProjet.adresse" 
+            placeholder="Adresse" 
+            :class="{ 'error': validationErrors.adresse }"
+          />
+          <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div>
+        </div>
+        <div class="form-group">
+          <label>Wilaya *</label>
+          <select 
+            v-model="newProjet.wilaya"
+            :class="{ 'error': validationErrors.wilaya }"
+          >
+            <option value="" disabled>Sélectionnez une wilaya</option>
+            <option v-for="wilaya in wilayas" :key="wilaya" :value="wilaya">{{ wilaya }}</option>
+          </select>
+          <div v-if="validationErrors.wilaya" class="error-message">{{ validationErrors.wilaya }}</div>
+        </div>
         <div class="modal-actions">
-          <button @click="addProjet">Ajouter</button>
+          <button @click="validateAndAddProjet">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
         </div>
       </div>
@@ -139,6 +165,13 @@ const showAddPopup = ref(false)
 const newProjet = ref({ code: '', description: '', adresse: '', wilaya: '' })
 const projetToDelete = ref<Projet | null>(null)
 const projetToUpdate = ref<Projet | null>(null)
+
+// Validation errors
+const validationErrors = ref({
+  code: '',
+  adresse: '',
+  wilaya: ''
+})
 
 const userStore = useUserStore()
 
@@ -207,6 +240,7 @@ async function addProjet() {
     projets.value.push(res.data)
     showAddPopup.value = false
     newProjet.value = { code: '', description: '', adresse: '', wilaya: '' }
+    validationErrors.value = { code: '', adresse: '', wilaya: '' }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -248,6 +282,42 @@ async function deleteProjet() {
     projetToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+// Validate required fields
+function validateRequiredFields() {
+  const errors = {
+    code: '',
+    adresse: '',
+    wilaya: ''
+  }
+  
+  let isValid = true
+  
+  if (!newProjet.value.code.trim()) {
+    errors.code = 'Le code est requis'
+    isValid = false
+  }
+  
+  if (!newProjet.value.adresse.trim()) {
+    errors.adresse = 'L\'adresse est requise'
+    isValid = false
+  }
+  
+  if (!newProjet.value.wilaya) {
+    errors.wilaya = 'La wilaya est requise'
+    isValid = false
+  }
+  
+  validationErrors.value = errors
+  return isValid
+}
+
+// Validate and add Projet
+function validateAndAddProjet() {
+  if (validateRequiredFields()) {
+    addProjet()
   }
 }
 
@@ -528,5 +598,30 @@ h1 {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.6;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  font-weight: 500;
 }
 </style>

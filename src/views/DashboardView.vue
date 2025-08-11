@@ -4,9 +4,27 @@
       <h1 class="dashboard-title">Tableau de bord</h1>
     </div>
 
-    <!-- Modernized Stats Cards -->
+    <!-- Highlighted Stats Cards -->
+    <div class="dashboard-grid highlighted-stats">
+      <template v-for="key in ['type produits', 'produits', 'documents']" :key="key">
+        <div class="stat-card highlighted" v-if="filteredStatistics[key] !== undefined">
+          <div class="stat-icon">
+            <i :class="iconForKey(key)"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">
+              {{ formatKey(key) }}
+              <span v-if="key === 'documents'" class="stat-subtitle"> (plan, videos, images....)</span>
+            </div>
+            <div class="stat-value">{{ filteredStatistics[key] }}</div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Regular Stats Cards -->
     <div class="dashboard-grid modern-stats">
-      <div class="stat-card modern" v-for="(value, key) in filteredStatistics" :key="key">
+      <div class="stat-card modern" v-for="(value, key) in regularStatistics" :key="key">
         <div class="stat-icon">
           <i :class="iconForKey(key)"></i>
         </div>
@@ -79,7 +97,7 @@ const loading = ref(true);
 const iconMap: Record<string, string> = {
   "type produits": "fas fa-cubes",
   "produits": "fas fa-box",
-  "structures": "fas fa-building",
+  // "structures": "fas fa-building",
   "bureau etudes": "fas fa-user-tie",
   "projets": "fas fa-project-diagram",
   "maitre oeuvres": "fas fa-hard-hat",
@@ -102,13 +120,17 @@ function formatKey(key: string): string {
 // State
 const statistics = ref<Record<string, number>>({});
 const filteredStatistics = ref<Record<string, number>>({});
+const regularStatistics = ref<Record<string, number>>({});
 
 const fetchData = async () => {
   loading.value = true;
   try {
     const statisticsResponse = await axiosInstance.get('statistics/');
     statistics.value = statisticsResponse.data.statistics;
-    filteredStatistics.value = statistics.value || {};
+    // Filter out structures from the displayed statistics
+    const { structures, 'type produits': typeProduits, produits, documents, ...regular } = statistics.value || {};
+    filteredStatistics.value = { 'type produits': typeProduits, produits, documents };
+    regularStatistics.value = regular;
   } catch (error) {
     console.error('Error fetching statistics:', error);
   } finally {
@@ -416,6 +438,13 @@ onMounted(async () => {
   transition: border-color 0.22s;
   box-shadow: 0px 2px 9px 0 #1a237e0e;
 }
+.dashboard-grid.highlighted-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
 .dashboard-grid.modern-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 2fr));
@@ -443,6 +472,51 @@ onMounted(async () => {
 .stat-card.modern:hover {
   box-shadow: 0 6px 18px 1px #2af5f3bb, 0 2px 22px #37519c88;
   transform: translateY(-2.5px) scale(1.025);
+}
+.stat-card.highlighted {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #3b82f6 100%);
+  padding: 0.8em 0.9em;
+  border-radius: 0.9em;
+  box-shadow: 0 4px 15px 0 #1e3a8a44, 0 2px 8px 0 #3b82f633;
+  border: 1.5px solid #3b82f660;
+  min-width: 0;
+  word-break: break-word;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  font-size: 1em;
+}
+.stat-card.highlighted:hover {
+  box-shadow: 0 6px 20px 1px #1e3a8a66, 0 3px 12px 0 #3b82f644;
+  transform: translateY(-2px);
+}
+.stat-card.highlighted .stat-icon {
+  background: linear-gradient(135deg, #fff 0%, #f1f5f9 100%);
+  color: #1e3a8a;
+  font-size: 1.6em;
+  box-shadow: 0 2px 8px 0 #00000015;
+}
+.stat-card.highlighted .stat-label {
+  color: #e1f5fe;
+  font-weight: 800;
+  text-shadow: 0 1px 4px #00000030;
+  font-size: 1em;
+}
+.stat-card.highlighted .stat-value {
+  color: #fff;
+  font-weight: 800;
+  text-shadow: 0 2px 6px #00000040;
+  font-size: 1.2em;
+}
+.stat-subtitle {
+  color: #b3d9ff;
+  font-size: 0.9em;
+  font-style: italic;
+  opacity: 0.9;
 }
 .stat-icon {
   font-size: 1.555em;

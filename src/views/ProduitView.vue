@@ -95,16 +95,34 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter un Produit</h2>
-        <select v-model="newProduit.idTypeProduit">
-          <option disabled value="">-- Type de Produit --</option>
-          <option v-for="type in types" :key="type.idTypeProduit" :value="type.idTypeProduit">
-            {{ type.designation }}
-          </option>
-        </select>
-        <input v-model="newProduit.designation" placeholder="Désignation" />
-        <textarea v-model="newProduit.description" placeholder="Description (optionnelle)" />
+        <div class="form-group">
+          <label>Type de Produit *</label>
+          <select 
+            v-model="newProduit.idTypeProduit"
+            :class="{ 'error': validationErrors.idTypeProduit }"
+          >
+            <option disabled value="">-- Type de Produit --</option>
+            <option v-for="type in types" :key="type.idTypeProduit" :value="type.idTypeProduit">
+              {{ type.designation }}
+            </option>
+          </select>
+          <div v-if="validationErrors.idTypeProduit" class="error-message">{{ validationErrors.idTypeProduit }}</div>
+        </div>
+        <div class="form-group">
+          <label>Désignation *</label>
+          <input 
+            v-model="newProduit.designation" 
+            placeholder="Désignation" 
+            :class="{ 'error': validationErrors.designation }"
+          />
+          <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea v-model="newProduit.description" placeholder="Description (optionnelle)" />
+        </div>
         <div class="modal-actions">
-          <button @click="addProduit">Ajouter</button>
+          <button @click="validateAndAddProduit">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
         </div>
       </div>
@@ -187,6 +205,12 @@ const newProduit = ref<{
   idTypeProduit: null,
   designation: '',
   description: ''
+})
+
+// Validation errors
+const validationErrors = ref({
+  idTypeProduit: '',
+  designation: ''
 })
 
 // User store for role-based access control
@@ -299,6 +323,7 @@ async function addProduit() {
     })
     showAddPopup.value = false
     newProduit.value = { idTypeProduit: null, designation: '', description: '' }
+    validationErrors.value = { idTypeProduit: '', designation: '' }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -343,6 +368,36 @@ async function deleteProduit() {
     produitToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+// Validate required fields
+function validateRequiredFields() {
+  const errors = {
+    idTypeProduit: '',
+    designation: ''
+  }
+  
+  let isValid = true
+  
+  if (!newProduit.value.idTypeProduit) {
+    errors.idTypeProduit = 'Le type de produit est requis'
+    isValid = false
+  }
+  
+  if (!newProduit.value.designation.trim()) {
+    errors.designation = 'La désignation est requise'
+    isValid = false
+  }
+  
+  validationErrors.value = errors
+  return isValid
+}
+
+// Validate and add Produit
+function validateAndAddProduit() {
+  if (validateRequiredFields()) {
+    addProduit()
   }
 }
 
@@ -627,5 +682,30 @@ h1 {
 
 .modal-actions button:first-child {
   background: #2244aa;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  font-weight: 500;
 }
 </style>

@@ -76,13 +76,48 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter un Sous-traitant</h2>
-        <input v-model="newSoustraitant.designationStt" placeholder="Désignation" />
-        <textarea v-model="newSoustraitant.description" placeholder="Description (optionnelle)" />
-        <input v-model="newSoustraitant.adresse" placeholder="Adresse" />
-        <input v-model="newSoustraitant.telephone" placeholder="Téléphone" />
-        <input v-model="newSoustraitant.email" placeholder="Email" />
+        <div class="form-group">
+          <label>Désignation *</label>
+          <input 
+            v-model="newSoustraitant.designationStt" 
+            placeholder="Désignation" 
+            :class="{ 'error': validationErrors.designationStt }"
+          />
+          <div v-if="validationErrors.designationStt" class="error-message">{{ validationErrors.designationStt }}</div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea v-model="newSoustraitant.description" placeholder="Description (optionnelle)" />
+        </div>
+        <div class="form-group">
+          <label>Adresse *</label>
+          <input 
+            v-model="newSoustraitant.adresse" 
+            placeholder="Adresse" 
+            :class="{ 'error': validationErrors.adresse }"
+          />
+          <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div>
+        </div>
+        <div class="form-group">
+          <label>Téléphone *</label>
+          <input 
+            v-model="newSoustraitant.telephone" 
+            placeholder="Téléphone" 
+            :class="{ 'error': validationErrors.telephone }"
+          />
+          <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input 
+            v-model="newSoustraitant.email" 
+            placeholder="Email" 
+            :class="{ 'error': validationErrors.email }"
+          />
+          <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div>
+        </div>
         <div class="modal-actions">
-          <button @click="addSoustraitant">Ajouter</button>
+          <button @click="validateAndAddSoustraitant">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
         </div>
       </div>
@@ -147,6 +182,14 @@ const newSoustraitant = ref({ designationStt: '', description: '', adresse: '', 
 const soustraitantToDelete = ref<Soustraitant | null>(null)
 const soustraitantToUpdate = ref<Soustraitant | null>(null)
 
+// Validation errors
+const validationErrors = ref({
+  designationStt: '',
+  adresse: '',
+  telephone: '',
+  email: ''
+})
+
 const userStore = useUserStore()
 
 function toggleSort(column: typeof sortColumn.value) {
@@ -205,6 +248,7 @@ async function addSoustraitant() {
     soustraitants.value.push(res.data)
     showAddPopup.value = false
     newSoustraitant.value = { designationStt: '', description: '', adresse: '', telephone: '', email: '' }
+    validationErrors.value = { designationStt: '', adresse: '', telephone: '', email: '' }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -247,6 +291,48 @@ async function deleteSoustraitant() {
     soustraitantToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+// Validate required fields
+function validateRequiredFields() {
+  const errors = {
+    designationStt: '',
+    adresse: '',
+    telephone: '',
+    email: ''
+  }
+  
+  let isValid = true
+  
+  if (!newSoustraitant.value.designationStt.trim()) {
+    errors.designationStt = 'La désignation est requise'
+    isValid = false
+  }
+  
+  if (!newSoustraitant.value.adresse.trim()) {
+    errors.adresse = 'L\'adresse est requise'
+    isValid = false
+  }
+  
+  if (!newSoustraitant.value.telephone.trim()) {
+    errors.telephone = 'Le téléphone est requis'
+    isValid = false
+  }
+  
+  if (!newSoustraitant.value.email.trim()) {
+    errors.email = 'L\'email est requis'
+    isValid = false
+  }
+  
+  validationErrors.value = errors
+  return isValid
+}
+
+// Validate and add Soustraitant
+function validateAndAddSoustraitant() {
+  if (validateRequiredFields()) {
+    addSoustraitant()
   }
 }
 
@@ -526,5 +612,29 @@ h1 {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.6;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.form-group input.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  font-weight: 500;
 }
 </style>

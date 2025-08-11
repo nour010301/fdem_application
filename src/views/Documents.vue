@@ -10,47 +10,48 @@
           {{ type.designation }}
         </option>
       </select>
-      <select v-model="selectedProduit" @change="onProduitChange" :disabled="loadingFilters || !produits.length">
+      <select v-model="selectedProduit" @change="onProduitChange" :disabled="loadingFilters || !selectedTypeProduit || !filteredProduits.length">
         <option value="">Produit</option>
-        <option v-for="prod in produits" :key="prod.idProduit" :value="prod.idProduit">
+        <option v-for="prod in filteredProduits" :key="prod.idProduit" :value="prod.idProduit">
           {{ prod.designation }}
         </option>
       </select>
-      <select v-model="selectedSection" @change="onSectionChange" :disabled="loadingFilters">
-        <option value="">Section</option>
-        <option v-for="s in sections" :key="s.idSectionProduit" :value="s.idSectionProduit">
-          {{ s.designation }}
-        </option>
-      </select>
-      <select v-model="selectedStructure" @change="onStructureChange" :disabled="loadingFilters">
+      <select v-model="selectedStructure" @change="onStructureChange" :disabled="loadingFilters || !selectedProduit">
         <option value="">Structure</option>
         <option v-for="str in structures" :key="str.idStructure" :value="str.idStructure">
           {{ str.designation || str.nom }}
         </option>
       </select>
-      <select v-model="selectedSubdivision1" @change="onSubdivision1Change" :disabled="loadingFilters">
+      <select v-model="selectedSection" @change="onSectionChange" :disabled="loadingFilters || !selectedStructure">
+        <option value="">Section</option>
+        <option v-for="s in sections" :key="s.idSectionProduit" :value="s.idSectionProduit">
+          {{ s.designation }}
+        </option>
+      </select>
+      <select v-model="selectedSubdivision1" @change="onSubdivision1Change" :disabled="loadingFilters || !selectedSection">
         <option value="">Subdivision 1</option>
         <option v-for="sub1 in subdivisions1" :key="sub1.idSubDivisionNv_1" :value="sub1.idSubDivisionNv_1">
           {{ sub1.nom }}
         </option>
       </select>
-      <select v-model="selectedSubdivision2" @change="onSubdivision2Change" :disabled="loadingFilters">
+      <select v-model="selectedSubdivision2" @change="onSubdivision2Change" :disabled="loadingFilters || !selectedSubdivision1">
         <option value="">Subdivision 2</option>
         <option v-for="sub2 in subdivisions2" :key="sub2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2">
           {{ sub2.nom }}
         </option>
       </select>
-      <select v-model="selectedSubdivision3" @change="onSubdivision3Change" :disabled="loadingFilters">
+      <select v-model="selectedSubdivision3" @change="onSubdivision3Change" :disabled="loadingFilters || !selectedSubdivision2">
         <option value="">Subdivision 3</option>
         <option v-for="sub3 in subdivisions3" :key="sub3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3">
           {{ sub3.nom }}
         </option>
       </select>
-      <select v-model="selectedSubdivision4" :disabled="loadingFilters">
-        <option value="">Subdivision 4</option>
-        <option v-for="sub4 in subdivisions4" :key="sub4.idSubDivisionNv_4" :value="sub4.idSubDivisionNv_4">
-          {{ sub4.nom }}
-        </option>
+      <select v-model="selectedTypeDoc" @change="onTypeDocChange" :disabled="loadingFilters">
+        <option value="">Type Doc</option>
+        <option value="Tous">Tous</option>
+        <option value="PDF">PDF</option>
+        <option value="Image">Image</option>
+        <option value="Vidéo">Vidéo</option>
       </select>
       <button class="primary" @click="applyFilters" :disabled="loading">{{ loading ? "Filtrage..." : "Filtrer" }}</button>
       <button class="outline" @click="resetFilters" :disabled="loading">Annuler le filtre</button>
@@ -85,7 +86,7 @@
             ID
             <span v-if="sortColumn === 'idDocument'">{{ sortAsc ? '▲' : '▼' }}</span>
           </th>
-          <th>Designation</th>
+          <th>Description</th>
           <th>Type Produit</th>
           <th>Produit</th>
           <th>Structure</th>
@@ -93,9 +94,11 @@
           <th>Subdivision 1</th>
           <th>Subdivision 2</th>
           <th>Subdivision 3</th>
-          <th>Subdivision 4</th>
+          <th v-if="canSeeCreatedBy">Créé par</th>
+          <th>Type Document</th>
           <!-- <th>Actions</th> -->
           <th>Consulter</th>
+          <!-- <th>Telecharger dossier source </th> -->
         </tr>
         </thead>
         <tbody>
@@ -109,13 +112,15 @@
             <td>{{ document.subDivisionNv1Nom || '—' }}</td>
             <td>{{ document.subDivisionNv2Nom || '—' }}</td>
             <td>{{ document.subDivisionNv3Nom || '—' }}</td>
-            <td>{{ document.subDivisionNv4Nom || '—' }}</td>
+            <td v-if="canSeeCreatedBy">{{ document.creerParUsername || '—' }}</td>
+            <td>{{ getDocumentType(document) }}</td>
+            
             <!-- <td>
               <button class="delete-button" @click="confirmDelete(document)">Supprimer</button>
             </td> -->
             <td>
               <button class="view-button" @click="viewDocument(document)">Consulter</button>
-              <button 
+              <!-- <button 
                 class="update-button" 
                 @click="confirmUpdate(document)"
                 :class="{ 'disabled': !canAddDocuments }"
@@ -132,8 +137,23 @@
                 title="Déplacer"
               >
                 ↗
-              </button>
+              </button> -->
             </td>
+            <!-- <td>
+              <button 
+                v-if="document.plan" 
+                @click="downloadPlan(document)" 
+                :class="['btn', 'plan-download-btn', { 'btn-disabled': !canDownloadPlan }]" 
+                :disabled="!canDownloadPlan"
+                title="Télécharger Plan"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                Plan
+              </button>
+              <span v-else>—</span>
+            </td> -->
           </tr>
         </tbody>
       </table>
@@ -237,9 +257,9 @@
             
             <div class="form-group">
               <label>Produit</label>
-              <select v-model="documentToMove.idProduit">
+              <select v-model="documentToMove.idProduit" @change="onMoveProduitChange">
                 <option value="">Sélectionner un produit</option>
-                <option v-for="prod in produits" :key="prod.idProduit" :value="prod.idProduit">
+                <option v-for="prod in filteredMoveProduits" :key="prod.idProduit" :value="prod.idProduit">
                   {{ prod.designation }}
                 </option>
               </select>
@@ -247,9 +267,9 @@
             
             <div class="form-group">
               <label>Structure</label>
-              <select v-model="documentToMove.idStructure">
+              <select v-model="documentToMove.idStructure" @change="onMoveStructureChange" :disabled="!documentToMove.idProduit || !filteredMoveStructures.length">
                 <option value="">Sélectionner une structure</option>
-                <option v-for="str in structures" :key="str.idStructure" :value="str.idStructure">
+                <option v-for="str in filteredMoveStructures" :key="str.idStructure" :value="str.idStructure">
                   {{ str.designation || str.nom }}
                 </option>
               </select>
@@ -257,9 +277,9 @@
             
             <div class="form-group">
               <label>Section</label>
-              <select v-model="documentToMove.idSection">
+              <select v-model="documentToMove.idSection" @change="onMoveSectionChange" :disabled="!documentToMove.idStructure || !filteredMoveSections.length">
                 <option value="">Sélectionner une section</option>
-                <option v-for="s in sections" :key="s.idSectionProduit" :value="s.idSectionProduit">
+                <option v-for="s in filteredMoveSections" :key="s.idSectionProduit" :value="s.idSectionProduit">
                   {{ s.designation }}
                 </option>
               </select>
@@ -267,9 +287,9 @@
             
             <div class="form-group">
               <label>Subdivision Niveau 1</label>
-              <select v-model="documentToMove.idSubDivisionNv_1">
+              <select v-model="documentToMove.idSubDivisionNv_1" @change="onMoveSubdivision1Change">
                 <option value="">Sélectionner subdivision 1</option>
-                <option v-for="sub1 in subdivisions1" :key="sub1.idSubDivisionNv_1" :value="sub1.idSubDivisionNv_1">
+                <option v-for="sub1 in filteredMoveSubdivisions1" :key="sub1.idSubDivisionNv_1" :value="sub1.idSubDivisionNv_1">
                   {{ sub1.nom }}
                 </option>
               </select>
@@ -277,9 +297,9 @@
             
             <div class="form-group">
               <label>Subdivision Niveau 2</label>
-              <select v-model="documentToMove.idSubDivisionNv_2">
+              <select v-model="documentToMove.idSubDivisionNv_2" @change="onMoveSubdivision2Change">
                 <option value="">Sélectionner subdivision 2</option>
-                <option v-for="sub2 in subdivisions2" :key="sub2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2">
+                <option v-for="sub2 in filteredMoveSubdivisions2" :key="sub2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2">
                   {{ sub2.nom }}
                 </option>
               </select>
@@ -287,9 +307,9 @@
             
             <div class="form-group">
               <label>Subdivision Niveau 3</label>
-              <select v-model="documentToMove.idSubDivisionNv_3">
+              <select v-model="documentToMove.idSubDivisionNv_3" @change="onMoveSubdivision3Change">
                 <option value="">Sélectionner subdivision 3</option>
-                <option v-for="sub3 in subdivisions3" :key="sub3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3">
+                <option v-for="sub3 in filteredMoveSubdivisions3" :key="sub3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3">
                   {{ sub3.nom }}
                 </option>
               </select>
@@ -299,7 +319,7 @@
               <label>Subdivision Niveau 4</label>
               <select v-model="documentToMove.idSubDivisionNv_4">
                 <option value="">Sélectionner subdivision 4</option>
-                <option v-for="sub4 in subdivisions4" :key="sub4.idSubDivisionNv_4" :value="sub4.idSubDivisionNv_4">
+                <option v-for="sub4 in filteredMoveSubdivisions4" :key="sub4.idSubDivisionNv_4" :value="sub4.idSubDivisionNv_4">
                   {{ sub4.nom }}
                 </option>
               </select>
@@ -320,12 +340,67 @@
         <h2>Consulter Document</h2>
         
         <div class="file-viewer-container">
+          <!-- PDF Viewer -->
           <PdfViewer
-            v-if="selectedDocument.fichier"
+            v-if="selectedDocument.fichier && getFileType(selectedDocument) === 'pdf'"
             :pdfUrl="selectedDocument.fichier"
             :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
             :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
           />
+          
+          <!-- Image Viewer -->
+          <div v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'" class="image-viewer">
+            <img 
+              :src="selectedDocument.fichier" 
+              alt="Document" 
+              class="document-image"
+            />
+            <div class="image-actions">
+              <button 
+                @click="downloadFile(selectedDocument)" 
+                :class="['btn', { 'btn-disabled': userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement }]" 
+                :disabled="userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement"
+                title="Télécharger"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+              </button>
+              <button 
+                @click="printImage(selectedDocument)" 
+                :class="['btn', { 'btn-disabled': userStore.user.value?.profil !== 2 && !userStore.user.value?.impression }]" 
+                :disabled="userStore.user.value?.profil !== 2 && !userStore.user.value?.impression"
+                title="Imprimer"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Video Viewer -->
+          <div v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'" class="video-viewer">
+            <video 
+              :src="selectedDocument.fichier" 
+              controls 
+              class="document-video"
+            >
+              Votre navigateur ne supporte pas la lecture vidéo.
+            </video>
+            <div class="video-actions">
+              <button 
+                @click="downloadFile(selectedDocument)" 
+                :class="['btn', { 'btn-disabled': userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement }]" 
+                :disabled="userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement"
+                title="Télécharger"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
         
         <div class="modal-actions">
@@ -370,6 +445,10 @@ interface Document {
   dateCreation?: string | null
   dateModification?: string | null
   fichier?: string | null
+  detectedType?: string
+  creerPar?: number | null
+  creerParUsername?: string | null
+  plan?: string | null
 }
 
 const documents = ref<Document[]>([])
@@ -399,6 +478,18 @@ const canAddDocuments = computed(() => {
   return userStore.userRole.value !== userStore.ROLES.CONSULTATION
 })
 
+// Computed property to check if user can see "Créé par" column
+// Only ADMIN_INFORMATIQUE (profile 2) can see this column
+const canSeeCreatedBy = computed(() => {
+  return userStore.isAdminInformatique.value
+})
+
+// Computed property to check if user can download plans
+// Users with plan permission or admin informatique can download plans
+// const canDownloadPlan = computed(() => {
+//   return userStore.user.value?.profil === 2 || userStore.user.value?.plan || false
+// })
+
 
 
 // --- Filters State ---
@@ -411,6 +502,7 @@ const subdivisions2 = ref<any[]>([])
 const subdivisions3 = ref<any[]>([])
 const subdivisions4 = ref<any[]>([])
 
+
 const selectedTypeProduit = ref<string | number | "">("")
 const selectedProduit = ref<string | number | "">("")
 const selectedSection = ref<string | number | "">("")
@@ -419,6 +511,8 @@ const selectedSubdivision1 = ref<string | number | "">("")
 const selectedSubdivision2 = ref<string | number | "">("")
 const selectedSubdivision3 = ref<string | number | "">("")
 const selectedSubdivision4 = ref<string | number | "">("")
+const selectedTypeDoc = ref<string | number | "">("")
+const selectedDocumentType = ref<string | number | "">("")
 
 const loadingFilters = ref(false)
 
@@ -455,9 +549,14 @@ async function loadFilterOptions() {
   loadingFilters.value = false;
 }
 
+// Computed properties for cascading filters
+const filteredProduits = computed(() => {
+  if (!selectedTypeProduit.value) return produits.value
+  return produits.value.filter(prod => prod.idTypeProduit == selectedTypeProduit.value)
+})
+
 // Cascading filter change handlers
 function onTypeProduitChange() {
-  // Reset all subsequent filters
   selectedProduit.value = ""
   selectedSection.value = ""
   selectedStructure.value = ""
@@ -465,65 +564,56 @@ function onTypeProduitChange() {
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
-  fetchProduits()
+  selectedTypeDoc.value = ""
 }
 
 function onProduitChange() {
-  // Reset all subsequent filters
+  selectedStructure.value = ""
   selectedSection.value = ""
-  selectedStructure.value = ""
   selectedSubdivision1.value = ""
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
-}
-
-function onSectionChange() {
-  // Reset all subsequent filters
-  selectedStructure.value = ""
-  selectedSubdivision1.value = ""
-  selectedSubdivision2.value = ""
-  selectedSubdivision3.value = ""
-  selectedSubdivision4.value = ""
+  selectedTypeDoc.value = ""
 }
 
 function onStructureChange() {
-  // Reset all subsequent filters
+  selectedSection.value = ""
   selectedSubdivision1.value = ""
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
+  selectedTypeDoc.value = ""
 }
 
-function onSubdivision1Change() {
-  // Reset all subsequent filters
+function onSectionChange() {
+  selectedSubdivision1.value = ""
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
+  selectedTypeDoc.value = ""
+}
+
+function onSubdivision1Change() {
+  selectedSubdivision2.value = ""
+  selectedSubdivision3.value = ""
+  selectedSubdivision4.value = ""
+  selectedTypeDoc.value = ""
 }
 
 function onSubdivision2Change() {
-  // Reset all subsequent filters
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
+  selectedTypeDoc.value = ""
 }
 
 function onSubdivision3Change() {
-  // Reset all subsequent filters
   selectedSubdivision4.value = ""
+  selectedTypeDoc.value = ""
 }
 
-async function fetchProduits() {
-  // refetch produits when TypeProduit changes (optional: filter only relevant produits)
-  if (!selectedTypeProduit.value) {
-    const res = await axiosInstance.get('produits/')
-    produits.value = res.data
-  } else {
-    const res = await axiosInstance.get('produits/', {
-      params: { idTypeProduit: selectedTypeProduit.value }
-    })
-    produits.value = res.data.filter((prod: any) => prod.idTypeProduit === selectedTypeProduit.value)
-  }
+function onTypeDocChange() {
+  // Frontend-only filter, no backend call needed
 }
 
 // --- Filtering Documents ---
@@ -540,6 +630,7 @@ async function applyFilters() {
     if (selectedSubdivision2.value) params.idSubDivisionNv_2 = selectedSubdivision2.value;
     if (selectedSubdivision3.value) params.idSubDivisionNv_3 = selectedSubdivision3.value;
     if (selectedSubdivision4.value) params.idSubDivisionNv_4 = selectedSubdivision4.value;
+
     const response = await axiosInstance.get('documentsFilter/', { params });
     documents.value = response.data;
     currentPage.value = 1;
@@ -559,6 +650,8 @@ async function resetFilters() {
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
+  selectedTypeDoc.value = ""
+  selectedDocumentType.value = ""
   await fetchDocuments()
 }
 
@@ -597,23 +690,41 @@ function toggleSort(column: typeof sortColumn.value) {
 
 
 const filteredDocuments = computed(() => {
+  let filtered = documents.value;
+  
+  // Apply Type Doc filter
+  if (selectedTypeDoc.value && selectedTypeDoc.value !== 'Tous') {
+    filtered = filtered.filter(doc => {
+      const docType = getDocumentType(doc);
+      // Treat Photo as Image for Type Doc filter
+      if (selectedTypeDoc.value === 'Image' && (docType === 'Image' || docType === 'Photo')) {
+        return true;
+      }
+      return docType === selectedTypeDoc.value;
+    });
+  }
+  
+  // Apply search filter
   const s = search.value.trim().toLowerCase();
-  if (!s) return documents.value; // Return all documents if search term is empty
-
-  return documents.value.filter((doc) => {
-    return (
-      (doc.idDocument?.toString().toLowerCase().includes(s) || false) ||
-      (doc.typeProduitDesignation?.toLowerCase().includes(s) || false) ||
-      (doc.produitDesignation?.toLowerCase().includes(s) || false) ||
-      (doc.structureNom?.toLowerCase().includes(s) || false) ||
-      (doc.sectionNom?.toLowerCase().includes(s) || false) ||
-      (doc.subDivisionNv1Nom?.toLowerCase().includes(s) || false) ||
-      (doc.subDivisionNv2Nom?.toLowerCase().includes(s) || false) ||
-      (doc.subDivisionNv3Nom?.toLowerCase().includes(s) || false) ||
-      (doc.subDivisionNv4Nom?.toLowerCase().includes(s) || false) ||
-      (doc.designation?.toLowerCase().includes(s) || false)
-    );
-  }).sort((a, b) => {
+  if (s) {
+    filtered = filtered.filter((doc) => {
+      return (
+        (doc.idDocument?.toString().toLowerCase().includes(s) || false) ||
+        (doc.typeProduitDesignation?.toLowerCase().includes(s) || false) ||
+        (doc.produitDesignation?.toLowerCase().includes(s) || false) ||
+        (doc.structureNom?.toLowerCase().includes(s) || false) ||
+        (doc.sectionNom?.toLowerCase().includes(s) || false) ||
+        (doc.subDivisionNv1Nom?.toLowerCase().includes(s) || false) ||
+        (doc.subDivisionNv2Nom?.toLowerCase().includes(s) || false) ||
+        (doc.subDivisionNv3Nom?.toLowerCase().includes(s) || false) ||
+        (doc.subDivisionNv4Nom?.toLowerCase().includes(s) || false) ||
+        (doc.designation?.toLowerCase().includes(s) || false)
+      );
+    });
+  }
+  
+  // Apply sorting
+  return filtered.sort((a, b) => {
     const fieldA = a[sortColumn.value] ?? '';
     const fieldB = b[sortColumn.value] ?? '';
     if (fieldA < fieldB) return sortAsc.value ? -1 : 1;
@@ -664,9 +775,18 @@ async function viewDocument(document: Document) {
     const blob = await response.blob()
     const fileUrl = URL.createObjectURL(blob)
     
+    // Detect file type from blob content-type
+    let detectedType = 'pdf'
+    if (blob.type.startsWith('image/')) {
+      detectedType = 'image'
+    } else if (blob.type.startsWith('video/')) {
+      detectedType = 'video'
+    }
+    
     selectedDocument.value = {
       ...document,
-      fichier: fileUrl
+      fichier: fileUrl,
+      detectedType: detectedType
     }
   } catch (error) {
     console.error('Error loading document:', error)
@@ -674,21 +794,29 @@ async function viewDocument(document: Document) {
   }
 }
 
-function confirmUpdate(document: Document) {
-  documentToUpdate.value = { ...document }
-  selectedFile.value = null
-  multipleImages.value = []
-  showImageToPdfOption.value = false
-}
+// function confirmUpdate(document: Document) {
+//   documentToUpdate.value = { ...document }
+//   selectedFile.value = null
+//   multipleImages.value = []
+//   showImageToPdfOption.value = false
+// }
 
 function getFileName(filePath: string): string {
   if (!filePath) return 'Aucun fichier'
   return filePath.split('/').pop() || filePath
 }
 
-function confirmMove(document: Document) {
-  documentToMove.value = { ...document }
-}
+// function confirmMove(document: Document) {
+//   documentToMove.value = { 
+//     ...document,
+//     // Ensure all subdivision properties exist
+//     idSubDivisionNv_1: document.idSubDivisionNv_1 || null,
+//     idSubDivisionNv_2: document.idSubDivisionNv_2 || null,
+//     idSubDivisionNv_3: document.idSubDivisionNv_3 || null,
+//     idSubDivisionNv_4: document.idSubDivisionNv_4 || null
+//   }
+//   console.log('Initialized documentToMove:', documentToMove.value)
+// }
 
 function onFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
@@ -776,6 +904,42 @@ async function convertImagesToPdf(): Promise<File> {
   return new File([pdfBlob], `${documentToUpdate.value?.designation || 'images'}.pdf`, { type: 'application/pdf' })
 }
 
+// Computed properties for move modal cascading filters
+const filteredMoveProduits = computed(() => {
+  if (!documentToMove.value?.idTypeProduit) return produits.value
+  return produits.value.filter(prod => prod.idTypeProduit == documentToMove.value?.idTypeProduit)
+})
+
+const filteredMoveStructures = computed(() => {
+  if (!documentToMove.value?.idProduit) return structures.value
+  return structures.value.filter(str => str.idProduit == documentToMove.value?.idProduit)
+})
+
+const filteredMoveSections = computed(() => {
+  if (!documentToMove.value?.idStructure) return sections.value
+  return sections.value.filter(sec => sec.idStructure == documentToMove.value?.idStructure)
+})
+
+const filteredMoveSubdivisions1 = computed(() => {
+  if (!documentToMove.value?.idSection) return subdivisions1.value
+  return subdivisions1.value.filter(sub => sub.idSectionProduit == documentToMove.value?.idSection)
+})
+
+const filteredMoveSubdivisions2 = computed(() => {
+  if (!documentToMove.value?.idSubDivisionNv_1) return subdivisions2.value
+  return subdivisions2.value.filter(sub => sub.idSubDivisionNv_1 == documentToMove.value?.idSubDivisionNv_1)
+})
+
+const filteredMoveSubdivisions3 = computed(() => {
+  if (!documentToMove.value?.idSubDivisionNv_2) return subdivisions3.value
+  return subdivisions3.value.filter(sub => sub.idSubDivisionNv_2 == documentToMove.value?.idSubDivisionNv_2)
+})
+
+const filteredMoveSubdivisions4 = computed(() => {
+  if (!documentToMove.value?.idSubDivisionNv_3) return subdivisions4.value
+  return subdivisions4.value.filter(sub => sub.idSubDivisionNv_3 == documentToMove.value?.idSubDivisionNv_3)
+})
+
 function onMoveTypeProduitChange() {
   if (documentToMove.value) {
     documentToMove.value.idProduit = null
@@ -788,12 +952,71 @@ function onMoveTypeProduitChange() {
   }
 }
 
+function onMoveProduitChange() {
+  if (documentToMove.value) {
+    documentToMove.value.idStructure = null
+    documentToMove.value.idSection = null
+    documentToMove.value.idSubDivisionNv_1 = null
+    documentToMove.value.idSubDivisionNv_2 = null
+    documentToMove.value.idSubDivisionNv_3 = null
+    documentToMove.value.idSubDivisionNv_4 = null
+  }
+}
+
+function onMoveStructureChange() {
+  if (documentToMove.value) {
+    documentToMove.value.idSection = null
+    documentToMove.value.idSubDivisionNv_1 = null
+    documentToMove.value.idSubDivisionNv_2 = null
+    documentToMove.value.idSubDivisionNv_3 = null
+    documentToMove.value.idSubDivisionNv_4 = null
+  }
+}
+
+function onMoveSectionChange() {
+  if (documentToMove.value) {
+    documentToMove.value.idSubDivisionNv_1 = null
+    documentToMove.value.idSubDivisionNv_2 = null
+    documentToMove.value.idSubDivisionNv_3 = null
+    documentToMove.value.idSubDivisionNv_4 = null
+  }
+}
+
+function onMoveSubdivision1Change() {
+  if (documentToMove.value) {
+    documentToMove.value.idSubDivisionNv_2 = null
+    documentToMove.value.idSubDivisionNv_3 = null
+    documentToMove.value.idSubDivisionNv_4 = null
+  }
+}
+
+function onMoveSubdivision2Change() {
+  if (documentToMove.value) {
+    documentToMove.value.idSubDivisionNv_3 = null
+    documentToMove.value.idSubDivisionNv_4 = null
+  }
+}
+
+function onMoveSubdivision3Change() {
+  if (documentToMove.value) {
+    documentToMove.value.idSubDivisionNv_4 = null
+  }
+}
+
 async function updateDocument() {
   if (!documentToUpdate.value) return
   try {
-    const formData = new FormData()
-    formData.append('designation', documentToUpdate.value.designation || '')
+    // Update designation if changed
+    if (documentToUpdate.value.designation !== undefined) {
+      const designationData = new FormData()
+      designationData.append('designation', documentToUpdate.value.designation || '')
+      
+      await axiosInstance.put(`documents/${documentToUpdate.value.idDocument}/`, designationData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    }
     
+    // Upload file if selected
     let fileToUpload = selectedFile.value
     
     // If multiple images are selected, convert them to PDF
@@ -802,12 +1025,13 @@ async function updateDocument() {
     }
     
     if (fileToUpload) {
-      formData.append('fichier', fileToUpload)
+      const fileData = new FormData()
+      fileData.append('fichier', fileToUpload)
+      
+      await axiosInstance.post(`documents/${documentToUpdate.value.idDocument}/upload-file/`, fileData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
     }
-    
-    await axiosInstance.put(`documents/${documentToUpdate.value.idDocument}/`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
     
     await fetchDocuments()
     documentToUpdate.value = null
@@ -822,15 +1046,28 @@ async function updateDocument() {
 async function moveDocument() {
   if (!documentToMove.value) return
   try {
-    await axiosInstance.put(`documents/${documentToMove.value.idDocument}/`, {
-      idTypeProduit: documentToMove.value.idTypeProduit,
-      idProduit: documentToMove.value.idProduit,
-      idStructure: documentToMove.value.idStructure,
-      idSection: documentToMove.value.idSection,
-      idSubDivisionNv_1: documentToMove.value.idSubDivisionNv_1,
-      idSubDivisionNv_2: documentToMove.value.idSubDivisionNv_2,
-      idSubDivisionNv_3: documentToMove.value.idSubDivisionNv_3,
-      idSubDivisionNv_4: documentToMove.value.idSubDivisionNv_4
+    console.log('Document to move full object:', JSON.stringify(documentToMove.value, null, 2))
+    console.log('idSubDivisionNv_4 specifically:', documentToMove.value.idSubDivisionNv_4)
+    
+    const formData = new FormData()
+    
+    // Add all fields to form data, including empty ones as empty strings
+    formData.append('idTypeProduit', documentToMove.value.idTypeProduit?.toString() || '')
+    formData.append('idProduit', documentToMove.value.idProduit?.toString() || '')
+    formData.append('idStructure', documentToMove.value.idStructure?.toString() || '')
+    formData.append('idSection', documentToMove.value.idSection?.toString() || '')
+    formData.append('idSubDivisionNv_1', documentToMove.value.idSubDivisionNv_1?.toString() || '')
+    formData.append('idSubDivisionNv_2', documentToMove.value.idSubDivisionNv_2?.toString() || '')
+    formData.append('idSubDivisionNv_3', documentToMove.value.idSubDivisionNv_3?.toString() || '')
+    formData.append('idSubDivisionNv_4', documentToMove.value.idSubDivisionNv_4?.toString() || '')
+    
+    // Debug: Log all form data entries
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value)
+    }
+    
+    await axiosInstance.post(`documents/${documentToMove.value.idDocument}/move/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     })
     
     await fetchDocuments()
@@ -840,12 +1077,123 @@ async function moveDocument() {
   }
 }
 
+function getFileType(document: any): string {
+  // Use detected type if available
+  if (document.detectedType) {
+    return document.detectedType
+  }
+  
+  if (!document.fichier) return 'pdf'
+  
+  const url = document.fichier.toLowerCase()
+  if (url.includes('png') || url.includes('jpg') || url.includes('jpeg') || url.includes('gif')) return 'image'
+  if (url.includes('mp4') || url.includes('mov') || url.includes('avi')) return 'video'
+  return 'pdf'
+}
+
+function getDocumentType(document: any): string {
+  if (!document.nomFichier) return 'PDF'
+  
+  const fileName = document.nomFichier.toLowerCase()
+  const extension = fileName.split('.').pop() || ''
+  
+  // Image extensions
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'ico']
+  if (imageExtensions.includes(extension)) {
+    return 'Image'
+  }
+  
+  // Video extensions
+  const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', '3gp', 'mpg', 'mpeg']
+  if (videoExtensions.includes(extension)) {
+    return 'Vidéo'
+  }
+  
+  // Photo extensions (specific photo formats)
+  const photoExtensions = ['raw', 'cr2', 'nef', 'arw', 'dng', 'orf', 'rw2']
+  if (photoExtensions.includes(extension)) {
+    return 'Photo'
+  }
+  
+  // PDF and document extensions
+  const pdfExtensions = ['pdf']
+  if (pdfExtensions.includes(extension)) {
+    return 'PDF'
+  }
+  
+  // Default to PDF for unknown extensions
+  return 'PDF'
+}
+
+async function downloadFile(doc: any) {
+  if (!doc.fichier) return
+  
+  try {
+    const response = await fetch(doc.fichier)
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `document-${doc.idDocument}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Download failed:', error)
+    alert('Erreur lors du téléchargement')
+  }
+}
+
+function printImage(doc: any) {
+  const printWindow = window.open('', '_blank')
+  if (printWindow) {
+    printWindow.document.write(`
+      <html>
+        <head><title>Print Image</title></head>
+        <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;">
+          <img src="${doc.fichier}" style="max-width:100%;max-height:100%;"/>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
+    printWindow.close()
+  }
+}
+
 function closeDocumentViewer() {
   if (selectedDocument.value?.fichier) {
     URL.revokeObjectURL(selectedDocument.value.fichier)
   }
   selectedDocument.value = null
 }
+
+// Download plan function
+// async function downloadPlan(doc: Document) {
+//   if (!doc.plan || !canDownloadPlan.value) return
+  
+//   try {
+//     const response = await fetch(doc.plan)
+//     const blob = await response.blob()
+//     const url = URL.createObjectURL(blob)
+    
+//     const a = document.createElement('a')
+//     a.href = url
+//     a.download = `plan-${doc.idDocument}.zip`
+//     document.body.appendChild(a)
+//     a.click()
+//     document.body.removeChild(a)
+    
+//     URL.revokeObjectURL(url)
+//   } catch (error) {
+//     console.error('Plan download failed:', error)
+//     alert('Erreur lors du téléchargement du plan')
+//   }
+// }
 
 onMounted(async () => {
   await userStore.fetchUserProfile()
@@ -1106,8 +1454,8 @@ h1 {
 
 /* Specific styles for PDF viewer modal */
 .pdf-modal {
-  max-width: 90vw !important;
-  max-height: 90vh !important;
+  max-width: 95vw !important;
+  max-height: 95vh !important;
   width: auto !important;
   height: auto !important;
   padding: 1rem !important;
@@ -1510,6 +1858,75 @@ h1 {
 
 .remove-image:hover {
   background: #d32f2f;
+}
+
+.image-viewer, .video-viewer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.document-image {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 1rem auto;
+}
+
+.document-video {
+  max-width: 100%;
+  max-height: 80vh;
+  display: block;
+  margin: 0 auto 1rem auto;
+}
+
+.image-actions, .video-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.btn {
+  padding: 0.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
+.btn:hover:not(.btn-disabled) {
+  background-color: #2563eb;
+}
+
+.btn-disabled {
+  background-color: #9ca3af !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.plan-download-btn {
+  background-color: #ff9800 !important;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+}
+
+.plan-download-btn:hover:not(.btn-disabled) {
+  background-color: #f57c00 !important;
 }
 
 /* Responsive design */

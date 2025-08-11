@@ -91,10 +91,26 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter une Section</h2>
-        <input v-model="newSection.nom" placeholder="Nom" />
-        <textarea v-model="newSection.designation" placeholder="Désignation" />
+        <div class="form-group">
+          <label>Nom *</label>
+          <input 
+            v-model="newSection.nom" 
+            placeholder="Nom" 
+            :class="{ 'error': validationErrors.nom }"
+          />
+          <div v-if="validationErrors.nom" class="error-message">{{ validationErrors.nom }}</div>
+        </div>
+        <div class="form-group">
+          <label>Désignation *</label>
+          <textarea 
+            v-model="newSection.designation" 
+            placeholder="Désignation" 
+            :class="{ 'error': validationErrors.designation }"
+          />
+          <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div>
+        </div>
         <div class="modal-actions">
-          <button @click="addSection">Ajouter</button>
+          <button @click="validateAndAddSection">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
         </div>
       </div>
@@ -153,6 +169,12 @@ const newSection = ref({ nom: '', designation: '' })
 const sectionToDelete = ref<Section | null>(null)
 const sectionToUpdate = ref<Section | null>(null)
 
+// Validation errors
+const validationErrors = ref({
+  nom: '',
+  designation: ''
+})
+
 // User store for role-based access control
 const userStore = useUserStore()
 
@@ -208,6 +230,7 @@ async function addSection() {
     sections.value.push(res.data)
     showAddPopup.value = false
     newSection.value = { nom: '', designation: '' }
+    validationErrors.value = { nom: '', designation: '' }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -247,6 +270,36 @@ async function deleteSection() {
     sectionToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+// Validate required fields
+function validateRequiredFields() {
+  const errors = {
+    nom: '',
+    designation: ''
+  }
+  
+  let isValid = true
+  
+  if (!newSection.value.nom.trim()) {
+    errors.nom = 'Le nom est requis'
+    isValid = false
+  }
+  
+  if (!newSection.value.designation.trim()) {
+    errors.designation = 'La désignation est requise'
+    isValid = false
+  }
+  
+  validationErrors.value = errors
+  return isValid
+}
+
+// Validate and add Section
+function validateAndAddSection() {
+  if (validateRequiredFields()) {
+    addSection()
   }
 }
 
@@ -498,5 +551,29 @@ h1 {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.6;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.form-group input.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  font-weight: 500;
 }
 </style>

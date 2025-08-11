@@ -7,9 +7,9 @@
     <!-- Profile Management Section -->
     <div v-if="!isRestrictedUser" class="profile-management-section">
       <div class="profile-actions">
-        <button @click="showAddProfileModal = true" class="btn-primary">
+        <!-- <button @click="showAddProfileModal = true" class="btn-primary">
           <i class="fas fa-plus-circle"></i> Ajouter un profil
-        </button>
+        </button> -->
         <button @click="showDeleteProfileModal = true" class="btn-danger">
           <i class="fas fa-trash"></i> Supprimer un profil
         </button>
@@ -27,6 +27,13 @@
             class="search-input"
           />
           <i class="fas fa-search search-icon"></i>
+        </div>
+        <div v-if="currentUser?.profil === 2" class="status-filter">
+          <select v-model="statusFilter" class="status-select">
+            <option value="all">Tous les statuts</option>
+            <option value="active">Actifs</option>
+            <option value="inactive">Inactifs</option>
+          </select>
         </div>
         <button v-if="!isRestrictedUser" @click="openCreateAccountModal" class="btn-primary">
           <i class="fas fa-user-plus"></i> Créer un compte
@@ -46,10 +53,12 @@
               <th v-if="!isRestrictedUser">Téléphone</th>
               <th v-if="!isRestrictedUser">Département</th>
               <th v-if="!isRestrictedUser">Profil</th>
+              <th v-if="currentUser?.profil === 2">Statut</th>
               <th>Types de produit</th>
               <th>Produits</th>
               <th>Impression</th>
               <th>Téléchargement</th>
+              <th>Plan</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -63,6 +72,11 @@
               <td v-if="!isRestrictedUser">{{ user.telephone || '-' }}</td>
               <td v-if="!isRestrictedUser">{{ user.departement || '-' }}</td>
               <td v-if="!isRestrictedUser">{{ user.profil?.nom || '-' }}</td>
+              <td v-if="currentUser?.profil === 2">
+                <span :class="user.is_active ? 'status-active' : 'status-inactive'">
+                  {{ user.is_active ? 'Actif' : 'Inactif' }}
+                </span>
+              </td>
               <td>
                 <div class="dropdown">
                   <button class="dropdown-btn">
@@ -93,9 +107,16 @@
               </td>
               <td>{{ user.impression ? 'Oui' : 'Non' }}</td>
               <td>{{ user.telechargement ? 'Oui' : 'Non' }}</td>
+              <td>{{ user.plan ? 'Oui' : 'Non' }}</td>
               <td class="actions-cell">
                 <button @click="editUser(user)" class="btn-icon btn-edit">
                   <i class="fas fa-edit"></i>
+                </button>
+                <button v-if="currentUser?.profil === 2 && user.is_active !== false" @click="confirmDeactivateUser(user)" class="btn-icon btn-deactivate" title="Désactiver">
+                  <i class="fas fa-user-slash"></i>
+                </button>
+                <button v-if="currentUser?.profil === 2 && user.is_active === false" @click="confirmActivateUser(user)" class="btn-icon btn-activate" title="Activer">
+                  <i class="fas fa-user-check"></i>
                 </button>
                 <button v-if="!isRestrictedUser" @click="confirmDeleteUser(user)" class="btn-icon btn-delete">
                   <i class="fas fa-trash"></i>
@@ -191,45 +212,98 @@
             <div v-if="currentStep === 0 && !(isRestrictedUser && isEditMode)">
               <h2>Informations utilisateur</h2>
               <div class="form-group">
-                <label for="username">Nom d'utilisateur</label>
-                <input type="text" id="username" v-model="userData.username" />
+                <label for="username">Nom d'utilisateur *</label>
+                <input 
+                  type="text" 
+                  id="username" 
+                  v-model="userData.username" 
+                  :class="{ 'error': validationErrors.username }"
+                />
+                <div v-if="validationErrors.username" class="error-message">{{ validationErrors.username }}</div>
               </div>
               <div class="form-group">
-                <label for="password">Mot de passe</label>
-                <input type="password" id="password" v-model="userData.password" />
+                <label for="password">Mot de passe *</label>
+                <input 
+                  type="password" 
+                  id="password" 
+                  v-model="userData.password" 
+                  :class="{ 'error': validationErrors.password }"
+                />
+                <div v-if="validationErrors.password" class="error-message">{{ validationErrors.password }}</div>
               </div>
               <div class="form-group">
-                <label for="role">Profil</label>
-                <select id="role" v-model="userData.profil">
+                <label for="role">Profil *</label>
+                <select 
+                  id="role" 
+                  v-model="userData.profil"
+                  :class="{ 'error': validationErrors.profil }"
+                >
                   <option value="">Sélectionner un profil</option>
                   <option v-for="profile in profiles" :key="profile.id" :value="profile.id">
                     {{ profile.nom }}
                   </option>
                 </select>
+                <div v-if="validationErrors.profil" class="error-message">{{ validationErrors.profil }}</div>
               </div>
               <div class="form-group">
-                <label for="poste">Poste</label>
-                <input type="text" id="poste" v-model="userData.poste" />
+                <label for="poste">Poste *</label>
+                <input 
+                  type="text" 
+                  id="poste" 
+                  v-model="userData.poste" 
+                  :class="{ 'error': validationErrors.poste }"
+                />
+                <div v-if="validationErrors.poste" class="error-message">{{ validationErrors.poste }}</div>
               </div>
               <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" v-model="userData.email" />
+                <label for="email">Email *</label>
+                <input 
+                  type="email" 
+                  id="email" 
+                  v-model="userData.email" 
+                  :class="{ 'error': validationErrors.email }"
+                />
+                <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div>
               </div>
               <div class="form-group">
-                <label for="nom">Nom</label>
-                <input type="text" id="nom" v-model="userData.nom" />
+                <label for="nom">Nom *</label>
+                <input 
+                  type="text" 
+                  id="nom" 
+                  v-model="userData.nom" 
+                  :class="{ 'error': validationErrors.nom }"
+                />
+                <div v-if="validationErrors.nom" class="error-message">{{ validationErrors.nom }}</div>
               </div>
               <div class="form-group">
-                <label for="prenom">Prénom</label>
-                <input type="text" id="prenom" v-model="userData.prenom" />
+                <label for="prenom">Prénom *</label>
+                <input 
+                  type="text" 
+                  id="prenom" 
+                  v-model="userData.prenom" 
+                  :class="{ 'error': validationErrors.prenom }"
+                />
+                <div v-if="validationErrors.prenom" class="error-message">{{ validationErrors.prenom }}</div>
               </div>
               <div class="form-group">
-                <label for="telephone">Téléphone</label>
-                <input type="text" id="telephone" v-model="userData.telephone" />
+                <label for="telephone">Téléphone *</label>
+                <input 
+                  type="text" 
+                  id="telephone" 
+                  v-model="userData.telephone" 
+                  :class="{ 'error': validationErrors.telephone }"
+                />
+                <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div>
               </div>
               <div class="form-group">
-                <label for="departement">Département</label>
-                <input type="text" id="departement" v-model="userData.departement" />
+                <label for="departement">Département *</label>
+                <input 
+                  type="text" 
+                  id="departement" 
+                  v-model="userData.departement" 
+                  :class="{ 'error': validationErrors.departement }"
+                />
+                <div v-if="validationErrors.departement" class="error-message">{{ validationErrors.departement }}</div>
               </div>
             </div>
             
@@ -300,7 +374,7 @@
                     id="impression" 
                     v-model="userPermissions.impression"
                   >
-                  <label for="impression">Autoriser l'impression des documents PDF</label>
+                  <label for="impression">Autoriser l'impression des documents</label>
                 </div>
                 <div class="checkbox-item">
                   <input 
@@ -308,7 +382,15 @@
                     id="telechargement" 
                     v-model="userPermissions.telechargement"
                   >
-                  <label for="telechargement">Autoriser le téléchargement des documents PDF</label>
+                  <label for="telechargement">Autoriser le téléchargement des documents</label>
+                </div>
+                <div class="checkbox-item">
+                  <input 
+                    type="checkbox" 
+                    id="plan" 
+                    v-model="userPermissions.plan"
+                  >
+                  <label for="plan">Autoriser le téléchargement des plans (AutoCAD, ZIP)</label>
                 </div>
               </div>
             </div>
@@ -328,9 +410,8 @@
             <!-- Create account button (first step) -->
             <button 
               v-if="currentStep === 0 && !userToEdit?.id" 
-              @click="createAccount" 
+              @click="validateAndCreateAccount" 
               class="btn-primary"
-              :disabled="!canProceed"
             >
               Créer le compte
             </button>
@@ -382,6 +463,38 @@
         </div>
       </div>
     </div>
+
+    <!-- Activate/Deactivate User Confirmation Modal -->
+    <div v-if="showStatusChangeModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>{{ statusChangeAction === 'activate' ? 'Activer' : 'Désactiver' }} l'utilisateur</h2>
+          <button @click="showStatusChangeModal = false" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Êtes-vous sûr de vouloir {{ statusChangeAction === 'activate' ? 'activer' : 'désactiver' }} l'utilisateur suivant ?</p>
+          <div class="user-info">
+            <p><strong>Nom d'utilisateur:</strong> {{ userToChangeStatus?.username }}</p>
+            <p><strong>Nom:</strong> {{ userToChangeStatus?.nom || '-' }}</p>
+            <p><strong>Prénom:</strong> {{ userToChangeStatus?.prenom || '-' }}</p>
+            <p><strong>Email:</strong> {{ userToChangeStatus?.email || '-' }}</p>
+            <p><strong>Poste:</strong> {{ userToChangeStatus?.poste || '-' }}</p>
+            <p><strong>Profil:</strong> {{ userToChangeStatus?.profil?.nom || '-' }}</p>
+            <p><strong>Statut actuel:</strong> 
+              <span :class="userToChangeStatus?.is_active ? 'status-active' : 'status-inactive'">
+                {{ userToChangeStatus?.is_active ? 'Actif' : 'Inactif' }}
+              </span>
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showStatusChangeModal = false" class="btn-secondary">Annuler</button>
+          <button @click="executeStatusChange" :class="statusChangeAction === 'activate' ? 'btn-primary' : 'btn-danger'">
+            {{ statusChangeAction === 'activate' ? 'Activer' : 'Désactiver' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -408,11 +521,14 @@ interface User {
   produits?: number[];
   impression?: boolean;
   telechargement?: boolean;
+  is_active?: boolean;
+  plan?: boolean;
 }
 
 // User management
 const users = ref<User[]>([]);
 const searchQuery = ref('');
+const statusFilter = ref('all');
 const loading = ref(false);
 const error = ref('');
 
@@ -467,13 +583,32 @@ const errorProduits = ref('');
 // User permissions
 const userPermissions = ref({
   impression: false,
-  telechargement: false
+  telechargement: false,
+  plan: false
+});
+
+// Validation errors
+const validationErrors = ref({
+  username: '',
+  password: '',
+  profil: '',
+  poste: '',
+  email: '',
+  nom: '',
+  prenom: '',
+  telephone: '',
+  departement: ''
 });
 
 // User deletion and editing
 const showDeleteUserModal = ref(false);
 const userToDelete = ref<User | null>(null);
 const userToEdit = ref<User | null>(null);
+
+// User status change
+const showStatusChangeModal = ref(false);
+const userToChangeStatus = ref<User | null>(null);
+const statusChangeAction = ref<'activate' | 'deactivate'>('activate');
 
 // Fetch users
 const fetchUsers = async () => {
@@ -602,7 +737,8 @@ const editUser = (user: User) => {
   // Load user's permissions
   userPermissions.value = {
     impression: user.impression || false,
-    telechargement: user.telechargement || false
+    telechargement: user.telechargement || false,
+    plan: user.plan || false
   };
   
   // For restricted users, start at step 0 which corresponds to step 2 (Types de produit)
@@ -667,12 +803,96 @@ const resetUserData = () => {
   selectedProduits.value = [];
   userPermissions.value = {
     impression: false,
-    telechargement: false
+    telechargement: false,
+    plan: false
+  };
+  validationErrors.value = {
+    username: '',
+    password: '',
+    profil: '',
+    poste: '',
+    email: '',
+    nom: '',
+    prenom: '',
+    telephone: '',
+    departement: ''
   };
   currentStep.value = 0;
   userToEdit.value = null;
   isEditMode.value = false;
   showSuccessCheckmark.value = false;
+};
+
+// Validate required fields
+const validateRequiredFields = () => {
+  const errors = {
+    username: '',
+    password: '',
+    profil: '',
+    poste: '',
+    email: '',
+    nom: '',
+    prenom: '',
+    telephone: '',
+    departement: ''
+  };
+  
+  let isValid = true;
+  
+  if (!userData.value.username.trim()) {
+    errors.username = 'Le nom d\'utilisateur est requis';
+    isValid = false;
+  }
+  
+  if (!userData.value.password.trim()) {
+    errors.password = 'Le mot de passe est requis';
+    isValid = false;
+  }
+  
+  if (!userData.value.profil) {
+    errors.profil = 'Le profil est requis';
+    isValid = false;
+  }
+  
+  if (!userData.value.poste.trim()) {
+    errors.poste = 'Le poste est requis';
+    isValid = false;
+  }
+  
+  if (!userData.value.email.trim()) {
+    errors.email = 'L\'email est requis';
+    isValid = false;
+  }
+  
+  if (!userData.value.nom.trim()) {
+    errors.nom = 'Le nom est requis';
+    isValid = false;
+  }
+  
+  if (!userData.value.prenom.trim()) {
+    errors.prenom = 'Le prénom est requis';
+    isValid = false;
+  }
+  
+  if (!userData.value.telephone.trim()) {
+    errors.telephone = 'Le téléphone est requis';
+    isValid = false;
+  }
+  
+  if (!userData.value.departement.trim()) {
+    errors.departement = 'Le département est requis';
+    isValid = false;
+  }
+  
+  validationErrors.value = errors;
+  return isValid;
+};
+
+// Validate and create account
+const validateAndCreateAccount = () => {
+  if (validateRequiredFields()) {
+    createAccount();
+  }
 };
 
 // Computed property for visible steps
@@ -715,17 +935,34 @@ const handleConfirmClick = () => {
 
 // Computed properties
 const filteredUsers = computed(() => {
-  if (!searchQuery.value) return users.value;
+  let filtered = users.value;
   
-  const query = searchQuery.value.toLowerCase();
-  return users.value.filter(user => 
-    (user.username && user.username.toLowerCase().includes(query)) ||
-    (user.nom && user.nom.toLowerCase().includes(query)) ||
-    (user.prenom && user.prenom.toLowerCase().includes(query)) ||
-    (user.email && user.email.toLowerCase().includes(query)) ||
-    (user.poste && user.poste.toLowerCase().includes(query)) ||
-    (user.profil && user.profil.nom && user.profil.nom.toLowerCase().includes(query))
-  );
+  // Filter by search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(user => 
+      (user.username && user.username.toLowerCase().includes(query)) ||
+      (user.nom && user.nom.toLowerCase().includes(query)) ||
+      (user.prenom && user.prenom.toLowerCase().includes(query)) ||
+      (user.email && user.email.toLowerCase().includes(query)) ||
+      (user.poste && user.poste.toLowerCase().includes(query)) ||
+      (user.profil && user.profil.nom && user.profil.nom.toLowerCase().includes(query))
+    );
+  }
+  
+  // Filter by status (only for admin informatique)
+  if (currentUser.value?.profil === 2 && statusFilter.value !== 'all') {
+    filtered = filtered.filter(user => {
+      if (statusFilter.value === 'active') {
+        return user.is_active !== false;
+      } else if (statusFilter.value === 'inactive') {
+        return user.is_active === false;
+      }
+      return true;
+    });
+  }
+  
+  return filtered;
 });
 
 const canProceed = computed(() => {
@@ -876,7 +1113,8 @@ const updateUserProductsAndTypes = async (userId: number) => {
       produits: selectedProduits.value,
       types_produits: selectedTypesProduit.value,
       impression: userPermissions.value.impression,
-      telechargement: userPermissions.value.telechargement
+      telechargement: userPermissions.value.telechargement,
+      plan: userPermissions.value.plan
     });
     
     if (response.status === 200 || response.status === 201) {
@@ -934,6 +1172,36 @@ const { currentUser, fetchUserProfile } = useUserStore();
 // Check if current user has profile 1 (restricted user)
 const isRestrictedUser = computed(() => currentUser.value?.profil === 1);
 
+// Confirm activate user
+const confirmActivateUser = (user: User) => {
+  userToChangeStatus.value = user;
+  statusChangeAction.value = 'activate';
+  showStatusChangeModal.value = true;
+};
+
+// Confirm deactivate user
+const confirmDeactivateUser = (user: User) => {
+  userToChangeStatus.value = user;
+  statusChangeAction.value = 'deactivate';
+  showStatusChangeModal.value = true;
+};
+
+// Execute status change
+const executeStatusChange = async () => {
+  if (!userToChangeStatus.value) return;
+  
+  try {
+    const endpoint = statusChangeAction.value === 'activate' ? 'activer' : 'desactiver';
+    await axiosInstance.post(`http://10.10.150.75:8000/api/utilisateur/${userToChangeStatus.value.id}/${endpoint}/`);
+    await fetchUsers();
+    showStatusChangeModal.value = false;
+    userToChangeStatus.value = null;
+  } catch (err) {
+    console.error(`Error ${statusChangeAction.value}ing user:`, err);
+    error.value = `Erreur lors de l'${statusChangeAction.value === 'activate' ? 'activation' : 'désactivation'} de l'utilisateur.`;
+  }
+};
+
 // Initialize data
 onMounted(async () => {
   await fetchUserProfile();
@@ -941,6 +1209,11 @@ onMounted(async () => {
   await fetchProfiles();
   await fetchTypesProduit();
   await fetchAllUserProduits();
+  
+  // Debug logging
+  console.log('Current user:', currentUser.value);
+  console.log('Current user profil:', currentUser.value?.profil);
+  console.log('Users:', users.value);
 });
 </script>
 
@@ -1219,6 +1492,31 @@ onMounted(async () => {
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
+.form-group input.error,
+.form-group select.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  font-weight: 500;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5em;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.form-group label:has(+ input.error),
+.form-group label:has(+ select.error) {
+  color: #e74c3c;
+}
+
 /* Stepper styles */
 .stepper-header {
   display: flex;
@@ -1466,5 +1764,74 @@ onMounted(async () => {
 
 .dropdown:hover .dropdown-content {
   display: block;
+}
+
+/* Status filter */
+.status-filter {
+  margin: 0 1rem;
+}
+
+.status-select {
+  padding: 0.8em;
+  border-radius: 0.5em;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #333;
+  font-size: 1em;
+  outline: none;
+}
+
+/* Status badges */
+.status-active {
+  background: #d4edda;
+  color: #155724;
+  padding: 0.3em 0.8em;
+  border-radius: 0.3em;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.status-inactive {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 0.3em 0.8em;
+  border-radius: 0.3em;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+/* Activate/Deactivate buttons */
+.btn-activate {
+  color: #28a745;
+}
+
+.btn-activate:hover {
+  background: rgba(40, 167, 69, 0.1);
+}
+
+.btn-deactivate {
+  color: #ffc107;
+}
+
+.btn-deactivate:hover {
+  background: rgba(255, 193, 7, 0.1);
+}
+
+/* User info in modal */
+.user-info {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.user-info p {
+  margin: 0.5rem 0;
+  color: #2c3e50;
+}
+
+.user-info strong {
+  font-weight: 600;
+  margin-right: 0.5rem;
 }
 </style>

@@ -66,11 +66,35 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter un Directeur</h2>
-        <input v-model="newDirecteur.nomPrenomDirecteur" placeholder="Nom et Prénom" />
-        <input v-model="newDirecteur.fonction" placeholder="Fonction" />
-        <input v-model="newDirecteur.telephone" placeholder="Téléphone" />
+        <div class="form-group">
+          <label>Nom et Prénom *</label>
+          <input 
+            v-model="newDirecteur.nomPrenomDirecteur" 
+            placeholder="Nom et Prénom" 
+            :class="{ 'error': validationErrors.nomPrenomDirecteur }"
+          />
+          <div v-if="validationErrors.nomPrenomDirecteur" class="error-message">{{ validationErrors.nomPrenomDirecteur }}</div>
+        </div>
+        <div class="form-group">
+          <label>Fonction *</label>
+          <input 
+            v-model="newDirecteur.fonction" 
+            placeholder="Fonction" 
+            :class="{ 'error': validationErrors.fonction }"
+          />
+          <div v-if="validationErrors.fonction" class="error-message">{{ validationErrors.fonction }}</div>
+        </div>
+        <div class="form-group">
+          <label>Téléphone *</label>
+          <input 
+            v-model="newDirecteur.telephone" 
+            placeholder="Téléphone" 
+            :class="{ 'error': validationErrors.telephone }"
+          />
+          <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div>
+        </div>
         <div class="modal-actions">
-          <button @click="addDirecteur">Ajouter</button>
+          <button @click="validateAndAddDirecteur">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
         </div>
       </div>
@@ -130,6 +154,13 @@ const showAddPopup = ref(false)
 const newDirecteur = ref({ nomPrenomDirecteur: '', fonction: '', telephone: '' })
 const directeurToDelete = ref<Directeur | null>(null)
 const directeurToUpdate = ref<Directeur | null>(null)
+
+// Validation errors
+const validationErrors = ref({
+  nomPrenomDirecteur: '',
+  fonction: '',
+  telephone: ''
+})
 
 const userStore = useUserStore()
 
@@ -227,6 +258,42 @@ async function deleteDirecteur() {
     directeurToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+// Validate required fields
+function validateRequiredFields() {
+  const errors = {
+    nomPrenomDirecteur: '',
+    fonction: '',
+    telephone: ''
+  }
+  
+  let isValid = true
+  
+  if (!newDirecteur.value.nomPrenomDirecteur.trim()) {
+    errors.nomPrenomDirecteur = 'Le nom et prénom sont requis'
+    isValid = false
+  }
+  
+  if (!newDirecteur.value.fonction.trim()) {
+    errors.fonction = 'La fonction est requise'
+    isValid = false
+  }
+  
+  if (!newDirecteur.value.telephone.trim()) {
+    errors.telephone = 'Le téléphone est requis'
+    isValid = false
+  }
+  
+  validationErrors.value = errors
+  return isValid
+}
+
+// Validate and add Directeur
+function validateAndAddDirecteur() {
+  if (validateRequiredFields()) {
+    addDirecteur()
   }
 }
 
@@ -504,5 +571,28 @@ h1 {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.6;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.form-group input.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  font-weight: 500;
 }
 </style>

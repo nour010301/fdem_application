@@ -14,13 +14,13 @@
         <span class="icon">🏠</span>
         <span>Accueil</span>
       </router-link>
-      <router-link to="/documents" class="nav-link" active-class="active">
-        <span class="icon">📄</span>
-        <span>Documents</span>
-      </router-link>
       <router-link to="/add-document" class="nav-link" active-class="active">
         <span class="icon">➕</span>
-        <span>Ajouter document</span>
+        <span>Fond Documentaire</span>
+      </router-link>
+      <router-link to="/documents" class="nav-link" active-class="active">
+        <span class="icon">📄</span>
+        <span>Recherche</span>
       </router-link>
 
       <!-- BIBLIOTHEQUE -->
@@ -106,6 +106,10 @@
                 <transition name="fade">
                   <!-- This panel does NOT have the arrow anymore -->
                   <div v-if="subMenu === 'context'" class="submenu-links submenu-context-clean">
+                    <router-link to="/list-projet-produit" class="nav-link sublink2" active-class="active">
+                      <span class="icon">📦</span>
+                      <span>Projets </span>
+                    </router-link>
                     <router-link to="/bur-etude-list" class="nav-link sublink2" active-class="active">
                       <span class="icon">🏢</span>
                       <span>Bureau d’étude</span>
@@ -117,10 +121,6 @@
                     <router-link to="/list-directeur" class="nav-link sublink2" active-class="active">
                       <span class="icon">👔</span>
                       <span>Directeurs</span>
-                    </router-link>
-                    <router-link to="/list-projet-produit" class="nav-link sublink2" active-class="active">
-                      <span class="icon">📦</span>
-                      <span>Projets produits</span>
                     </router-link>
                     <router-link to="/maitre-oeuvre-list" class="nav-link sublink2" active-class="active">
                       <span class="icon">🛠️</span>

@@ -71,12 +71,39 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter un Maître d'Ouvrage</h2>
-        <input v-model="newMaitreOuvrage.designationMOg" placeholder="Désignation" />
-        <textarea v-model="newMaitreOuvrage.description" placeholder="Description (optionnelle)" />
-        <input v-model="newMaitreOuvrage.adresse" placeholder="Adresse" />
-        <input v-model="newMaitreOuvrage.email" placeholder="Email" />
+        <div class="form-group">
+          <label>Désignation *</label>
+          <input 
+            v-model="newMaitreOuvrage.designationMOg" 
+            placeholder="Désignation" 
+            :class="{ 'error': validationErrors.designationMOg }"
+          />
+          <div v-if="validationErrors.designationMOg" class="error-message">{{ validationErrors.designationMOg }}</div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea v-model="newMaitreOuvrage.description" placeholder="Description (optionnelle)" />
+        </div>
+        <div class="form-group">
+          <label>Adresse *</label>
+          <input 
+            v-model="newMaitreOuvrage.adresse" 
+            placeholder="Adresse" 
+            :class="{ 'error': validationErrors.adresse }"
+          />
+          <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input 
+            v-model="newMaitreOuvrage.email" 
+            placeholder="Email" 
+            :class="{ 'error': validationErrors.email }"
+          />
+          <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div>
+        </div>
         <div class="modal-actions">
-          <button @click="addMaitreOuvrage">Ajouter</button>
+          <button @click="validateAndAddMaitreOuvrage">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
         </div>
       </div>
@@ -138,6 +165,13 @@ const showAddPopup = ref(false)
 const newMaitreOuvrage = ref({ designationMOg: '', description: '', adresse: '', email: '' })
 const maitreOuvrageToDelete = ref<MaitreOuvrage | null>(null)
 const maitreOuvrageToUpdate = ref<MaitreOuvrage | null>(null)
+
+// Validation errors
+const validationErrors = ref({
+  designationMOg: '',
+  adresse: '',
+  email: ''
+})
 
 const userStore = useUserStore()
 
@@ -237,6 +271,42 @@ async function deleteMaitreOuvrage() {
     maitreOuvrageToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+// Validate required fields
+function validateRequiredFields() {
+  const errors = {
+    designationMOg: '',
+    adresse: '',
+    email: ''
+  }
+  
+  let isValid = true
+  
+  if (!newMaitreOuvrage.value.designationMOg.trim()) {
+    errors.designationMOg = 'La désignation est requise'
+    isValid = false
+  }
+  
+  if (!newMaitreOuvrage.value.adresse.trim()) {
+    errors.adresse = 'L\'adresse est requise'
+    isValid = false
+  }
+  
+  if (!newMaitreOuvrage.value.email.trim()) {
+    errors.email = 'L\'email est requis'
+    isValid = false
+  }
+  
+  validationErrors.value = errors
+  return isValid
+}
+
+// Validate and add MaitreOuvrage
+function validateAndAddMaitreOuvrage() {
+  if (validateRequiredFields()) {
+    addMaitreOuvrage()
   }
 }
 
@@ -515,5 +585,29 @@ h1 {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.6;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.form-group input.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  font-weight: 500;
 }
 </style>
