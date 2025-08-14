@@ -34,27 +34,27 @@
           {{ sub1.nom }}
         </option>
       </select>
-      <select v-model="selectedSubdivision2" @change="onSubdivision2Change" :disabled="loadingFilters || !selectedSubdivision1">
+      <select v-model="selectedSubdivision2" @change="onSubdivision2Change" :disabled="loadingFilters || !selectedSubdivision1 || !filteredSubdivisions2.length">
         <option value="">Subdivision 2</option>
-        <option v-for="sub2 in subdivisions2" :key="sub2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2">
-          {{ sub2.nom }}
+        <option v-for="sub2 in filteredSubdivisions2" :key="sub2.idSubDivisionNv_2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2.idSubDivisionNv_2">
+          {{ sub2.idSubDivisionNv_2.nom }}
         </option>
       </select>
-      <select v-model="selectedSubdivision3" @change="onSubdivision3Change" :disabled="loadingFilters || !selectedSubdivision2">
+      <select v-model="selectedSubdivision3" @change="onSubdivision3Change" :disabled="loadingFilters || !selectedSubdivision2 || !filteredSubdivisions3.length">
         <option value="">Subdivision 3</option>
-        <option v-for="sub3 in subdivisions3" :key="sub3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3">
-          {{ sub3.nom }}
+        <option v-for="sub3 in filteredSubdivisions3" :key="sub3.idSubDivisionNv_3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3.idSubDivisionNv_3">
+          {{ sub3.idSubDivisionNv_3.nom }}
         </option>
       </select>
-      <select v-model="selectedTypeDoc" @change="onTypeDocChange" :disabled="loadingFilters">
+      <!-- <select v-model="selectedTypeDoc" @change="onTypeDocChange" :disabled="loadingFilters">
         <option value="">Type Doc</option>
         <option value="Tous">Tous</option>
         <option value="PDF">PDF</option>
         <option value="Image">Image</option>
         <option value="Vidéo">Vidéo</option>
-      </select>
-      <button class="primary" @click="applyFilters" :disabled="loading">{{ loading ? "Filtrage..." : "Filtrer" }}</button>
-      <button class="outline" @click="resetFilters" :disabled="loading">Annuler le filtre</button>
+      </select> -->
+      <button class="primary" @click="applyFilters" :disabled="loading || loadingConsulter">{{ loading ? "Filtrage..." : "Filtrer" }}</button>
+      <button class="outline" @click="resetFilters" :disabled="loading || loadingConsulter">Annuler le filtre</button>
     </div>
 
     <div class="controls">
@@ -67,8 +67,8 @@
       <button 
         @click="redirectToAddDocument" 
         class="add-button"
-        :class="{ 'disabled': !canAddDocuments }"
-        :disabled="!canAddDocuments"
+        :class="{ 'disabled': !canAddDocuments || loadingConsulter }"
+        :disabled="!canAddDocuments || loadingConsulter"
       >
         + Ajouter
       </button>
@@ -78,7 +78,7 @@
     <div v-else-if="error" class="error">Erreur : {{ error }}</div>
 
     <div class="table-wrapper">
-      <table v-if="filteredDocuments.length > 0" class="product-table">
+      <table v-if="filtersApplied && filteredDocuments.length > 0" class="product-table">
         <!-- ... your thead/tr/td code from before ... -->
         <thead>
         <tr>
@@ -119,7 +119,15 @@
               <button class="delete-button" @click="confirmDelete(document)">Supprimer</button>
             </td> -->
             <td>
-              <button class="view-button" @click="viewDocument(document)">Consulter</button>
+              <button 
+                class="view-button" 
+                @click="viewDocument(document)" 
+                :disabled="loadingConsulter"
+                :class="{ 'disabled': loadingConsulter }"
+              >
+                <span v-if="loadingConsulter && loadingDocumentId === document.idDocument">Chargement...</span>
+                <span v-else>Consulter</span>
+              </button>
               <!-- <button 
                 class="update-button" 
                 @click="confirmUpdate(document)"
@@ -157,7 +165,8 @@
           </tr>
         </tbody>
       </table>
-      <div v-else class="no-result">Aucun résultat trouvé.</div>
+      <div v-else-if="filtersApplied" class="no-result">Aucun résultat trouvé.</div>
+      <div v-else class="no-result">Veuillez utiliser les filtres pour afficher les documents.</div>
     </div>
 
     <div v-if="totalPages > 1" class="pagination">
@@ -454,6 +463,7 @@ interface Document {
 const documents = ref<Document[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const filtersApplied = ref(false)
 const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
@@ -467,6 +477,8 @@ const multipleImages = ref<File[]>([])
 const showImageToPdfOption = ref(false)
 const router = useRouter()
 const selectedDocument = ref<Document | null>(null)
+const loadingConsulter = ref(false)
+const loadingDocumentId = ref<number | null>(null)
 
 
 // User store for role-based access control
@@ -501,6 +513,9 @@ const subdivisions1 = ref<any[]>([])
 const subdivisions2 = ref<any[]>([])
 const subdivisions3 = ref<any[]>([])
 const subdivisions4 = ref<any[]>([])
+const allSubDivs1Et2 = ref<any[]>([])
+const allSubDivs2Et3 = ref<any[]>([])
+const allSubDivs3Et4 = ref<any[]>([])
 
 
 const selectedTypeProduit = ref<string | number | "">("")
@@ -519,34 +534,24 @@ const loadingFilters = ref(false)
 // --- Filter Fetch Helpers ---
 async function loadFilterOptions() {
   loadingFilters.value = true
-  const [
-    typesRes,
-    produitsRes,
-    sectionsRes,
-    structuresRes,
-    sub1Res,
-    sub2Res,
-    sub3Res,
-    sub4Res
-  ] = await Promise.all([
-    axiosInstance.get('types/'),
-    axiosInstance.get('produits/'),
-    axiosInstance.get('sections/'),
-    axiosInstance.get('structures/'),
-    axiosInstance.get('subdivision-nv1/'),
-    axiosInstance.get('subdivision-nv2/'),
-    axiosInstance.get('subdivision-nv3/'),
-    axiosInstance.get('subdivision-nv4/')
-  ]);
-  typesProduit.value = typesRes.data;
-  produits.value = produitsRes.data;
-  sections.value = sectionsRes.data;
-  structures.value = structuresRes.data;
-  subdivisions1.value = sub1Res.data;
-  subdivisions2.value = sub2Res.data;
-  subdivisions3.value = sub3Res.data;
-  subdivisions4.value = sub4Res.data;
-  loadingFilters.value = false;
+  try {
+    const [typesRes, structuresRes, subDivsRes, subDivs3Res, subDivs4Res] = await Promise.all([
+      axiosInstance.get('types/'),
+      axiosInstance.get('structures/'),
+      axiosInstance.get('subdiv1et2/'),
+      axiosInstance.get('subdiv2et3/'),
+      axiosInstance.get('subdiv3et4/')
+    ]);
+    typesProduit.value = typesRes.data;
+    structures.value = structuresRes.data;
+    allSubDivs1Et2.value = subDivsRes.data;
+    allSubDivs2Et3.value = subDivs3Res.data;
+    allSubDivs3Et4.value = subDivs4Res.data;
+  } catch (error) {
+    console.error('Error loading filter options:', error);
+  } finally {
+    loadingFilters.value = false;
+  }
 }
 
 // Computed properties for cascading filters
@@ -555,8 +560,22 @@ const filteredProduits = computed(() => {
   return produits.value.filter(prod => prod.idTypeProduit == selectedTypeProduit.value)
 })
 
+const filteredSubdivisions2 = computed(() => {
+  if (!selectedSubdivision1.value) return []
+  return allSubDivs1Et2.value.filter(
+    item => item.idSubDivisionNv_1.idSubDivisionNv_1 === selectedSubdivision1.value
+  )
+})
+
+const filteredSubdivisions3 = computed(() => {
+  if (!selectedSubdivision2.value) return []
+  return allSubDivs2Et3.value.filter(
+    item => item.idSubDivisionNv_2.idSubDivisionNv_2 === selectedSubdivision2.value
+  )
+})
+
 // Cascading filter change handlers
-function onTypeProduitChange() {
+async function onTypeProduitChange() {
   selectedProduit.value = ""
   selectedSection.value = ""
   selectedStructure.value = ""
@@ -565,6 +584,26 @@ function onTypeProduitChange() {
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
   selectedTypeDoc.value = ""
+  
+  produits.value = []
+  sections.value = []
+  subdivisions1.value = []
+  
+  // Clear right-side content and reset states
+  clearRightSideContent()
+  
+  if (selectedTypeProduit.value) {
+    try {
+      const [produitsRes, sectionsRes] = await Promise.all([
+        axiosInstance.get(`produits/by-type/${selectedTypeProduit.value}/`),
+        axiosInstance.get(`sections/by-type/${selectedTypeProduit.value}/`)
+      ])
+      produits.value = produitsRes.data
+      sections.value = sectionsRes.data
+    } catch (error) {
+      console.error('Error loading produits/sections:', error)
+    }
+  }
 }
 
 function onProduitChange() {
@@ -575,15 +614,32 @@ function onProduitChange() {
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
   selectedTypeDoc.value = ""
+  
+  // Clear right-side content and reset states
+  clearRightSideContent()
 }
 
-function onStructureChange() {
+async function onStructureChange() {
   selectedSection.value = ""
   selectedSubdivision1.value = ""
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
   selectedTypeDoc.value = ""
+  
+  subdivisions1.value = []
+  
+  // Clear right-side content and reset states
+  clearRightSideContent()
+  
+  if (selectedStructure.value) {
+    try {
+      const res = await axiosInstance.get(`subdivision-nv1/by-structure/${selectedStructure.value}/`)
+      subdivisions1.value = res.data
+    } catch (error) {
+      console.error('Error loading subdivisions1:', error)
+    }
+  }
 }
 
 function onSectionChange() {
@@ -592,6 +648,9 @@ function onSectionChange() {
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
   selectedTypeDoc.value = ""
+  
+  // Clear right-side content and reset states
+  clearRightSideContent()
 }
 
 function onSubdivision1Change() {
@@ -599,27 +658,37 @@ function onSubdivision1Change() {
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
   selectedTypeDoc.value = ""
+  
+  // Clear right-side content and reset states
+  clearRightSideContent()
 }
 
 function onSubdivision2Change() {
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
   selectedTypeDoc.value = ""
+  
+  // Clear right-side content and reset states
+  clearRightSideContent()
 }
 
 function onSubdivision3Change() {
   selectedSubdivision4.value = ""
   selectedTypeDoc.value = ""
+  
+  // Clear right-side content and reset states
+  clearRightSideContent()
 }
 
-function onTypeDocChange() {
-  // Frontend-only filter, no backend call needed
-}
+// function onTypeDocChange() {
+//   // Frontend-only filter, no backend call needed
+// }
 
 // --- Filtering Documents ---
 async function applyFilters() {
   loading.value = true
   error.value = null
+  filtersApplied.value = true
   try {
     const params: Record<string, string | number> = {};
     if (selectedTypeProduit.value) params.idTypeProduit = selectedTypeProduit.value;
@@ -632,10 +701,12 @@ async function applyFilters() {
     if (selectedSubdivision4.value) params.idSubDivisionNv_4 = selectedSubdivision4.value;
 
     const response = await axiosInstance.get('documentsFilter/', { params });
-    documents.value = response.data;
+    // Handle case where API returns {message: "Aucun document trouvé."} instead of empty array
+    documents.value = Array.isArray(response.data) ? response.data : [];
     currentPage.value = 1;
   } catch (e: any) {
     error.value = e?.message || "Erreur lors du filtrage"
+    documents.value = []; // Ensure documents is always an array
   } finally {
     loading.value = false
   }
@@ -652,7 +723,11 @@ async function resetFilters() {
   selectedSubdivision4.value = ""
   selectedTypeDoc.value = ""
   selectedDocumentType.value = ""
-  await fetchDocuments()
+  filtersApplied.value = false
+  documents.value = []
+  
+  // Clear right-side content and reset states
+  clearRightSideContent()
 }
 
 // --- Table Logic (same as before, but uses documents.value for filtered) ---
@@ -770,6 +845,9 @@ async function deleteDocument() {
 }
 function redirectToAddDocument() { router.push('/add-document') }
 async function viewDocument(document: Document) {
+  loadingConsulter.value = true
+  loadingDocumentId.value = document.idDocument
+  
   try {
     const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
     const blob = await response.blob()
@@ -791,6 +869,9 @@ async function viewDocument(document: Document) {
   } catch (error) {
     console.error('Error loading document:', error)
     alert('Erreur lors du chargement du document')
+  } finally {
+    loadingConsulter.value = false
+    loadingDocumentId.value = null
   }
 }
 
@@ -1172,6 +1253,29 @@ function closeDocumentViewer() {
   selectedDocument.value = null
 }
 
+// Helper function to clear all right-side content and reset states
+function clearRightSideContent() {
+  // Close document viewer if open
+  if (selectedDocument.value) {
+    closeDocumentViewer()
+  }
+  
+  // Clear any modals that might be open
+  documentToDelete.value = null
+  documentToUpdate.value = null
+  documentToMove.value = null
+  
+  // Clear file selections
+  selectedFile.value = null
+  multipleImages.value = []
+  showImageToPdfOption.value = false
+  
+  // Reset filters applied state to force re-filtering
+  if (filtersApplied.value) {
+    documents.value = []
+  }
+}
+
 // Download plan function
 // async function downloadPlan(doc: Document) {
 //   if (!doc.plan || !canDownloadPlan.value) return
@@ -1198,7 +1302,7 @@ function closeDocumentViewer() {
 onMounted(async () => {
   await userStore.fetchUserProfile()
   await loadFilterOptions()
-  await fetchDocuments()
+  loading.value = false
 })
 </script>
 
@@ -1391,6 +1495,18 @@ h1 {
   background: #0056b3;
 }
 
+.view-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.view-button:disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
 .update-button {
   padding: 5px 10px;
   background: #17a2b8;
@@ -1453,12 +1569,18 @@ h1 {
 }
 
 /* Specific styles for PDF viewer modal */
-.pdf-modal {
+/* .pdf-modal {
   max-width: 95vw !important;
   max-height: 95vh !important;
   width: auto !important;
   height: auto !important;
   padding: 1rem !important;
+} */
+ .pdf-modal {
+  max-width: 95vw;
+  max-height: 95vh;
+  width: fit-content;
+  height: fit-content;
 }
 
 .modal input,
@@ -1576,7 +1698,8 @@ h1 {
   width: 100%;
   height: auto;
   max-height: calc(90vh - 120px);
-  overflow-y: auto;
+  /* overflow-y: auto; */
+   overflow: auto;
   flex: 1;
   display: flex;
   justify-content: center;

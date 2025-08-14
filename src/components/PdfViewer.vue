@@ -5,10 +5,10 @@
         v-for="(pageIndex) in numPages"
         :key="pageIndex"
         :ref="el => setCanvasRef(el, pageIndex - 1)"
-        class="w-full border mb-4"
+        class="pdf-canvas"
       />
     </div>
-    
+
     <div class="action-buttons">
       <button 
         @click="downloadPdf" 
@@ -16,9 +16,7 @@
         :disabled="!props.canDownload"
         title="Télécharger"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-        </svg>
+        ⬇
       </button>
       <button 
         @click="printPdf" 
@@ -26,23 +24,23 @@
         :disabled="!props.canPrint"
         title="Imprimer"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
-        </svg>
+        🖨
       </button>
+
+      <button @click="zoomOut" class="btn" title="Zoom out">➖</button>
+      <button @click="resetZoom" class="btn" title="Fit to page">🔲</button>
+      <button @click="zoomIn" class="btn" title="Zoom in">➕</button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, onBeforeUnmount } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import type { ComponentPublicInstance } from 'vue'
- import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
-// pdfjsLib.GlobalWorkerOptions.workerSrc = '/media/documents_pdfs/pdf.worker-DHtGXOM1.mjs'
-
 
 const canvasRefs = ref<(HTMLCanvasElement | null)[]>([])
 
@@ -60,34 +58,76 @@ const props = defineProps<{
 
 const numPages = ref(0)
 const pdfData = ref<Uint8Array | null>(null)
+let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null
 
-onMounted(async () => {
-  // Load PDF as typed array for download/print later
-  const loadingTask = pdfjsLib.getDocument(props.pdfUrl)
-  const pdf = await loadingTask.promise
-  numPages.value = pdf.numPages
+// Zoom handling
+const baseScale = ref(1) // Fit-to-page scale
+const zoomLevel = ref(1) // Multiplicative zoom factor
 
-  // Fetch the raw PDF bytes for download and printing
-  const response = await fetch(props.pdfUrl)
-  const arrayBuffer = await response.arrayBuffer()
-  pdfData.value = new Uint8Array(arrayBuffer)
+function zoomIn() {
+  zoomLevel.value *= 1.25
+  renderAllPages()
+}
 
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i)
+function zoomOut() {
+  zoomLevel.value /= 1.25
+  renderAllPages()
+}
 
+function resetZoom() {
+  zoomLevel.value = 1
+  renderAllPages()
+}
+
+async function renderAllPages() {
+  if (!pdfDoc) return
+
+  const screenWidth = window.innerWidth
+  const screenHeight = window.innerHeight
+
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const page = await pdfDoc.getPage(i)
     const canvas = canvasRefs.value[i - 1]
     if (!canvas) continue
 
     const context = canvas.getContext('2d')
     if (!context) continue
 
-    const viewport = page.getViewport({ scale: 1.5 })
+    // Get unscaled size
+    const unscaledViewport = page.getViewport({ scale: 1 })
+
+    // Calculate fit-to-page scale only once (from page 1)
+    if (i === 1) {
+      const scaleX = screenWidth / unscaledViewport.width
+      const scaleY = screenHeight / unscaledViewport.height
+      baseScale.value = Math.min(scaleX, scaleY)
+    }
+
+    const viewport = page.getViewport({ scale: baseScale.value * zoomLevel.value })
 
     canvas.height = viewport.height
     canvas.width = viewport.width
 
     await page.render({ canvasContext: context, viewport }).promise
   }
+}
+
+onMounted(async () => {
+  const loadingTask = pdfjsLib.getDocument(props.pdfUrl)
+  pdfDoc = await loadingTask.promise
+  numPages.value = pdfDoc.numPages
+
+  const response = await fetch(props.pdfUrl)
+  const arrayBuffer = await response.arrayBuffer()
+  pdfData.value = new Uint8Array(arrayBuffer)
+
+  await renderAllPages()
+
+  window.addEventListener('resize', renderAllPages)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', renderAllPages)
 })
 
 function downloadPdf() {
@@ -110,7 +150,6 @@ function printPdf() {
   const blob = new Blob([pdfData.value], { type: 'application/pdf' })
   const url = URL.createObjectURL(blob)
 
-  // Create an iframe visible but positioned offscreen
   const iframe = document.createElement('iframe')
   iframe.style.position = 'fixed'
   iframe.style.right = '0'
@@ -136,15 +175,12 @@ function printPdf() {
     }
   }
 }
-
 </script>
 
 <style scoped>
-canvas {
+.pdf-canvas {
   display: block;
   margin: 0 auto;
-  max-width: 100%;
-  height: auto;
 }
 
 .btn {
@@ -161,6 +197,7 @@ canvas {
   transition: background-color 0.2s;
   min-width: 2.5rem;
   min-height: 2.5rem;
+  font-size: 1rem;
 }
 
 .btn:hover:not(.btn-disabled) {
@@ -173,18 +210,13 @@ canvas {
   opacity: 0.6;
 }
 
-.btn-disabled:hover {
-  background-color: #9ca3af !important;
-}
-
 .main-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
   width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
   padding: 1rem;
   box-sizing: border-box;
 }
@@ -194,9 +226,6 @@ canvas {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: min(90vw, 800px);
-  flex: 1;
-  overflow: visible;
 }
 
 .action-buttons {
@@ -210,21 +239,5 @@ canvas {
   border-top: 1px solid #e5e7eb;
   width: 100%;
   justify-content: center;
-  flex-shrink: 0;
-}
-
-@media (max-width: 768px) {
-  .main-container {
-    padding: 0.5rem;
-  }
-  
-  .grid-container {
-    max-width: 95vw;
-  }
-  
-  .btn {
-    padding: 0.375rem;
-    margin: 0 0.125rem;
-  }
 }
 </style>

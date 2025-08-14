@@ -1,6 +1,22 @@
 
 <template>
   <div class="add-doc-root">
+    <!-- Toast Notifications -->
+    <div class="toast-container">
+      <div 
+        v-for="toast in toasts" 
+        :key="toast.id" 
+        :class="['toast', toast.type]"
+        @click="removeToast(toast.id)"
+      >
+        <div class="toast-icon">
+          <span v-if="toast.type === 'success'">✓</span>
+          <span v-else-if="toast.type === 'error'">✕</span>
+        </div>
+        <div class="toast-message">{{ toast.message }}</div>
+        <button class="toast-close" @click.stop="removeToast(toast.id)">×</button>
+      </div>
+    </div>
     <!-- Main content with forms -->
     <div class="add-doc-main">
       <h1>Fond Documentaire</h1>
@@ -64,7 +80,7 @@
             </option>
           </select>
         </div>
-        <div class="step" v-if="requiresSubDiv2 && selectedSubDiv2Id">
+        <div class="step" v-if="requiresSubDiv2 && selectedSubDiv2Id && requiresSubDiv3">
           <label for="subdivision-nv3">Subdivision 3</label>
           <select id="subdivision-nv3" v-model="selectedSubDiv3Id">
             <option value="" disabled>Choisir une sous-division Niv. 3</option>
@@ -73,7 +89,7 @@
             </option>
           </select>
         </div>
-        <div class="step" v-if="requiresSubDiv2 && selectedSubDiv3Id && filteredSubDiv4List.length > 0">
+        <!-- <div class="step" v-if="requiresSubDiv2 && selectedSubDiv3Id && filteredSubDiv4List.length > 0">
           <label for="subdivision-nv4">Subdivision Niveau 4</label>
           <select id="subdivision-nv4" v-model="selectedSubDiv4Id">
             <option value="" disabled>Choisir une sous-division Niv. 4</option>
@@ -81,7 +97,7 @@
               {{ item.idSubDivisionNv_4?.nom }}
             </option>
           </select>
-        </div>
+        </div> -->
         <p v-if="!isSubDivAllowed && selectedDivisionId" style="color: #E53935;">
           Cette subdivision ne permet pas la création de documents.
         </p>
@@ -96,7 +112,10 @@
           )"
         >
           <button class="save-btn" type="button" @click="openStructureDocContent" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter </button>
-          <button class="consulter-btn" type="button" @click="showSuccessMessage">Consulter</button>
+          <button class="consulter-btn" type="button" @click="showSuccessMessage" :disabled="loadingConsulter">
+            <span v-if="loadingConsulter">Chargement en cours...</span>
+            <span v-else>Consulter</span>
+          </button>
           <!-- <button v-if="isPiecesGraphiques" class="import-btn" type="button" @click="openImportModal" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Importer Dossier Source</button> -->
           <!-- <button class="delete-btn" type="button" @click="openDocModal('delete')">Supprimer Document</button> -->
         </div>
@@ -129,9 +148,9 @@
     <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess">
 
       <!-- Success Message in Sidebar -->
-      <div v-if="showSuccess" class="success-message-sidebar">
+      <!-- <div v-if="showSuccess" class="success-message-sidebar">
         ✓ Consulter action completed successfully!
-      </div>
+      </div> -->
 
       <!-- Consulter content in sidebar -->
       <div v-if="showSuccess" class="sidebar-content modal-section">
@@ -159,7 +178,10 @@
                       <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
                       <td>{{ getDocumentType(document) }}</td>
                       <td>
-                        <button @click="viewDocument(document)" class="consulter-view-btn">Consulter</button>
+                        <button @click="viewDocument(document)" class="consulter-view-btn" :disabled="isAnyDocumentLoading">
+                          <span v-if="loadingViewDocument[document.idDocument]">Chargement...</span>
+                          <span v-else>Consulter</span>
+                        </button>
                       </td>
                     </tr>
                   </tbody>
@@ -241,7 +263,7 @@
           <!-- LEFT: All Items Table -->
           <div class="section">
             <h4>Liste de {{ contextAjouter.entityLabel }}</h4>
-            <div class="table-container">
+            <div class="table-container limited">
               <table class="sidebar-table">
                 <thead>
                   <tr>
@@ -277,7 +299,7 @@
           <!-- RIGHT: Selected Table -->
           <div class="section">
             <h4>Votre sélection</h4>
-            <div class="table-container">
+            <div class="table-container limited">
               <table class="sidebar-table">
                 <thead>
                   <tr>
@@ -325,9 +347,6 @@
               </table>
             </div>
           </div>
-        </div>
-        <div class="sidebar-footer">
-          <button class="validate-btn" @click="saveSelectedContextEntities">Valider sélection</button>
         </div>
       </div>
 
@@ -407,7 +426,10 @@
                       <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
                       <td>{{ getDocumentType(document) }}</td>
                       <td>
-                        <button @click="viewDocument(document)" class="consulter-view-btn">Consulter</button>
+                        <button @click="viewDocument(document)" class="consulter-view-btn" :disabled="isAnyDocumentLoading">
+                          <span v-if="loadingViewDocument[document.idDocument]">Chargement...</span>
+                          <span v-else>Consulter</span>
+                        </button>
                       </td>
                     </tr>
                   </tbody>
@@ -426,10 +448,10 @@
                 <input id="nonFichier-input" v-model="nonFichier" type="text" />
               </div>
               <div class="step">
-                <label for="file-upload">Fichier (PDF,Image,Video)</label>
+                <label for="file-upload" class="file-upload-label">Fichier (PDF,Image,Video)</label>
                 <input id="file-upload" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi" @change="onFileChange" />
                 <div v-if="uploadedFile" class="file-info">
-                  <span>Fichier sélectionné: {{ uploadedFile.name }}</span>
+                  <span class="file-selected-text">Fichier sélectionné: {{ uploadedFile.name }}</span>
                   <button @click="uploadedFile = null" type="button">Retirer</button>
                 </div>
               </div>
@@ -901,6 +923,39 @@ interface Document {
 // User store for role-based access control
 const userStore = useUserStore()
 const selectedDocument = ref<Document | null>(null)
+const loadingViewDocument = ref<Record<number, boolean>>({})
+const isAnyDocumentLoading = computed(() => Object.values(loadingViewDocument.value).some(loading => loading))
+
+// Toast notification system
+interface Toast {
+  id: number
+  message: string
+  type: 'success' | 'error'
+}
+
+const toasts = ref<Toast[]>([])
+let toastId = 0
+
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  const toast: Toast = {
+    id: ++toastId,
+    message,
+    type
+  }
+  toasts.value.push(toast)
+  
+  // Auto remove after 4 seconds
+  setTimeout(() => {
+    removeToast(toast.id)
+  }, 4000)
+}
+
+function removeToast(id: number) {
+  const index = toasts.value.findIndex(t => t.id === id)
+  if (index > -1) {
+    toasts.value.splice(index, 1)
+  }
+}
 
 // Computed property to check if user can access "ajouter" buttons
 // Users with CONSULTATION profile (3) can only consult, not add
@@ -979,6 +1034,10 @@ watch(selectedTypeId, async (newTypeId) => {
   selectedSectionId.value = null
   produits.value = []
   sections.value = []
+  
+  // Clear all sidebar content when Type Produit changes
+  clearAllSidebarContent()
+  
   if (newTypeId !== null) {
     try {
       const [produitsRes, sectionsRes] = await Promise.all([
@@ -998,6 +1057,9 @@ function onStructureChange() {
   selectedDivisionId.value = null
   divisionsNv1.value = []
   
+  // Clear all sidebar content when structure changes
+  clearAllSidebarContent()
+  
   // Set mode based on selected structure
   if (selectedStructureId.value === 5) {
     // CONTEXTE structure
@@ -1012,11 +1074,78 @@ function onStructureChange() {
 function goBackToForm() {
   mode.value = ''
   selectedStructureId.value = null
+  // Clear all sidebar content when going back
+  clearAllSidebarContent()
 }
 
-watch(selectedStructureId, async (newStructureId) => {
+watch(selectedProduitId, () => {
+  // Reset all downstream selections when Produit changes
+  selectedStructureId.value = null
+  selectedSectionId.value = null
   selectedDivisionId.value = null
+  selectedSubDiv2Id.value = null
+  selectedSubDiv3Id.value = null
+  selectedSubDiv4Id.value = null
+  
+  // Clear downstream data arrays
   divisionsNv1.value = []
+  
+  // Clear all sidebar content when Produit changes
+  clearAllSidebarContent()
+})
+
+watch(selectedSectionId, () => {
+  // Reset all downstream selections when Section changes
+  selectedDivisionId.value = null
+  selectedSubDiv2Id.value = null
+  selectedSubDiv3Id.value = null
+  selectedSubDiv4Id.value = null
+  
+  // Clear all sidebar content when Section changes
+  clearAllSidebarContent()
+})
+
+watch(selectedDivisionId, () => {
+  // Reset all downstream selections when Division changes
+  selectedSubDiv2Id.value = null
+  selectedSubDiv3Id.value = null
+  selectedSubDiv4Id.value = null
+  
+  // Clear all sidebar content when Division changes
+  clearAllSidebarContent()
+})
+
+watch(selectedSubDiv2Id, () => {
+  // Reset all downstream selections when SubDiv2 changes
+  selectedSubDiv3Id.value = null
+  selectedSubDiv4Id.value = null
+  
+  // Clear all sidebar content when SubDiv2 changes
+  clearAllSidebarContent()
+})
+
+watch(selectedSubDiv3Id, () => {
+  // Reset all downstream selections when SubDiv3 changes
+  selectedSubDiv4Id.value = null
+  
+  // Clear all sidebar content when SubDiv3 changes
+  clearAllSidebarContent()
+})
+
+watch(selectedStructureId, async (newStructureId) => {
+  // Reset all downstream selections when Structure changes
+  selectedSectionId.value = null
+  selectedDivisionId.value = null
+  selectedSubDiv2Id.value = null
+  selectedSubDiv3Id.value = null
+  selectedSubDiv4Id.value = null
+  
+  // Clear downstream data arrays
+  divisionsNv1.value = []
+  
+  // Clear all sidebar content when Structure changes
+  clearAllSidebarContent()
+  
   if (newStructureId !== null) {
     try {
       const res = await axios.get(`subdivision-nv1/by-structure/${newStructureId}/`)
@@ -1030,6 +1159,14 @@ watch(selectedStructureId, async (newStructureId) => {
 const requiresSubDiv2 = computed(() => {
   const division = divisionsNv1.value.find(d => d.idSubDivisionNv_1 === selectedDivisionId.value)
   return division?.subDiv === true
+})
+
+const requiresSubDiv3 = computed(() => {
+  if (!selectedSubDiv2Id.value) return false
+  const subDiv2Item = filteredSubDiv2List.value.find(
+    item => item.idSubDivisionNv_2.idSubDivisionNv_2 === selectedSubDiv2Id.value
+  )
+  return subDiv2Item?.idSubDivisionNv_2.subDiv === true
 })
 const filteredSubDiv2List = computed(() => {
   return allSubDivs1Et2.value.filter(
@@ -1247,7 +1384,7 @@ async function submitForm() {
         'Content-Type': 'multipart/form-data'
       }
     });
-    alert('Document créé avec succès!');
+    showToast('Document créé avec succès!', 'success');
     console.log(response.data);
     
     // Reset form
@@ -1269,9 +1406,9 @@ async function submitForm() {
     console.error('Erreur lors de la création du document', error);
     if (error.response?.data) {
       console.error('Response data:', error.response.data);
-      alert('Erreur: ' + JSON.stringify(error.response.data));
+      showToast('Erreur: ' + JSON.stringify(error.response.data), 'error');
     } else {
-      alert('Erreur lors de la création du document');
+      showToast('Erreur lors de la création du document', 'error');
     }
   }
 }
@@ -1289,6 +1426,7 @@ const showStructureConsulterContent = ref(false);
 
 // SUCCESS MESSAGE VARIABLE
 const showSuccess = ref(false);
+const loadingConsulter = ref(false);
 
 // NEW SEPARATE CONSULTER VARIABLES
 const showConsulterPanel = ref(false);
@@ -1384,38 +1522,38 @@ const contextConsulterEntityConfig: Record<string, EntityConfig> = {
   projet: {
     label: "Projet",
     endpoint: ((produitId: number) => `projets/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["Code", "Description", "Adresse", "Wilaya"],
-    columnKeys: ["code", "description", "adresse", "wilaya"]
+    columns: ["Code", "Description"],
+    columnKeys: ["code", "description"]
   },
   fournisseur: {
     label: "Fournisseur",
     endpoint: ((produitId: number) => `fournisseur/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Désignation", "Description", "Adresse", "Téléphone", "Email"],
-    columnKeys: ["idFournisseur", "designationFournisseur", "description", "adresse", "telephone", "email"]
+    columns: ["ID", "Désignation", "Description", "Téléphone", "Email"],
+    columnKeys: ["idFournisseur", "designationFournisseur", "description", "telephone", "email"]
   },
   maitre_oeuvre: {
     label: "Maître d'Œuvre",
     endpoint: ((produitId: number) => `/moe/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Désignation", "Description", "Adresse", "Email"],
-    columnKeys: ["idMaitreOeuvre", "designationMO", "description", "adresse", "email"]
+    columns: ["ID", "Désignation", "Description", "Email"],
+    columnKeys: ["idMaitreOeuvre", "designationMO", "description", "email"]
   },
   maitre_ouvrage: {
     label: "Maître d'Ouvrage",
     endpoint: ((produitId: number) => `moa/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Désignation", "Description", "Adresse", "Email"],
-    columnKeys: ["idMaitreOuvrage", "designationMOg", "description", "adresse", "email"]
+    columns: ["ID", "Désignation", "Description", "Email"],
+    columnKeys: ["idMaitreOuvrage", "designationMOg", "description", "email"]
   },
   soustraitants_tvx: {
     label: "Soustraitants Travaux",
     endpoint: ((produitId: number) => `soustraitants/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Désignation", "Description", "Adresse", "Téléphone", "Email"],
-    columnKeys: ["idSoustraitants", "designationStt", "description", "adresse", "telephone", "email"]
+    columns: ["ID", "Désignation", "Description", "Téléphone", "Email"],
+    columnKeys: ["idSoustraitants", "designationStt", "description", "telephone", "email"]
   },
   bet_soustraitants_etudes: {
     label: "BET Soustraitants Études",
     endpoint: ((produitId: number) => `bet/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Nom", "Description", "Adresse", "Téléphone", "Email"],
-    columnKeys: ["idBET", "nom", "description", "adresse", "telephone", "email"]
+    columns: ["ID", "Nom", "Description", "Téléphone", "Email"],
+    columnKeys: ["idBET", "nom", "description", "telephone", "email"]
   },
   direction_projet: {
     label: "Direction du Projet",
@@ -1467,7 +1605,7 @@ async function onConsulterFunction(entityKey: string) {
   
   const config = contextConsulterEntityConfig[entityKey as keyof typeof contextConsulterEntityConfig];
   if (!config) {
-    alert(`Consulter config manquante pour: ${entityKey}`);
+    showToast(`Consulter config manquante pour: ${entityKey}`, 'error');
     return;
   }
 
@@ -1475,7 +1613,7 @@ async function onConsulterFunction(entityKey: string) {
 // Check if the entity is 'direction_projet' and if a project is selected
 if (entityKey === 'direction_projet') {
   if (!selectedProjets.value.length) {
-    alert("Veuillez d'abord sélectionner un projet.");
+    showToast("Veuillez d'abord sélectionner un projet.", 'error');
     return;
   }
   contextConsulter.value.visible = true; // Add this line to make the modal visible
@@ -1502,7 +1640,7 @@ if (entityKey === 'direction_projet') {
   // The rest of your code for other entities...
 
     if (!selectedProduitId.value) {
-      alert("Veuillez d'abord sélectionner un produit.");
+      showToast("Veuillez d'abord sélectionner un produit.", 'error');
       return;
     }
     contextConsulter.value.visible = true;
@@ -1634,7 +1772,7 @@ function closeDateModal() {
 // Function to add Direction Projet with dates
 async function addDirectionProjet() {
   if (!selectedProjets.value.length || !dateModal.value.directeur) {
-    alert("Veuillez sélectionner un projet et un directeur");
+    showToast("Veuillez sélectionner un projet et un directeur", 'error');
     return;
   }
 
@@ -1656,9 +1794,9 @@ async function addDirectionProjet() {
     }
     
     closeDateModal();
-    alert("Directeur ajouté avec succès!");
+    showToast("Directeur ajouté avec succès!", 'success');
   } catch (e) {
-    alert("Erreur lors de l'ajout du directeur au projet");
+    showToast("Erreur lors de l'ajout du directeur au projet", 'error');
   }
 }
 
@@ -1691,7 +1829,7 @@ async function onAjouter(entityKey: string) {
   
   const config = contextEntitiesConfig[entityKey as keyof typeof contextEntitiesConfig];
   if (!config) {
-    alert(`Config manquante pour: ${entityKey}`);
+    showToast(`Config manquante pour: ${entityKey}`, 'error');
     return;
   }
   contextAjouter.value.entityKey = entityKey;
@@ -1706,7 +1844,7 @@ async function onAjouter(entityKey: string) {
       const { data } = await axios.get(config.api);
       config.listRef.value = data;
     } catch (e) {
-      alert("Erreur lors du chargement des " + config.label);
+      showToast("Erreur lors du chargement des " + config.label, 'error');
       contextAjouter.value.visible = false;
       return;
     }
@@ -1744,7 +1882,7 @@ async function onAjouter(entityKey: string) {
   }
   // For direction_projet, check if a project is selected
   if (entityKey === 'direction_projet' && !selectedProjets.value.length) {
-    alert("Veuillez d'abord sélectionner un projet");
+    showToast("Veuillez d'abord sélectionner un projet", 'error');
     return;
   }
   config.selectedRef.value = selectedList;
@@ -1810,7 +1948,7 @@ async function addToSelected(entityKey: string, item: any) {
       config.selectedRef.value.push(item);
       contextAjouter.value.selected = [...config.selectedRef.value];
     } catch (e) {
-      alert("Erreur lors de l'ajout de l'entité.");
+      showToast("Erreur lors de l'ajout de l'entité.", 'error');
     }
   }
 }
@@ -1872,7 +2010,7 @@ async function removeFromSelected(entityKey: string, item: any) {
     );
     contextAjouter.value.selected = [...config.selectedRef.value];
   } catch (e) {
-    alert("Erreur lors de la suppression de l'entité.");
+    showToast("Erreur lors de la suppression de l'entité.", 'error');
   }
 }
 
@@ -1967,15 +2105,15 @@ async function addDirecteur() {
         endpoint = 'projets-directeurs';
         break;
       default:
-        alert("Type d'entité non pris en charge pour l'ajout d'un directeur.");
+        showToast("Type d'entité non pris en charge pour l'ajout d'un directeur.", 'error');
         return;
     }
 
     await axios.post(`/${endpoint}/`, payload);
-    alert("Directeur ajouté avec succès !");
+    showToast("Directeur ajouté avec succès !", 'success');
     closeDirecteurModal();
   } catch (e) {
-    alert("Erreur lors de l'ajout du directeur.");
+    showToast("Erreur lors de l'ajout du directeur.", 'error');
   }
 }
 
@@ -2019,10 +2157,10 @@ function isAlreadySelected(entityKey: string, item: any) {
 
 // Save user's selection (and close modal)
 // Simplify the saveSelectedContextEntities function
-function saveSelectedContextEntities() {
-  alert("Les entités sont enregistrées automatiquement.");
-  closeContextAjouterModal();
-}
+// function saveSelectedContextEntities() {
+//   alert("Les entités sont enregistrées automatiquement.");
+//   closeContextAjouterModal();
+// }
 
 // async function onSupprimer(entityKey: string) {
 //   const entityDef = contextConsulterEntityConfig[entityKey as keyof typeof contextConsulterEntityConfig];
@@ -2110,9 +2248,9 @@ async function performEntityDelete(item:any) {
     contextDelete.value.confirmItem = null;
     // Remove from list in modal UI
     contextDelete.value.data = contextDelete.value.data.filter((row:any) => row[contextDelete.value.idCol] !== item[contextDelete.value.idCol]);
-    alert('Elément supprimé avec succès');
+    showToast('Elément supprimé avec succès', 'success');
   } catch(e:any) {
-    alert('Erreur lors de la suppression: ' + (e?.message || ''));
+    showToast('Erreur lors de la suppression: ' + (e?.message || ''), 'error');
   } finally {
     contextDelete.value.loading = false;
   }
@@ -2175,6 +2313,7 @@ function closeDocModal() {
 
 // Structure mode sidebar functions
 function openStructureDocContent() {
+  contextAjouter.value.visible = false; // Close context ajouter modal
   showSuccess.value = false; // Close success message if open
   showConsulterPanel.value = false; // Close NEW consulter if open
   showStructureDocContent.value = true;
@@ -2188,9 +2327,18 @@ function closeStructureDocContent() {
 }
 
 // SUCCESS MESSAGE FUNCTION
-function showSuccessMessage() {
+async function showSuccessMessage() {
+  if (loadingConsulter.value) return; // Prevent multiple clicks
+  
+  loadingConsulter.value = true;
+  showStructureDocContent.value = false; // Close ajouter content
   showSuccess.value = true;
-  fetchDocListForCurrentSelection();
+  
+  try {
+    await fetchDocListForCurrentSelection();
+  } finally {
+    loadingConsulter.value = false;
+  }
 }
 
 
@@ -2252,14 +2400,19 @@ async function handleDeleteDocument(document: any) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) return;
   try {
     await axios.delete(`documents/${document.idDocument}`);
-    alert("Document supprimé !");
+    showToast("Document supprimé !", 'success');
     fetchDocListForCurrentSelection();
   } catch (e) {
-    alert("Erreur lors de la suppression.");
+    showToast("Erreur lors de la suppression.", 'error');
   }
 }
 
 async function viewDocument(document: Document) {
+  if (loadingViewDocument.value[document.idDocument]) return
+  
+  loadingViewDocument.value[document.idDocument] = true
+  showToast('Veuillez patienter, le document se charge...', 'success')
+  
   try {
     const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
     const blob = await response.blob()
@@ -2280,7 +2433,9 @@ async function viewDocument(document: Document) {
     }
   } catch (error) {
     console.error('Error loading document:', error)
-    alert('Erreur lors du chargement du document')
+    showToast('Erreur lors du chargement du document', 'error')
+  } finally {
+    loadingViewDocument.value[document.idDocument] = false
   }
 }
 
@@ -2419,7 +2574,7 @@ watch(mode, async (val) => {
       // Auto-load existing context data for arborescence
       await loadExistingContextData();
     } catch (e) {
-      alert("Erreur de chargement des listes de contexte.");
+      showToast("Erreur de chargement des listes de contexte.", 'error');
     } finally {
       loadingContexteLists.value = false;
     }
@@ -2572,8 +2727,8 @@ const contextEntitiesConfig = {
     label: 'Projet',
     api: '/projets/',
     idCol: 'code',
-    columns: ['Code', 'Description', 'Adresse', 'Wilaya'],
-    columnKeys: ['code', 'description', 'adresse', 'wilaya'],
+    columns: ['Code', 'Description'],
+    columnKeys: ['code', 'description'],
     listRef: projetsList,
     selectedRef: selectedProjets,
     allowMultiple: false,
@@ -2582,8 +2737,8 @@ const contextEntitiesConfig = {
     label: 'Fournisseur',
     api: '/fournisseurs/',
     idCol: 'idFournisseur',
-    columns: ['ID', 'Désignation', 'Description', 'Adresse', 'Téléphone', 'Email'],
-    columnKeys: ['idFournisseur', 'designationFournisseur', 'description', 'adresse', 'telephone', 'email'],
+    columns: ['ID', 'Désignation', 'Description', 'Téléphone', 'Email'],
+    columnKeys: ['idFournisseur', 'designationFournisseur', 'description', 'telephone', 'email'],
     listRef: fournisseursList,
     selectedRef: selectedFournisseurs,
     allowMultiple: true,
@@ -2592,8 +2747,8 @@ const contextEntitiesConfig = {
     label: "Maître d'Ouvrage",
     api: '/maitres-ouvrage/',
     idCol: 'idMaitreOuvrage',
-    columns: ['ID', 'Désignation', 'Description', 'Adresse', 'Email'],
-    columnKeys: ['idMaitreOuvrage', 'designationMOg', 'description', 'adresse', 'email'],
+    columns: ['ID', 'Désignation', 'Description', 'Email'],
+    columnKeys: ['idMaitreOuvrage', 'designationMOg', 'description', 'email'],
     listRef: maitresOuvrageList,
     selectedRef: selectedMaitresOuvrage,
     allowMultiple: false,
@@ -2602,8 +2757,8 @@ const contextEntitiesConfig = {
     label: "Maître d'Œuvre",
     api: '/maitres-oeuvre/',
     idCol: 'idMaitreOeuvre',
-    columns: ['ID', 'Désignation', 'Description', 'Adresse', 'Email'],
-    columnKeys: ['idMaitreOeuvre', 'designationMO', 'description', 'adresse', 'email'],
+    columns: ['ID', 'Désignation', 'Description', 'Email'],
+    columnKeys: ['idMaitreOeuvre', 'designationMO', 'description', 'email'],
     listRef: maitresOeuvreList,
     selectedRef: selectedMaitresOeuvre,
     allowMultiple: false,
@@ -2612,8 +2767,8 @@ const contextEntitiesConfig = {
     label: "Soustraitants de Travaux",
     api: '/soustraitants/',
     idCol: 'idSoustraitant',
-    columns: ['ID', 'Désignation', 'Description', 'Adresse', 'Téléphone', 'Email'],
-    columnKeys: ['idSoustraitant', 'designationStt', 'description', 'adresse', 'telephone', 'email'],
+    columns: ['ID', 'Désignation', 'Description', 'Téléphone', 'Email'],
+    columnKeys: ['idSoustraitant', 'designationStt', 'description', 'telephone', 'email'],
     listRef: soustraitantsList,
     selectedRef: selectedSoustraitants,
     allowMultiple: true,
@@ -2622,8 +2777,8 @@ const contextEntitiesConfig = {
     label: "BET Soustraitants Études",
     api: '/bet-soustraitants-etudes/',
     idCol: 'idBET',
-    columns: ['ID', 'Nom', 'Description', 'Adresse', 'Téléphone', 'Email'],
-    columnKeys: ['idBetSoustraitant', 'nom', 'description', 'adresse', 'telephone', 'email'],
+    columns: ['ID', 'Nom', 'Description', 'Téléphone', 'Email'],
+    columnKeys: ['idBetSoustraitant', 'nom', 'description', 'telephone', 'email'],
     listRef: bureauxEtudesList,
     selectedRef: selectedBureauxEtudes,
     allowMultiple: true,
@@ -2792,7 +2947,7 @@ async function downloadFile(doc: any) {
     URL.revokeObjectURL(url)
   } catch (error) {
     console.error('Download failed:', error)
-    alert('Erreur lors du téléchargement')
+    showToast('Erreur lors du téléchargement', 'error')
   }
 }
 
@@ -2819,6 +2974,58 @@ function closeDocumentViewer() {
     URL.revokeObjectURL(selectedDocument.value.fichier)
   }
   selectedDocument.value = null
+}
+
+// Helper function to clear all sidebar content and reset states
+function clearAllSidebarContent() {
+  // Close all modals and sidebar content
+  showStructureDocContent.value = false
+  showSuccess.value = false
+  showConsulterPanel.value = false
+  showStructureConsulterContent.value = false
+  showDocModal.value = false
+  showImportModal.value = false
+  
+  // Close context modals
+  contextAjouter.value.visible = false
+  contextConsulter.value.visible = false
+  contextDelete.value.visible = false
+  directeurModal.value.visible = false
+  dateModal.value.visible = false
+  
+  // Clear document viewer
+  if (selectedDocument.value) {
+    closeDocumentViewer()
+  }
+  
+  // Clear form data
+  nonFichier.value = ''
+  uploadedFile.value = null
+  multipleImages.value = []
+  showImageToPdfOption.value = false
+  importFiles.value = []
+  importNomFichier.value = ''
+  
+  // Clear document lists
+  docList.value = []
+  docModalError.value = ''
+  
+  // Clear context selections
+  selectedBureauxEtudes.value = []
+  selectedFournisseurs.value = []
+  selectedMaitresOeuvre.value = []
+  selectedMaitresOuvrage.value = []
+  selectedSoustraitants.value = []
+  selectedProjets.value = []
+  selectedDirectionsProjets.value = []
+  
+  // Reset dropdown states
+  activeDropdown.value = null
+  activeDropdownConsulter.value = null
+  directeursList.value = []
+  directeursListConsulter.value = []
+  loadingDirecteurs.value = false
+  loadingDirecteursConsulter.value = false
 }
 
 // Import Dossier Source functions
@@ -2867,7 +3074,7 @@ async function createZipFile(files: File[], zipName: string): Promise<File> {
 
 async function submitImportForm() {
   if (!importFiles.value.length || !importNomFichier.value) {
-    alert('Veuillez sélectionner des fichiers et saisir un nom de dossier')
+    showToast('Veuillez sélectionner des fichiers et saisir un nom de dossier', 'error')
     return
   }
 
@@ -2921,7 +3128,7 @@ async function submitImportForm() {
         'Content-Type': 'multipart/form-data'
       }
     })
-    alert('Dossier source importé avec succès!')
+    showToast('Dossier source importé avec succès!', 'success')
     console.log(response.data)
     
     // Reset form and close modal
@@ -2936,9 +3143,9 @@ async function submitImportForm() {
     console.error('Erreur lors de l\'importation du dossier source', error)
     if (error.response?.data) {
       console.error('Response data:', error.response.data)
-      alert('Erreur: ' + JSON.stringify(error.response.data))
+      showToast('Erreur: ' + JSON.stringify(error.response.data), 'error')
     } else {
-      alert('Erreur lors de l\'importation du dossier source')
+      showToast('Erreur lors de l\'importation du dossier source', 'error')
     }
   }
 }
@@ -3068,7 +3275,7 @@ async function submitImportForm() {
 
 /* Modal section */
 .modal-section {
-  margin-top: 0.3em;
+  margin-top: 0.1em;
 }
 
 /* Sidebar content styles */
@@ -3082,8 +3289,8 @@ async function submitImportForm() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5em;
-  padding-bottom: 0.2em;
+  margin-bottom: 0.1em;
+  padding-bottom: 0.1em;
   border-bottom: 2px solid #232f4b;
 }
 
@@ -3110,12 +3317,12 @@ async function submitImportForm() {
 
 .sidebar-body {
   flex: 1;
-  overflow-y: auto;
+  overflow: visible;
   max-height: 70vh;
 }
 
 .section {
-  margin-bottom: 0.8em;
+  margin-bottom: 1em;
 }
 
 .section h4 {
@@ -3126,11 +3333,17 @@ async function submitImportForm() {
 }
 
 .table-container {
-  max-height: 500px;
+  max-height: 300px;
   overflow-y: auto;
   border: 1px solid #232f4b;
   border-radius: 6px;
   margin-bottom: 1em;
+}
+
+/* Limit tables to 5 rows with scrolling */
+.table-container.limited {
+  max-height: 250px;
+  overflow-y: auto;
 }
 
 .sidebar-table {
@@ -3224,7 +3437,7 @@ async function submitImportForm() {
 }
 
 .sidebar-footer {
-  padding-top: 0.8em;
+  padding-top: 0.1em;
   border-top: 2px solid #232f4b;
   text-align: center;
 }
@@ -3258,7 +3471,7 @@ async function submitImportForm() {
 }
 .add-doc-main {
   flex: 1;
-  padding: 0.1em 2em 0.3em 3em;
+  padding: 0.01em 2em 0.1em 3em;
   max-width: 700px;
   margin: 0;
   display: flex;
@@ -3276,7 +3489,7 @@ async function submitImportForm() {
   margin-bottom: 0.5em;
   background: rgba(22,33,62,0.85);
   border-radius: 12px;
-  padding: 1em 2em 1em 1.5em;
+  padding: 0.5em 2em 1em 1.5em;
   box-shadow: 0 2px 12px 0 #1a237e22;
   border-left: 4px solid #2196F3;
 }
@@ -3395,6 +3608,17 @@ select:focus, input:focus {
   color: #E53935;
   font-weight: 700;
   cursor: pointer;
+}
+
+.file-upload-label {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: #43E97B !important;
+}
+
+.file-selected-text {
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 .pdf-btn, .save-btn {
   /* margin-top: 1.2em; */
@@ -3544,7 +3768,7 @@ ul {
 }
 .context-stepper select {
   width: 100%;
-  padding: 0.7em 1em;
+  padding: 0.1em 1em;
   border-radius: 6px;
   border: 1.5px solid #7ea8e9;
   background: #202a49;
@@ -3563,7 +3787,7 @@ ul {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 0.7rem;
+  margin-bottom: 0.3rem;
 }
 
 .back-btn {
@@ -3709,7 +3933,7 @@ ul {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5em 1.7em;
+  padding: 0.2em 1.7em;
 }
 .context-entity-title {
   font-size: 1.15em;
@@ -3792,12 +4016,12 @@ ul {
 .dropdown-content {
   position: absolute;
   background-color: #1a237e;
-  min-width: 200px;
-  max-width: 300px;
-  max-height: 200px;
+  min-width: 250px;
+  max-width: 350px;
+  max-height: 180px;
   overflow-y: auto;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 100;
+  z-index: 1000;
   border-radius: 4px;
   right: 0;
   top: 100%;
@@ -3806,10 +4030,11 @@ ul {
 
 .dropdown-item {
   color: #e3eafc;
-  padding: 8px 12px;
+  padding: 10px 14px;
   text-decoration: none;
   display: block;
   border-bottom: 1px solid #232f4b;
+  line-height: 1.4;
 }
 
 .dropdown-item:hover {
@@ -3956,8 +4181,14 @@ ul {
   transition: background 0.2s;
 }
 
-.consulter-btn:hover {
+.consulter-btn:hover:not(:disabled) {
   background: linear-gradient(90deg, #673AB7 0%, #9C27B0 100%);
+}
+
+.consulter-btn:disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
 }
 
 .files-preview {
@@ -4167,8 +4398,14 @@ ul {
   font-weight: 600;
 }
 
-.consulter-view-btn:hover {
+.consulter-view-btn:hover:not(:disabled) {
   background: #039be5;
+}
+
+.consulter-view-btn:disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
 }
 
 .consulter-no-data {
@@ -4201,6 +4438,120 @@ ul {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* Toast Notification Styles */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-weight: 500;
+  font-size: 14px;
+  min-width: 300px;
+  max-width: 400px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+.toast:hover {
+  transform: translateX(-5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.toast.success {
+  background: linear-gradient(135deg, #4CAF50 0%, #43E97B 100%);
+  color: white;
+  border-left: 4px solid #2E7D32;
+}
+
+.toast.error {
+  background: linear-gradient(135deg, #F44336 0%, #E53935 100%);
+  color: white;
+  border-left: 4px solid #C62828;
+}
+
+.toast-icon {
+  font-size: 18px;
+  font-weight: bold;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.toast-message {
+  flex: 1;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .toast-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .toast {
+    min-width: auto;
+    max-width: none;
+    font-size: 13px;
+    padding: 10px 12px;
   }
 }
 

@@ -14,14 +14,14 @@
         <span class="icon">🏠</span>
         <span>Accueil</span>
       </router-link>
-      <router-link to="/add-document" class="nav-link" active-class="active">
+      <a @click="handleNavClick('/add-document')" class="nav-link" :class="{ active: route.path === '/add-document' }">
         <span class="icon">➕</span>
         <span>Fond Documentaire</span>
-      </router-link>
-      <router-link to="/documents" class="nav-link" active-class="active">
+      </a>
+      <a @click="handleNavClick('/documents')" class="nav-link" :class="{ active: route.path === '/documents' }">
         <span class="icon">📄</span>
         <span>Recherche</span>
-      </router-link>
+      </a>
 
       <!-- BIBLIOTHEQUE -->
       <div class="bibliotheque-group">
@@ -160,12 +160,24 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, computed } from "vue"
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../store/userStore'
 
 defineProps<{ visible: boolean }>()
 
 const route = useRoute()
+const router = useRouter()
+
+// Handle navigation with refresh functionality
+function handleNavClick(path: string) {
+  if (route.path === path) {
+    // If clicking on current page, refresh it
+    window.location.reload()
+  } else {
+    // Navigate to different page
+    router.push(path)
+  }
+}
 
 // User store for role-based access control
 const userStore = useUserStore()
