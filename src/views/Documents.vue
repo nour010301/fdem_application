@@ -46,13 +46,13 @@
           {{ sub3.idSubDivisionNv_3.nom }}
         </option>
       </select>
-      <!-- <select v-model="selectedTypeDoc" @change="onTypeDocChange" :disabled="loadingFilters">
+      <select v-model="selectedTypeDoc" @change="onTypeDocChange" :disabled="loadingFilters">
         <option value="">Type Doc</option>
         <option value="Tous">Tous</option>
         <option value="PDF">PDF</option>
         <option value="Image">Image</option>
-        <option value="Vidéo">Vidéo</option>
-      </select> -->
+        <option value="Multimédia">Multimédia</option>
+      </select>
       <button class="primary" @click="applyFilters" :disabled="loading || loadingConsulter">{{ loading ? "Filtrage..." : "Filtrer" }}</button>
       <button class="outline" @click="resetFilters" :disabled="loading || loadingConsulter">Annuler le filtre</button>
     </div>
@@ -64,14 +64,14 @@
         placeholder="Rechercher un document..."
         class="search-input"
       />
-      <button 
+      <!-- <button 
         @click="redirectToAddDocument" 
         class="add-button"
         :class="{ 'disabled': !canAddDocuments || loadingConsulter }"
         :disabled="!canAddDocuments || loadingConsulter"
       >
         + Ajouter
-      </button>
+      </button> -->
     </div>
 
     <div v-if="loading" class="info">Chargement...</div>
@@ -79,7 +79,6 @@
 
     <div class="table-wrapper">
       <table v-if="filtersApplied && filteredDocuments.length > 0" class="product-table">
-        <!-- ... your thead/tr/td code from before ... -->
         <thead>
         <tr>
           <th @click="toggleSort('idDocument')" class="sortable">
@@ -95,10 +94,10 @@
           <th>Subdivision 2</th>
           <th>Subdivision 3</th>
           <th v-if="canSeeCreatedBy">Créé par</th>
-          <th>Type Document</th>
-          <!-- <th>Actions</th> -->
-          <th>Consulter</th>
-          <!-- <th>Telecharger dossier source </th> -->
+          <th>Fichier</th>
+          <th>Vidéo</th>
+          <th>Plan</th>
+          <th>Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -113,55 +112,37 @@
             <td>{{ document.subDivisionNv2Nom || '—' }}</td>
             <td>{{ document.subDivisionNv3Nom || '—' }}</td>
             <td v-if="canSeeCreatedBy">{{ document.creerParUsername || '—' }}</td>
-            <td>{{ getDocumentType(document) }}</td>
-            
-            <!-- <td>
-              <button class="delete-button" @click="confirmDelete(document)">Supprimer</button>
-            </td> -->
             <td>
-              <button 
-                class="view-button" 
-                @click="viewDocument(document)" 
-                :disabled="loadingConsulter"
-                :class="{ 'disabled': loadingConsulter }"
-              >
-                <span v-if="loadingConsulter && loadingDocumentId === document.idDocument">Chargement...</span>
+              <button v-if="document.nomFichier" @click="viewDocument(document, 'fichier')" class="file-btn" :disabled="loadingConsulter" title="Consulter">
+                <span v-if="loadingConsulter && loadingDocumentId === document.idDocument">...</span>
                 <span v-else>Consulter</span>
               </button>
-              <!-- <button 
-                class="update-button" 
-                @click="confirmUpdate(document)"
-                :class="{ 'disabled': !canAddDocuments }"
-                :disabled="!canAddDocuments"
-                title="Modifier"
-              >
+              <span v-else class="no-file">—</span>
+            </td>
+            <td>
+              <button v-if="document.video" @click="viewDocument(document, 'video')" class="file-btn" :disabled="loadingConsulter" title="Voir vidéo">
+                <span v-if="loadingConsulter && loadingDocumentId === document.idDocument">...</span>
+                <span v-else>Voir vidéo</span>
+              </button>
+              <span v-else class="no-file">—</span>
+            </td>
+            <td>
+              <button v-if="document.plan" @click="downloadPlan(document)" class="file-btn" :disabled="!canDownloadPlan" title="Télécharger plan">
+                Télécharger
+              </button>
+              <span v-else class="no-file">—</span>
+            </td>
+            <td class="action-buttons">
+              <button class="action-btn delete-btn" @click="confirmDelete(document)" title="Supprimer">
+                🗑️
+              </button>
+              <button class="action-btn update-btn" @click="confirmUpdate(document)" :disabled="!canAddDocuments" title="Modifier">
                 ✎
               </button>
-              <button 
-                class="move-button" 
-                @click="confirmMove(document)"
-                :class="{ 'disabled': !canAddDocuments }"
-                :disabled="!canAddDocuments"
-                title="Déplacer"
-              >
+              <button class="action-btn move-btn" @click="confirmMove(document)" :disabled="!canAddDocuments" title="Déplacer">
                 ↗
-              </button> -->
-            </td>
-            <!-- <td>
-              <button 
-                v-if="document.plan" 
-                @click="downloadPlan(document)" 
-                :class="['btn', 'plan-download-btn', { 'btn-disabled': !canDownloadPlan }]" 
-                :disabled="!canDownloadPlan"
-                title="Télécharger Plan"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                </svg>
-                Plan
               </button>
-              <span v-else>—</span>
-            </td> -->
+            </td>
           </tr>
         </tbody>
       </table>
@@ -425,7 +406,7 @@
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
-import { useRouter } from 'vue-router'
+// import { useRouter } from 'vue-router'
 import PdfViewer from '../components/PdfViewer.vue'
 import { useUserStore } from '../store/userStore'
 
@@ -454,6 +435,8 @@ interface Document {
   dateCreation?: string | null
   dateModification?: string | null
   fichier?: string | null
+  nomFichier?: string | null
+  video?: string | null
   detectedType?: string
   creerPar?: number | null
   creerParUsername?: string | null
@@ -475,7 +458,7 @@ const documentToMove = ref<Document | null>(null)
 const selectedFile = ref<File | null>(null)
 const multipleImages = ref<File[]>([])
 const showImageToPdfOption = ref(false)
-const router = useRouter()
+// const router = useRouter()
 const selectedDocument = ref<Document | null>(null)
 const loadingConsulter = ref(false)
 const loadingDocumentId = ref<number | null>(null)
@@ -498,9 +481,9 @@ const canSeeCreatedBy = computed(() => {
 
 // Computed property to check if user can download plans
 // Users with plan permission or admin informatique can download plans
-// const canDownloadPlan = computed(() => {
-//   return userStore.user.value?.profil === 2 || userStore.user.value?.plan || false
-// })
+const canDownloadPlan = computed(() => {
+  return userStore.user.value?.profil === 2 || userStore.user.value?.plan || false
+})
 
 
 
@@ -680,9 +663,9 @@ function onSubdivision3Change() {
   clearRightSideContent()
 }
 
-// function onTypeDocChange() {
-//   // Frontend-only filter, no backend call needed
-// }
+function onTypeDocChange() {
+  // Frontend-only filter, no backend call needed
+}
 
 // --- Filtering Documents ---
 async function applyFilters() {
@@ -832,7 +815,7 @@ async function fetchDocuments() {
     loading.value = false
   }
 }
-// function confirmDelete(document: Document) { documentToDelete.value = document }
+ function confirmDelete(document: Document) { documentToDelete.value = document }
 async function deleteDocument() {
   if (!documentToDelete.value) return
   try {
@@ -843,28 +826,36 @@ async function deleteDocument() {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
   }
 }
-function redirectToAddDocument() { router.push('/add-document') }
-async function viewDocument(document: Document) {
+// function redirectToAddDocument() { router.push('/add-document') }
+async function viewDocument(document: Document, fileType: 'fichier' | 'video' = 'fichier') {
   loadingConsulter.value = true
   loadingDocumentId.value = document.idDocument
   
   try {
-    const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
-    const blob = await response.blob()
-    const fileUrl = URL.createObjectURL(blob)
-    
-    // Detect file type from blob content-type
-    let detectedType = 'pdf'
-    if (blob.type.startsWith('image/')) {
-      detectedType = 'image'
-    } else if (blob.type.startsWith('video/')) {
-      detectedType = 'video'
-    }
-    
-    selectedDocument.value = {
-      ...document,
-      fichier: fileUrl,
-      detectedType: detectedType
+    if (fileType === 'video' && document.video) {
+      // For video, use the direct URL from API response
+      selectedDocument.value = {
+        ...document,
+        fichier: document.video,
+        detectedType: 'video'
+      }
+    } else {
+      // For fichier, use the view-file endpoint
+      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
+      const blob = await response.blob()
+      const fileUrl = URL.createObjectURL(blob)
+      
+      // Detect file type from blob content-type
+      let detectedType = 'pdf'
+      if (blob.type.startsWith('image/')) {
+        detectedType = 'image'
+      }
+      
+      selectedDocument.value = {
+        ...document,
+        fichier: fileUrl,
+        detectedType: detectedType
+      }
     }
   } catch (error) {
     console.error('Error loading document:', error)
@@ -875,29 +866,29 @@ async function viewDocument(document: Document) {
   }
 }
 
-// function confirmUpdate(document: Document) {
-//   documentToUpdate.value = { ...document }
-//   selectedFile.value = null
-//   multipleImages.value = []
-//   showImageToPdfOption.value = false
-// }
+function confirmUpdate(document: Document) {
+  documentToUpdate.value = { ...document }
+  selectedFile.value = null
+  multipleImages.value = []
+  showImageToPdfOption.value = false
+}
 
 function getFileName(filePath: string): string {
   if (!filePath) return 'Aucun fichier'
   return filePath.split('/').pop() || filePath
 }
 
-// function confirmMove(document: Document) {
-//   documentToMove.value = { 
-//     ...document,
-//     // Ensure all subdivision properties exist
-//     idSubDivisionNv_1: document.idSubDivisionNv_1 || null,
-//     idSubDivisionNv_2: document.idSubDivisionNv_2 || null,
-//     idSubDivisionNv_3: document.idSubDivisionNv_3 || null,
-//     idSubDivisionNv_4: document.idSubDivisionNv_4 || null
-//   }
-//   console.log('Initialized documentToMove:', documentToMove.value)
-// }
+function confirmMove(document: Document) {
+  documentToMove.value = { 
+    ...document,
+    // Ensure all subdivision properties exist
+    idSubDivisionNv_1: document.idSubDivisionNv_1 || null,
+    idSubDivisionNv_2: document.idSubDivisionNv_2 || null,
+    idSubDivisionNv_3: document.idSubDivisionNv_3 || null,
+    idSubDivisionNv_4: document.idSubDivisionNv_4 || null
+  }
+  console.log('Initialized documentToMove:', documentToMove.value)
+}
 
 function onFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
@@ -1187,7 +1178,7 @@ function getDocumentType(document: any): string {
   // Video extensions
   const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', '3gp', 'mpg', 'mpeg']
   if (videoExtensions.includes(extension)) {
-    return 'Vidéo'
+    return 'Multimédia'
   }
   
   // Photo extensions (specific photo formats)
@@ -1277,27 +1268,27 @@ function clearRightSideContent() {
 }
 
 // Download plan function
-// async function downloadPlan(doc: Document) {
-//   if (!doc.plan || !canDownloadPlan.value) return
+async function downloadPlan(doc: Document) {
+  if (!doc.plan || !canDownloadPlan.value) return
   
-//   try {
-//     const response = await fetch(doc.plan)
-//     const blob = await response.blob()
-//     const url = URL.createObjectURL(blob)
+  try {
+    const response = await fetch(doc.plan)
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
     
-//     const a = document.createElement('a')
-//     a.href = url
-//     a.download = `plan-${doc.idDocument}.zip`
-//     document.body.appendChild(a)
-//     a.click()
-//     document.body.removeChild(a)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `plan-${doc.idDocument}.zip`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
     
-//     URL.revokeObjectURL(url)
-//   } catch (error) {
-//     console.error('Plan download failed:', error)
-//     alert('Erreur lors du téléchargement du plan')
-//   }
-// }
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Plan download failed:', error)
+    alert('Erreur lors du téléchargement du plan')
+  }
+}
 
 onMounted(async () => {
   await userStore.fetchUserProfile()
@@ -2050,6 +2041,125 @@ h1 {
 
 .plan-download-btn:hover:not(.btn-disabled) {
   background-color: #f57c00 !important;
+}
+
+/* File type indicators and action buttons */
+.file-indicator {
+  font-size: 1.2em;
+  color: #43E97B;
+}
+
+.no-file {
+  color: #888;
+  font-style: italic;
+}
+
+.file-btn {
+  padding: 6px 12px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.file-btn:hover:not(:disabled) {
+  background: #1976d2;
+}
+
+.file-btn:disabled {
+  background: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.3em;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  background: none;
+  border: 1px solid #232f4b;
+  border-radius: 4px;
+  padding: 0.3em 0.5em;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s;
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1px;
+}
+
+.view-btn {
+  background: #2196F3;
+  color: white;
+  border-color: #2196F3;
+}
+
+.view-btn:hover:not(:disabled) {
+  background: #1976d2;
+  transform: scale(1.1);
+}
+
+.download-btn {
+  background: #43E97B;
+  color: #111;
+  border-color: #43E97B;
+}
+
+.download-btn:hover:not(:disabled) {
+  background: #3bc96a;
+  transform: scale(1.1);
+}
+
+.delete-btn {
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+.delete-btn:hover:not(:disabled) {
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+.update-btn {
+  background: #17a2b8;
+  color: white;
+  border-color: #17a2b8;
+}
+
+.update-btn:hover:not(:disabled) {
+  background: #138496;
+  transform: scale(1.1);
+}
+
+.move-btn {
+  background: #ffc107;
+  color: #212529;
+  border-color: #ffc107;
+}
+
+.move-btn:hover:not(:disabled) {
+  background: #e0a800;
+  transform: scale(1.1);
+}
+
+.action-btn:disabled {
+  background: #888 !important;
+  color: #ccc !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+  transform: none !important;
 }
 
 /* Responsive design */

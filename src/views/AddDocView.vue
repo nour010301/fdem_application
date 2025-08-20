@@ -144,6 +144,15 @@
       </div>
     </div>
 
+    <!-- Resizable divider -->
+    <div 
+      v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess"
+      class="resize-divider"
+      @mousedown="startResize"
+    >
+      <div class="resize-handle"></div>
+    </div>
+
     <!-- Right sidebar for context and structure modes -->
     <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess">
 
@@ -164,30 +173,53 @@
             <div v-if="docModalError" class="error">{{ docModalError }}</div>
             <div class="section">
               <h4>Documents existants</h4>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Rechercher un document..." 
+                class="search-input-sidebar"
+              />
               <div class="table-container">
-                <table v-if="docList.length" class="sidebar-table">
+                <table v-if="filteredDocList.length" class="sidebar-table">
                   <thead>
                     <tr>
                       <th>Description</th>
-                      <th>Type Document</th>
-                      <th>Action</th>
+                      <th>Fichier</th>
+                      <th>Vidéo</th>
+                      <th>Plan</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="document in docList" :key="document.idDocument">
+                    <tr v-for="document in filteredDocList" :key="document.idDocument">
                       <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
-                      <td>{{ getDocumentType(document) }}</td>
                       <td>
-                        <button @click="viewDocument(document)" class="consulter-view-btn" :disabled="isAnyDocumentLoading">
-                          <span v-if="loadingViewDocument[document.idDocument]">Chargement...</span>
+                        <button v-if="document.nomFichier" @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
                           <span v-else>Consulter</span>
                         </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <button v-if="document.video" @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                          <span v-else>▶️ Voir</span>
+                        </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                          💾 Télécharger
+                        </button>
+                        <span v-else class="no-file">-</span>
                       </td>
                     </tr>
                   </tbody>
                 </table>
-                <div v-else class="no-data">
+                <div v-else-if="!docList.length" class="no-data">
                   Aucun document trouvé pour l'arborescence sélectionnée.
+                </div>
+                <div v-else class="no-data">
+                  Aucun document trouvé pour "{{ searchQuery }}".
                 </div>
               </div>
             </div>
@@ -197,7 +229,7 @@
 
       <!-- Show Arborescence only in context mode -->
       <div v-if="mode === 'contexte'" class="arborescence-section">
-        <h3>Arborescence</h3>
+        <!-- <h3>Arborescence</h3> -->
         
         <!-- Tree structure for Type Produit and Produit -->
         <div class="tree-structure">
@@ -417,19 +449,33 @@
                   <thead>
                     <tr>
                       <th>Description</th>
-                      <th>Type Document</th>
-                      <th>Action</th>
+                      <th>Fichier</th>
+                      <th>Vidéo</th>
+                      <th>Plan</th>
                     </tr>
                   </thead>
                     <tbody>
                     <tr v-for="document in docList" :key="document.idDocument">
                       <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
-                      <td>{{ getDocumentType(document) }}</td>
                       <td>
-                        <button @click="viewDocument(document)" class="consulter-view-btn" :disabled="isAnyDocumentLoading">
-                          <span v-if="loadingViewDocument[document.idDocument]">Chargement...</span>
+                        <button v-if="document.nomFichier" @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
                           <span v-else>Consulter</span>
                         </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <button v-if="document.video" @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                          <span v-else>▶️ Voir</span>
+                        </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                          💾 Télécharger
+                        </button>
+                        <span v-else class="no-file">-</span>
                       </td>
                     </tr>
                   </tbody>
@@ -447,28 +493,48 @@
                 <label for="nonFichier">Description</label>
                 <input id="nonFichier-input" v-model="nonFichier" type="text" />
               </div>
-              <div class="step">
-                <label for="file-upload" class="file-upload-label">Fichier (PDF,Image,Video)</label>
-                <input id="file-upload" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi" @change="onFileChange" />
-                <div v-if="uploadedFile" class="file-info">
-                  <span class="file-selected-text">Fichier sélectionné: {{ uploadedFile.name }}</span>
-                  <button @click="uploadedFile = null" type="button">Retirer</button>
-                </div>
-              </div>
               
-              <!-- <div class="step" v-if="selectedStructureId">
-                <label for="multiple-images">Ou sélectionner plusieurs images (pour créer un PDF)</label>
-                <input id="multiple-images" type="file" multiple accept="image/*" @change="onMultipleImagesChange" />
-                <div v-if="multipleImages.length > 0" class="images-preview">
-                  <h4>Images sélectionnées ({{ multipleImages.length }}):</h4>
-                  <div class="image-list">
-                    <div v-for="(image, index) in multipleImages" :key="index" class="image-item">
-                      <span>{{ image.name }}</span>
-                      <button @click="removeImage(index)" type="button" class="remove-image">×</button>
+              <!-- File Upload Options -->
+              <div class="upload-options">
+                <!-- Option 1: Normal Files -->
+                <div class="step upload-option">
+                  <label for="file-upload" class="file-upload-label">Ajouter Fichier Normal</label>
+                  <input id="file-upload" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.bmp,.webp" @change="onFileChange" />
+                  <div v-if="uploadedFile" class="file-info">
+                    <span class="file-selected-text">Fichier sélectionné: {{ uploadedFile.name }}</span>
+                    <button @click="uploadedFile = null" type="button">Retirer</button>
+                  </div>
+                </div>
+                
+                <!-- Option 2: Video Files -->
+                <div class="step upload-option">
+                  <label for="video-upload" class="file-upload-label">Ajouter Vidéo</label>
+                  <input id="video-upload" type="file" accept=".mp4,.mov,.avi,.mkv,.webm" @change="onVideoChange" />
+                  <div v-if="uploadedVideo" class="file-info">
+                    <span class="file-selected-text">Vidéo sélectionnée: {{ uploadedVideo.name }}</span>
+                    <button @click="uploadedVideo = null" type="button">Retirer</button>
+                  </div>
+                </div>
+                
+                <!-- Option 3: Graphics Files (for PiecesGraphiques) -->
+                <div v-if="isPiecesGraphiques" class="step upload-option">
+                  <label class="file-upload-label">Ajouter Pièces Graphiques</label>
+                  <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
+                    <input ref="graphicsFileInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addGraphicsFile" style="display: none;" />
+                    <button @click="graphicsFileInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Fichier</button>
+                    <span style="color: #bbdefb; font-size: 0.9em;">{{ graphicsFiles.length }} fichier(s) sélectionné(s)</span>
+                  </div>
+                  <div v-if="graphicsFiles.length > 0" class="files-preview">
+                    <h4>Fichiers sélectionnés ({{ graphicsFiles.length }}):</h4>
+                    <div class="file-list">
+                      <div v-for="(file, index) in graphicsFiles" :key="index" class="file-item">
+                        <span>{{ file.name }}</span>
+                        <button @click="removeGraphicsFile(index)" type="button" class="remove-file" title="Retirer ce fichier">Retirer</button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div> -->
+              </div>
             </div>
         </div>
         <div class="sidebar-footer">
@@ -790,8 +856,12 @@
 
 <!-- FILE VIEWER MODAL -->
 <div v-if="selectedDocument && selectedDocument.fichier" class="modal-overlay">
-  <div class="modal">
-    <h2>Consulter Document</h2>
+  <div class="modal pdf-modal">
+    <!-- Modal Header with Close Button -->
+    <div class="modal-header-fixed">
+      <h2>Consulter Document</h2>
+      <button @click="closeDocumentViewer" class="modal-close-btn">Fermer</button>
+    </div>
 
     <div class="file-viewer-container">
       <!-- PDF Viewer -->
@@ -856,10 +926,6 @@
         </div>
       </div>
     </div>
-
-    <div class="modal-actions">
-      <button @click="closeDocumentViewer" class="cancel">Fermer</button>
-    </div>
   </div>
 </div>
 
@@ -915,6 +981,8 @@ import { useUserStore } from '../store/userStore'
 interface Document {
   idDocument: number
   fichier?: string | null
+  video?: string | null
+  plan?: string | null
   detectedType?: string
 }
 
@@ -962,6 +1030,11 @@ function removeToast(id: number) {
 const canAddDocuments = computed(() => {
   return userStore.userRole.value !== userStore.ROLES.CONSULTATION
 })
+
+// Computed property to check if user can download files
+const canDownload = computed(() => {
+  return userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false
+})
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -997,6 +1070,9 @@ const selectedSubDiv4Id = ref<number | null>(null)
 
 const nonFichier = ref<string>('')
 const uploadedFile = ref<File | null>(null)
+const uploadedVideo = ref<File | null>(null)
+const graphicsFiles = ref<File[]>([])
+const graphicsFileInput = ref<HTMLInputElement>()
 const multipleImages = ref<File[]>([])
 const showImageToPdfOption = ref(false)
 
@@ -1060,6 +1136,9 @@ function onStructureChange() {
   // Clear all sidebar content when structure changes
   clearAllSidebarContent()
   
+  // Reset panel width to default when changing modes
+  leftPanelWidth.value = defaultPanelWidth
+  
   // Set mode based on selected structure
   if (selectedStructureId.value === 5) {
     // CONTEXTE structure
@@ -1074,6 +1153,8 @@ function onStructureChange() {
 function goBackToForm() {
   mode.value = ''
   selectedStructureId.value = null
+  // Reset panel width to default
+  leftPanelWidth.value = defaultPanelWidth
   // Clear all sidebar content when going back
   clearAllSidebarContent()
 }
@@ -1206,15 +1287,45 @@ const isSubDivAllowed = computed(() => {
   return false
 })
 
-// const isPiecesGraphiques = computed(() => {
-//   if (!selectedDivisionId.value) return false
-//   const division = divisionsNv1.value.find(d => d.idSubDivisionNv_1 === selectedDivisionId.value)
-//   return division?.nom?.toUpperCase().includes('PIECES GRAPHIQUES') || division?.nom?.toUpperCase().includes('PIECE GRAPHIQUES') || false
-// })
+const isPiecesGraphiques = computed(() => {
+  if (!selectedDivisionId.value) return false
+  const division = divisionsNv1.value.find(d => d.idSubDivisionNv_1 === selectedDivisionId.value)
+  return division?.nom?.toUpperCase().includes('PIECES GRAPHIQUES') || division?.nom?.toUpperCase().includes('PIECE GRAPHIQUES') || false
+})
 
 function onFileChange(e: Event) {
   const files = (e.target as HTMLInputElement).files
-  if (files && files.length > 0) uploadedFile.value = files[0]
+  if (files && files.length > 0) {
+    const file = files[0]
+    console.log('Selected file:', file.name, 'Type:', file.type, 'Size:', file.size)
+    uploadedFile.value = file
+    // Don't clear other file selections - allow multiple file types
+  }
+}
+
+function onVideoChange(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    uploadedVideo.value = files[0]
+    console.log('Selected video:', files[0].name, 'Type:', files[0].type, 'Size:', files[0].size)
+    // Don't clear other file selections - allow multiple file types
+  }
+}
+
+function addGraphicsFile(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    const newFile = files[0]
+    graphicsFiles.value = [...graphicsFiles.value, newFile]
+    console.log('Added graphics file:', newFile.name, 'Total graphics files:', graphicsFiles.value.length)
+    // Don't clear other file selections - allow multiple file types
+    // Clear the input so the same file can be selected again
+    ;(e.target as HTMLInputElement).value = ''
+  }
+}
+
+function removeGraphicsFile(index: number) {
+  graphicsFiles.value.splice(index, 1)
 }
 
 function onMultipleImagesChange(e: Event) {
@@ -1375,11 +1486,36 @@ async function submitForm() {
       fileToUpload = await convertImagesToPdf();
     }
     
+    // Handle normal files - append as 'fichier'
     if (fileToUpload) {
-      formData.append('fichier', fileToUpload);
+      console.log('Appending file to FormData:', fileToUpload.name, 'Type:', fileToUpload.type, 'Size:', fileToUpload.size)
+      formData.append('fichier', fileToUpload, fileToUpload.name);
+    }
+    
+    // Handle video files - append as 'video'
+    if (uploadedVideo.value) {
+      console.log('Appending video to FormData:', uploadedVideo.value.name, 'Type:', uploadedVideo.value.type, 'Size:', uploadedVideo.value.size)
+      formData.append('video', uploadedVideo.value, uploadedVideo.value.name);
+    }
+    
+    // Handle graphics files (zip them for PiecesGraphiques) - append as 'plan'
+    if (graphicsFiles.value.length > 0) {
+      const zipFile = await createZipFile(graphicsFiles.value, nonFichier.value || 'pieces-graphiques');
+      console.log('Appending plan to FormData:', zipFile.name, 'Type:', zipFile.type, 'Size:', zipFile.size)
+      formData.append('plan', zipFile, zipFile.name);
+    }
+    
+    // Debug: Log all FormData entries
+    console.log('FormData entries:');
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: ${value.name} (${value.type}, ${value.size} bytes)`);
+      } else {
+        console.log(`${key}: ${value}`);
+      }
     }
 
-    const response = await axios.post('documents/create-with-file/', formData, {
+    const response = await axios.post('documents/create-two-file/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -1390,6 +1526,8 @@ async function submitForm() {
     // Reset form
     nonFichier.value = '';
     uploadedFile.value = null;
+    uploadedVideo.value = null;
+    graphicsFiles.value = [];
     multipleImages.value = [];
     showImageToPdfOption.value = false;
     
@@ -1427,6 +1565,54 @@ const showStructureConsulterContent = ref(false);
 // SUCCESS MESSAGE VARIABLE
 const showSuccess = ref(false);
 const loadingConsulter = ref(false);
+
+// Search functionality
+const searchQuery = ref('');
+
+// Computed property to filter documents based on search query
+const filteredDocList = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return docList.value;
+  }
+  
+  const query = searchQuery.value.toLowerCase().trim();
+  return docList.value.filter(doc => 
+    (doc.designation || '').toLowerCase().includes(query) ||
+    (doc.nomFichier || '').toLowerCase().includes(query) ||
+    getDocumentType(doc).toLowerCase().includes(query) ||
+    (doc.idDocument?.toString() || '').includes(query)
+  );
+});
+
+// Resizable panels functionality
+const leftPanelWidth = ref(60); // percentage
+const defaultPanelWidth = 60; // default percentage
+const isResizing = ref(false);
+
+function startResize(e: MouseEvent) {
+  isResizing.value = true;
+  document.addEventListener('mousemove', handleResize);
+  document.addEventListener('mouseup', stopResize);
+  e.preventDefault();
+}
+
+function handleResize(e: MouseEvent) {
+  if (!isResizing.value) return;
+  
+  const containerWidth = window.innerWidth;
+  const newLeftWidth = (e.clientX / containerWidth) * 100;
+  
+  // Constrain between 30% and 80%
+  if (newLeftWidth >= 30 && newLeftWidth <= 80) {
+    leftPanelWidth.value = newLeftWidth;
+  }
+}
+
+function stopResize() {
+  isResizing.value = false;
+  document.removeEventListener('mousemove', handleResize);
+  document.removeEventListener('mouseup', stopResize);
+}
 
 // NEW SEPARATE CONSULTER VARIABLES
 const showConsulterPanel = ref(false);
@@ -2407,29 +2593,37 @@ async function handleDeleteDocument(document: any) {
   }
 }
 
-async function viewDocument(document: Document) {
+async function viewDocument(document: Document, fileType: 'fichier' | 'video' = 'fichier') {
   if (loadingViewDocument.value[document.idDocument]) return
   
   loadingViewDocument.value[document.idDocument] = true
   showToast('Veuillez patienter, le document se charge...', 'success')
   
   try {
-    const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
-    const blob = await response.blob()
-    const fileUrl = URL.createObjectURL(blob)
-    
-    // Detect file type from blob content-type
-    let detectedType = 'pdf'
-    if (blob.type.startsWith('image/')) {
-      detectedType = 'image'
-    } else if (blob.type.startsWith('video/')) {
-      detectedType = 'video'
-    }
-    
-    selectedDocument.value = {
-      ...document,
-      fichier: fileUrl,
-      detectedType: detectedType
+    if (fileType === 'video' && document.video) {
+      // For video, use the direct URL from API response
+      selectedDocument.value = {
+        ...document,
+        fichier: document.video,
+        detectedType: 'video'
+      }
+    } else {
+      // For fichier, use the view-file endpoint
+      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
+      const blob = await response.blob()
+      const fileUrl = URL.createObjectURL(blob)
+      
+      // Detect file type from blob content-type
+      let detectedType = 'pdf'
+      if (blob.type.startsWith('image/')) {
+        detectedType = 'image'
+      }
+      
+      selectedDocument.value = {
+        ...document,
+        fichier: fileUrl,
+        detectedType: detectedType
+      }
     }
   } catch (error) {
     console.error('Error loading document:', error)
@@ -2527,7 +2721,7 @@ const selectedSoustraitantNoms = computed(() =>
   selectedSoustraitants.value.map(s => s.designationStt)
 )
 const selectedProjetNoms = computed(() =>
-  selectedProjets.value.map(p => p.description)
+  selectedProjets.value.map(p => `${p.code} / ${p.description}`)
 )
 
 // Computed properties to check if there are more items than displayed
@@ -2929,22 +3123,32 @@ function getDocumentType(document: any): string {
 
 
 
-async function downloadFile(doc: any) {
-  if (!doc.fichier) return
+async function downloadFile(doc: any, fileType: 'fichier' | 'video' | 'plan' = 'fichier') {
+  if (!canDownload.value) {
+    showToast('Vous n\'avez pas les permissions pour télécharger', 'error')
+    return
+  }
+  
+  const fileUrl = doc[fileType]
+  if (!fileUrl) return
   
   try {
-    const response = await fetch(doc.fichier)
+    showToast('Téléchargement en cours...', 'success')
+    // Use the full URL directly since it already contains the base URL
+    const response = await fetch(fileUrl)
     const blob = await response.blob()
     const url = URL.createObjectURL(blob)
     
     const a = document.createElement('a')
     a.href = url
-    a.download = `document-${doc.idDocument}`
+    const extension = fileType === 'plan' ? '.zip' : fileType === 'video' ? '.mp4' : '.pdf'
+    a.download = `${doc.designation || 'document'}-${doc.idDocument}${extension}`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     
     URL.revokeObjectURL(url)
+    showToast('Téléchargement terminé', 'success')
   } catch (error) {
     console.error('Download failed:', error)
     showToast('Erreur lors du téléchargement', 'error')
@@ -3001,6 +3205,8 @@ function clearAllSidebarContent() {
   // Clear form data
   nonFichier.value = ''
   uploadedFile.value = null
+  uploadedVideo.value = null
+  graphicsFiles.value = []
   multipleImages.value = []
   showImageToPdfOption.value = false
   importFiles.value = []
@@ -3167,15 +3373,17 @@ async function submitImportForm() {
 }
 
 .doc-sidebar {
-  width: 900px;
   background: rgba(22,33,62,0.98);
   border-left: 2px solid #232f4b;
   padding: 1.5em 2em 1em 2em;
   min-height: 100vh;
   box-shadow: -2px 0 16px 0 #151e3044;
   font-size: 1.2rem;
-  order: 2;
+  order: 3;
   overflow-y: auto;
+  width: v-bind('(100 - leftPanelWidth) + "%"');
+  min-width: 300px;
+  transition: width 0.1s ease;
 }
 
 /* Arborescence section */
@@ -3196,8 +3404,8 @@ async function submitImportForm() {
 
 /* Tree structure styles */
 .tree-structure {
-  margin-bottom: 0.5em;
-  padding: 0.2em;
+  margin-bottom: 0.8em;
+  padding: 0.4em;
   background: rgba(67, 233, 123, 0.05);
   border-radius: 8px;
   border-left: 3px solid #43E97B;
@@ -3207,7 +3415,7 @@ async function submitImportForm() {
   display: flex;
   align-items: center;
   margin-bottom: 0.2em;
-  font-size: 1rem;
+  font-size: 1.3rem;
 }
 
 .tree-child {
@@ -3442,6 +3650,29 @@ async function submitImportForm() {
   text-align: center;
 }
 
+.search-input-sidebar {
+  width: 100%;
+  padding: 0.8em 1em;
+  margin-bottom: 1em;
+  border: 2px solid #232f4b;
+  border-radius: 6px;
+  background: #1a237e;
+  color: #fff;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+.search-input-sidebar::placeholder {
+  color: #bbdefb;
+  opacity: 0.8;
+}
+
+.search-input-sidebar:focus {
+  border-color: #43E97B;
+  box-shadow: 0 0 0 2px #43e97b44;
+}
+
 .no-data {
   text-align: center;
   font-style: italic;
@@ -3470,13 +3701,14 @@ async function submitImportForm() {
   opacity: 0.8;
 }
 .add-doc-main {
-  flex: 1;
   padding: 0.01em 2em 0.1em 3em;
-  max-width: 700px;
   margin: 0;
   display: flex;
   flex-direction: column;
   order: 1;
+  width: v-bind('leftPanelWidth + "%"');
+  min-width: 400px;
+  transition: width 0.1s ease;
 }
 .add-doc-main h1 {
   color: #90caf9;
@@ -3497,8 +3729,8 @@ async function submitImportForm() {
 /* Structure mode: side by side layout */
 .structure-step-form .step {
   display: grid;
-  grid-template-columns: 250px 1fr;
-  gap: 2em;
+  grid-template-columns: minmax(200px, 300px) 1fr;
+  gap: 1.5em;
   align-items: start;
   padding: 1.2em 2em;
 }
@@ -3515,6 +3747,8 @@ async function submitImportForm() {
 .structure-step-form .step select,
 .structure-step-form .step input {
   margin-bottom: 0;
+  min-width: 250px;
+  width: 100%;
 }
 
 /* Structure fields styling with enhanced background */
@@ -3542,12 +3776,13 @@ label {
 }
 select, input[type="text"], input[type="date"], input[type="email"], input[type="tel"] {
   width: 100%;
-  padding: 0.7em 1em;
+  min-width: 300px;
+  padding: 0.8em 1.2em;
   border-radius: 6px;
   border: 1.5px solid #232f4b;
   background: #1a237e;
   color: #fff;
-  font-size: 1rem;
+  font-size: 1.1rem;
   margin-bottom: 1em;
   transition: border 0.2s, box-shadow 0.2s;
   outline: none;
@@ -3556,14 +3791,15 @@ select, input[type="text"], input[type="date"], input[type="email"], input[type=
 
 /* Fix select specific styling */
 select {
-  padding-left: 1em;
-  padding-right: 1em;
+  padding-left: 1.2em;
+  padding-right: 3em;
   text-indent: 0;
   appearance: none;
   background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23ffffff" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
   background-repeat: no-repeat;
-  background-position: right 1em center;
-  background-size: 12px;
+  background-position: right 1.2em center;
+  background-size: 14px;
+  min-height: 50px;
 }
 
 select:focus, input:focus {
@@ -3680,7 +3916,7 @@ ul {
 }
 @media (max-width: 1200px) {
   .doc-sidebar {
-    width: 500px;
+    min-width: 400px;
   }
   
   .sidebar-table {
@@ -3691,6 +3927,12 @@ ul {
   .sidebar-table td {
     padding: 0.5em 0.6em;
   }
+  
+  .structure-step-form .step {
+    grid-template-columns: minmax(150px, 250px) 1fr;
+    gap: 1em;
+    padding: 1em 1.5em;
+  }
 }
 
 @media (max-width: 900px) {
@@ -3700,7 +3942,7 @@ ul {
   }
   
   .doc-sidebar {
-    width: 100vw;
+    width: 100vw !important;
     min-height: 50vh;
     max-height: 70vh;
     border-left: none;
@@ -3713,8 +3955,19 @@ ul {
   
   .add-doc-main {
     padding: 1.2em 0.5em;
-    max-width: 100vw;
+    width: 100vw !important;
     order: 1;
+  }
+  
+  .structure-step-form .step {
+    grid-template-columns: 1fr;
+    gap: 0.5em;
+    padding: 1em;
+  }
+  
+  .structure-step-form .step label {
+    text-align: left;
+    padding-top: 0;
   }
   
   .sidebar-header h3 {
@@ -3744,6 +3997,34 @@ ul {
   }
 }
 
+/* Resizable divider styles */
+.resize-divider {
+  width: 8px;
+  background: #232f4b;
+  cursor: col-resize;
+  order: 2;
+  position: relative;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resize-divider:hover {
+  background: #43E97B;
+}
+
+.resize-handle {
+  width: 2px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1px;
+}
+
+.resize-divider:hover .resize-handle {
+  background: rgba(255, 255, 255, 0.8);
+}
+
 @media (max-width: 600px) {
   .doc-sidebar {
     padding: 1em 0.5em;
@@ -3764,6 +4045,10 @@ ul {
     min-width: 100px;
     font-size: 0.7rem;
     padding: 4px 8px;
+  }
+  
+  .resize-divider {
+    display: none;
   }
 }
 .context-stepper select {
@@ -4072,7 +4357,7 @@ ul {
   z-index: 1000;
 }
 
-.modal {
+/* .modal {
   background-color: white;
   padding: 20px;
   border-radius: 8px;
@@ -4080,8 +4365,21 @@ ul {
   width: 90%;
   max-height: 95vh;
   overflow-y: auto;
+} */
+.modal {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 100%;
+  overflow-y: auto;
 }
-
+.pdf-modal {
+  max-width: 95vw;
+  max-height: 95vh;
+  width: fit-content;
+  height: fit-content;
+}
 .pdf-viewer-container {
   width: 100%;
   height: auto;
@@ -4097,6 +4395,40 @@ ul {
 
 .cancel {
   margin-left: 10px;
+}
+
+/* Fixed modal header */
+.modal-header-fixed {
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.modal-header-fixed h2 {
+  margin: 0;
+  color: #333;
+}
+
+.modal-close-btn {
+  background: #E53935;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: #d32f2f;
 }
 
 .images-preview {
@@ -4203,6 +4535,32 @@ ul {
   color: #FF9800;
   margin-bottom: 0.5em;
   font-size: 1rem;
+}
+
+/* Upload options styling */
+.upload-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+.upload-option {
+  border: 2px solid #232f4b;
+  border-radius: 8px;
+  padding: 1em;
+  background: rgba(26, 35, 126, 0.3);
+  transition: border-color 0.2s;
+}
+
+.upload-option:hover {
+  border-color: #43E97B;
+}
+
+.upload-option .file-upload-label {
+  color: #43E97B !important;
+  font-size: 1.2rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.8em;
 }
 
 .file-list {
@@ -4406,6 +4764,69 @@ ul {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.7;
+}
+
+/* File type indicators and action buttons */
+.file-indicator {
+  font-size: 1.2em;
+  color: #43E97B;
+}
+
+.no-file {
+  color: #888;
+  font-style: italic;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.3em;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn {
+  background: none;
+  border: 1px solid #232f4b;
+  border-radius: 4px;
+  padding: 0.3em 0.5em;
+  cursor: pointer;
+  font-size: 1em;
+  transition: all 0.2s;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-btn {
+  background: #2196F3;
+  color: white;
+  border-color: #2196F3;
+}
+
+.view-btn:hover:not(:disabled) {
+  background: #1976d2;
+  transform: scale(1.1);
+}
+
+.download-btn {
+  background: #43E97B;
+  color: #111;
+  border-color: #43E97B;
+}
+
+.download-btn:hover:not(:disabled) {
+  background: #3bc96a;
+  transform: scale(1.1);
+}
+
+.action-btn:disabled {
+  background: #888 !important;
+  color: #ccc !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+  transform: none !important;
 }
 
 .consulter-no-data {

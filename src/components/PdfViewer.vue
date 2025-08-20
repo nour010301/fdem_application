@@ -1,14 +1,6 @@
 <template>
   <div class="main-container">
-    <div class="grid-container">
-      <canvas
-        v-for="(pageIndex) in numPages"
-        :key="pageIndex"
-        :ref="el => setCanvasRef(el, pageIndex - 1)"
-        class="pdf-canvas"
-      />
-    </div>
-
+    <!-- Fixed action bar at the top, centered and same width as viewer -->
     <div class="action-buttons">
       <button 
         @click="downloadPdf" 
@@ -30,6 +22,18 @@
       <button @click="zoomOut" class="btn" title="Zoom out">➖</button>
       <button @click="resetZoom" class="btn" title="Fit to page">🔲</button>
       <button @click="zoomIn" class="btn" title="Zoom in">➕</button>
+      <button @click="rotateLeft" class="btn" title="Rotate left">⟲</button>
+      <button @click="rotateRight" class="btn" title="Rotate right">⟳</button>
+    </div>
+
+    <!-- PDF pages -->
+    <div class="grid-container">
+      <canvas
+        v-for="(pageIndex) in numPages"
+        :key="pageIndex"
+        :ref="el => setCanvasRef(el, pageIndex - 1)"
+        class="pdf-canvas"
+      />
     </div>
   </div>
 </template>
@@ -60,9 +64,10 @@ const numPages = ref(0)
 const pdfData = ref<Uint8Array | null>(null)
 let pdfDoc: pdfjsLib.PDFDocumentProxy | null = null
 
-// Zoom handling
+// Zoom + Rotation
 const baseScale = ref(1) // Fit-to-page scale
 const zoomLevel = ref(1) // Multiplicative zoom factor
+const rotation = ref(0)  // Rotation angle
 
 function zoomIn() {
   zoomLevel.value *= 1.25
@@ -76,6 +81,16 @@ function zoomOut() {
 
 function resetZoom() {
   zoomLevel.value = 1
+  renderAllPages()
+}
+
+function rotateLeft() {
+  rotation.value = (rotation.value - 90 + 360) % 360
+  renderAllPages()
+}
+
+function rotateRight() {
+  rotation.value = (rotation.value + 90) % 360
   renderAllPages()
 }
 
@@ -103,7 +118,10 @@ async function renderAllPages() {
       baseScale.value = Math.min(scaleX, scaleY)
     }
 
-    const viewport = page.getViewport({ scale: baseScale.value * zoomLevel.value })
+    const viewport = page.getViewport({
+      scale: baseScale.value * zoomLevel.value,
+      rotation: rotation.value,
+    })
 
     canvas.height = viewport.height
     canvas.width = viewport.width
@@ -183,6 +201,7 @@ function printPdf() {
   margin: 0 auto;
 }
 
+/* General button styles */
 .btn {
   padding: 0.5rem;
   background-color: #3b82f6;
@@ -210,6 +229,7 @@ function printPdf() {
   opacity: 0.6;
 }
 
+/* Page container */
 .main-container {
   display: flex;
   flex-direction: column;
@@ -217,27 +237,35 @@ function printPdf() {
   min-height: 100vh;
   width: 100%;
   overflow: auto;
-  padding: 1rem;
   box-sizing: border-box;
 }
 
+/* FIXED top toolbar, but same width as the PDF viewer */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  position: fixed;
+  top: 5;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  justify-content: center;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+
+  /* 👇 keep it same width as PDF viewer */
+  max-width: 100%;  /* match your PDF max width */
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Push PDF content below toolbar */
 .grid-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding: 1rem 0;
-  position: sticky;
-  bottom: 0;
-  background: white;
-  border-top: 1px solid #e5e7eb;
-  width: 100%;
-  justify-content: center;
+  margin-top: 5rem; /* extra to clear toolbar */
 }
 </style>

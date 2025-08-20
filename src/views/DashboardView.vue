@@ -14,7 +14,7 @@
           <div class="stat-info">
             <div class="stat-label">
               {{ formatKey(key) }}
-              <span v-if="key === 'documents'" class="stat-subtitle"> (plan, videos, images....)</span>
+              <span v-if="key === 'documents'" class="stat-subtitle"> (plan, multimédia, images....)</span>
             </div>
             <div class="stat-value">{{ filteredStatistics[key] }}</div>
           </div>
