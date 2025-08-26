@@ -338,8 +338,8 @@ async function onSubdivisionNv1Change() {
       const response = await axiosInstance.get('subdiv1et2/')
       const allSubDivs1Et2 = response.data
       filteredSubdivisionsNv2.value = allSubDivs1Et2.filter(
-        item => item.idSubDivisionNv_1.idSubDivisionNv_1 === newSubdivision.value.selectedSubdivisionNv1
-      ).map(item => ({
+        (item: any) => item.idSubDivisionNv_1.idSubDivisionNv_1 === newSubdivision.value.selectedSubdivisionNv1
+      ).map((item: any) => ({
         idSubDivisionNv_2: item.idSubDivisionNv_2.idSubDivisionNv_2,
         nom: item.idSubDivisionNv_2.nom,
         designation: item.idSubDivisionNv_2.designation
@@ -453,7 +453,9 @@ function validateRequiredFields() {
   const errors = {
     nom: '',
     designation: '',
-    idSubDivisionNv_2: ''
+    idSubDivisionNv_2: '',
+    selectedStructure: '',
+    selectedSubdivisionNv1: ''
   }
   
   let isValid = true

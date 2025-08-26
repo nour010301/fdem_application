@@ -438,6 +438,7 @@
                   <tr>
                     <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
                     <th>Action</th>
+                    <th v-if="contextAjouter.entityKey !== 'direction_projet'">Fiche Technique</th>
                     <th v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
                   </tr>
                 </thead>
@@ -469,6 +470,24 @@
                         @click="openDirecteurModal(item)"
                       >Ajouter Directeur</button>
                     </td>
+                    <td v-if="contextAjouter.entityKey !== 'direction_projet'">
+                      <div v-if="isAlreadySelected(contextAjouter.entityKey, item)" class="fiche-technique-container">
+                        <button
+                          v-if="!item.hasFichier"
+                          class="fiche-technique-btn"
+                          @click="openFicheTechniqueModal(contextAjouter.entityKey, item)"
+                        >Ajouter Fiche Technique</button>
+                        <div v-else class="fiche-technique-uploaded">
+                          <span class="uploaded-indicator">✓ Ajoutée</span>
+                          <button
+                            class="fiche-technique-btn-modify"
+                            @click="openFicheTechniqueModal(contextAjouter.entityKey, item)"
+                            title="Modifier la fiche technique"
+                          >✏️</button>
+                        </div>
+                      </div>
+                      <span v-else>-</span>
+                    </td>
                     <td v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">
                       <div v-if="isAlreadySelected(contextAjouter.entityKey, item)" class="dropdown">
                         <button class="dropdown-btn" @click="loadDirecteurs(contextAjouter.entityKey, item)">
@@ -490,7 +509,7 @@
                     </td>
                   </tr>
                   <tr v-if="!filteredContextAjouterItems.length">
-                    <td :colspan="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes' ? contextAjouter.columns.length + 2 : contextAjouter.columns.length + 1" class="no-data">
+                    <td :colspan="(contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes' ? contextAjouter.columns.length + 3 : contextAjouter.columns.length + 2) - (contextAjouter.entityKey === 'direction_projet' ? 1 : 0)" class="no-data">
                       {{ contextAjouterSearchQuery ? `Aucun résultat pour "${contextAjouterSearchQuery}"` : 'Aucun élément à afficher.' }}
                     </td>
                   </tr>
@@ -522,12 +541,23 @@
                 <thead>
                   <tr>
                     <th v-for="col in contextConsulter.columns" :key="col">{{ col }}</th>
+                    <th v-if="contextConsulter.entityKey !== 'direction_projet'">Fiche Technique</th>
                     <th v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="row in filteredContextConsulterItems" :key="row[contextConsulter.columnKeys[0]]">
                     <td v-for="colKey in contextConsulter.columnKeys" :key="colKey">{{ row[colKey] ?? '-' }}</td>
+                    <td v-if="contextConsulter.entityKey !== 'direction_projet'">
+                      <div class="fiche-technique-container">
+                        <button
+                          v-if="row.hasFichier"
+                          class="view-fiche-btn"
+                          @click="viewFicheTechnique(contextConsulter.entityKey, row)"
+                        >Voir Fiche</button>
+                        <span v-else>-</span>
+                      </div>
+                    </td>
                     <td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
                       <div class="dropdown">
                         <button class="dropdown-btn" @click="loadDirecteursConsulter(contextConsulter.entityKey, row)">
@@ -1141,6 +1171,38 @@
         <div class="doc-modal-footer" style="text-align: right; padding-top: 1em; border-top: 1px solid #232f4b;">
           <button @click="showDeleteConfirmModal = false; documentToDelete = null" class="view-button" style="margin-right: 1em;">Annuler</button>
           <button @click="deleteDocumentConfirmed" class="delete-button">Confirmer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fiche Technique Modal -->
+    <div v-if="ficheTechniqueModal.visible" class="doc-modal-backdrop">
+      <div class="doc-modal" style="min-width: 400px; max-width: 500px; min-height: auto;">
+        <div class="doc-modal-header">
+          <h3>{{ getFicheTechniqueStatus(ficheTechniqueModal.entityKey, { [getFicheTechniqueIdProperty(ficheTechniqueModal.entityKey)]: ficheTechniqueModal.entityId }) ? 'Modifier' : 'Ajouter' }} Fiche Technique</h3>
+          <button @click="closeFicheTechniqueModal" class="close-modal">&times;</button>
+        </div>
+        <div class="doc-modal-body">
+          <div style="margin-bottom: 1em;">
+            <label for="fiche-technique-file">Sélectionner un fichier PDF:</label>
+            <input 
+              id="fiche-technique-file" 
+              type="file" 
+              accept=".pdf" 
+              @change="onFicheTechniqueFileChange" 
+              style="width: 100%; padding: 0.5em; margin-top: 0.5em; border: 1px solid #ccc; border-radius: 4px;"
+            />
+          </div>
+          <div v-if="ficheTechniqueModal.selectedFile" style="margin-bottom: 1em; padding: 0.5em; background: rgba(67, 233, 123, 0.1); border-radius: 4px;">
+            <strong>Fichier sélectionné:</strong> {{ ficheTechniqueModal.selectedFile.name }}
+          </div>
+        </div>
+        <div class="doc-modal-footer" style="text-align: right; padding-top: 1em; border-top: 1px solid #232f4b;">
+          <button @click="closeFicheTechniqueModal" class="view-button" style="margin-right: 1em;" :disabled="ficheTechniqueModal.uploading">Annuler</button>
+          <button @click="uploadFicheTechnique" class="save-btn" :disabled="!ficheTechniqueModal.selectedFile || ficheTechniqueModal.uploading">
+            <span v-if="ficheTechniqueModal.uploading">Envoi en cours...</span>
+            <span v-else>{{ getFicheTechniqueStatus(ficheTechniqueModal.entityKey, { [getFicheTechniqueIdProperty(ficheTechniqueModal.entityKey)]: ficheTechniqueModal.entityId }) ? 'Modifier' : 'Ajouter' }} Fiche Technique</span>
+          </button>
         </div>
       </div>
     </div>
@@ -2332,7 +2394,7 @@ const contextEntityDeleteConfig = {
   },
   soustraitants_tvx: {
     endpoint: '/contexte-soustraitant/',
-    getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idSoustraitant: item.idSoustraitant }),
+    getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idSoustraitant: item.idSoustraitants }),
   },
   fournisseur: {
     endpoint: '/contexte-fournisseur/',
@@ -2495,6 +2557,7 @@ async function onAjouter(entityKey: string) {
       const { data } = await axios.get(url);
       selectedList = Array.isArray(data) ? data : [data];
       selectedList = selectedList.filter(x => typeof x === 'object' && x != null);
+      console.log('Selected items with hasFichier:', selectedList);
     }
   } catch (e) {
     selectedList = [];
@@ -2517,6 +2580,16 @@ async function onAjouter(entityKey: string) {
   }
   config.selectedRef.value = selectedList;
   contextAjouter.value.selected = [...selectedList];
+  
+  // Merge hasFichier property from selected items into all items
+  contextAjouter.value.all = contextAjouter.value.all.map(item => {
+    const selectedItem = selectedList.find(selected => selected[config.idCol] === item[config.idCol]);
+    return {
+      ...item,
+      hasFichier: selectedItem?.hasFichier || false
+    };
+  });
+  
   contextAjouter.value.visible = true;
 }
 
@@ -3103,6 +3176,266 @@ async function handleDeleteDocument(document: any) {
 const showDeleteConfirmModal = ref(false);
 const documentToDelete = ref<any>(null);
 
+// Fiche Technique modal state
+const ficheTechniqueModal = ref({
+  visible: false,
+  entityKey: '',
+  entityId: null as number | null,
+  selectedFile: null as File | null,
+  uploading: false
+});
+
+
+
+// Function to open fiche technique modal
+function openFicheTechniqueModal(entityKey: string, item: any) {
+  ficheTechniqueModal.value.visible = true;
+  ficheTechniqueModal.value.entityKey = entityKey;
+  
+  // Get the correct ID based on entity type
+  switch (entityKey) {
+    case 'projet':
+      ficheTechniqueModal.value.entityId = item.code;
+      break;
+    case 'maitre_ouvrage':
+      ficheTechniqueModal.value.entityId = item.idMaitreOuvrage;
+      break;
+    case 'maitre_oeuvre':
+      ficheTechniqueModal.value.entityId = item.idMaitreOeuvre;
+      break;
+    case 'soustraitants_tvx':
+      ficheTechniqueModal.value.entityId = item.idSoustraitants;
+      break;
+    case 'fournisseur':
+      ficheTechniqueModal.value.entityId = item.idFournisseur;
+      break;
+    case 'bet_soustraitants_etudes':
+      ficheTechniqueModal.value.entityId = item.idBET;
+      break;
+    default:
+      ficheTechniqueModal.value.entityId = null;
+  }
+}
+
+// Function to get the ID property name for an entity
+function getFicheTechniqueIdProperty(entityKey: string): string {
+  switch (entityKey) {
+    case 'projet':
+      return 'code';
+    case 'maitre_ouvrage':
+      return 'idMaitreOuvrage';
+    case 'maitre_oeuvre':
+      return 'idMaitreOeuvre';
+    case 'soustraitants_tvx':
+      return 'idSoustraitants';
+    case 'fournisseur':
+      return 'idFournisseur';
+    case 'bet_soustraitants_etudes':
+      return 'idBET';
+    default:
+      return 'id';
+  }
+}
+
+// Function to close fiche technique modal
+function closeFicheTechniqueModal() {
+  ficheTechniqueModal.value.visible = false;
+  ficheTechniqueModal.value.entityKey = '';
+  ficheTechniqueModal.value.entityId = null;
+  ficheTechniqueModal.value.selectedFile = null;
+  ficheTechniqueModal.value.uploading = false;
+}
+
+// Function to handle file selection for fiche technique
+function onFicheTechniqueFileChange(e: Event) {
+  const files = (e.target as HTMLInputElement).files;
+  if (files && files.length > 0) {
+    const file = files[0];
+    if (file.type === 'application/pdf') {
+      ficheTechniqueModal.value.selectedFile = file;
+    } else {
+      showToast('Veuillez sélectionner un fichier PDF', 'error');
+    }
+  }
+}
+
+// Function to get fiche technique upload status
+function getFicheTechniqueStatus(_entityKey: string, item: any): boolean {
+  console.log('Item data:', item, 'hasFichier:', item.hasFichier);
+  return item.hasFichier || false;
+}
+
+// Helper function to get entity ID for fiche technique
+function getFicheTechniqueEntityId(entityKey: string, item: any): string | number {
+  switch (entityKey) {
+    case 'projet':
+      return item.code;
+    case 'maitre_ouvrage':
+      return item.idMaitreOuvrage;
+    case 'maitre_oeuvre':
+      return item.idMaitreOeuvre;
+    case 'soustraitants_tvx':
+      return item.idSoustraitants;
+    case 'fournisseur':
+      return item.idFournisseur;
+    case 'bet_soustraitants_etudes':
+      return item.idBET;
+    default:
+      return '';
+  }
+}
+
+// Function to upload fiche technique
+async function uploadFicheTechnique() {
+  if (!ficheTechniqueModal.value.selectedFile || !ficheTechniqueModal.value.entityId) {
+    showToast('Veuillez sélectionner un fichier PDF', 'error');
+    return;
+  }
+
+  ficheTechniqueModal.value.uploading = true;
+  
+  try {
+    const formData = new FormData();
+    formData.append('idProduit', String(selectedProduitId.value));
+    formData.append('fichier', ficheTechniqueModal.value.selectedFile);
+    
+    // Add entity-specific ID
+    switch (ficheTechniqueModal.value.entityKey) {
+      case 'projet':
+        formData.append('code', String(ficheTechniqueModal.value.entityId));
+        break;
+      case 'maitre_ouvrage':
+        formData.append('idMaitreOuvrage', String(ficheTechniqueModal.value.entityId));
+        break;
+      case 'maitre_oeuvre':
+        formData.append('idMaitreOeuvre', String(ficheTechniqueModal.value.entityId));
+        break;
+      case 'soustraitants_tvx':
+        formData.append('idSoustraitant', String(ficheTechniqueModal.value.entityId));
+        break;
+      case 'fournisseur':
+        formData.append('idFournisseur', String(ficheTechniqueModal.value.entityId));
+        break;
+      case 'bet_soustraitants_etudes':
+        formData.append('idBET', String(ficheTechniqueModal.value.entityId));
+        break;
+    }
+
+    // Determine the correct API endpoint
+    let endpoint = '';
+    switch (ficheTechniqueModal.value.entityKey) {
+      case 'projet':
+        endpoint = 'http://10.10.150.75:8000/api/AddFilePRJ/';
+        break;
+      case 'maitre_ouvrage':
+        endpoint = 'http://10.10.150.75:8000/api/AddFileMOA/';
+        break;
+      case 'maitre_oeuvre':
+        endpoint = 'http://10.10.150.75:8000/api/AddFileMOE/';
+        break;
+      case 'soustraitants_tvx':
+        endpoint = 'http://10.10.150.75:8000/api/AddFileSOUT/';
+        break;
+      case 'fournisseur':
+        endpoint = 'http://10.10.150.75:8000/api/AddFileFOUR/';
+        break;
+      case 'bet_soustraitants_etudes':
+        endpoint = 'http://10.10.150.75:8000/api/AddFileBET/';
+        break;
+      default:
+        throw new Error('Type d\'entité non supporté');
+    }
+
+    await axios.post(endpoint, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    showToast('Fiche technique ajoutée avec succès!', 'success');
+    closeFicheTechniqueModal();
+    
+    // Refresh the context data to get updated hasFichier status
+    if (contextAjouter.value.visible) {
+      await onAjouter(contextAjouter.value.entityKey);
+    }
+  } catch (error: any) {
+    console.error('Erreur lors de l\'ajout de la fiche technique:', error);
+    showToast('Erreur lors de l\'ajout de la fiche technique', 'error');
+  } finally {
+    ficheTechniqueModal.value.uploading = false;
+  }
+}
+
+// Function to view fiche technique
+async function viewFicheTechnique(entityKey: string, item: any) {
+  try {
+    showToast('Chargement de la fiche technique...', 'success');
+    
+    // Get entity ID
+    const entityId = getFicheTechniqueEntityId(entityKey, item);
+    
+    // Determine the correct View API endpoint
+    let endpoint = '';
+    let params = new URLSearchParams();
+    params.append('idProduit', String(selectedProduitId.value));
+    
+    switch (entityKey) {
+      case 'projet':
+        endpoint = 'http://10.10.150.75:8000/api/ViewFilePRJ/';
+        params.append('code', String(entityId));
+        break;
+      case 'maitre_ouvrage':
+        endpoint = 'http://10.10.150.75:8000/api/ViewFileMOA/';
+        params.append('idMaitreOuvrage', String(entityId));
+        break;
+      case 'maitre_oeuvre':
+        endpoint = 'http://10.10.150.75:8000/api/ViewFileMOE/';
+        params.append('idMaitreOeuvre', String(entityId));
+        break;
+      case 'soustraitants_tvx':
+        endpoint = 'http://10.10.150.75:8000/api/ViewFileSOUT/';
+        params.append('idSoustraitant', String(entityId));
+        break;
+      case 'fournisseur':
+        endpoint = 'http://10.10.150.75:8000/api/ViewFileFOUR/';
+        params.append('idFournisseur', String(entityId));
+        break;
+      case 'bet_soustraitants_etudes':
+        endpoint = 'http://10.10.150.75:8000/api/ViewFileBET/';
+        params.append('idBET', String(entityId));
+        break;
+      default:
+        throw new Error('Type d\'entité non supporté');
+    }
+    
+    // Fetch the PDF file
+    const response = await fetch(`${endpoint}?${params.toString()}`);
+    
+    if (!response.ok) {
+      throw new Error('Fiche technique non trouvée');
+    }
+    
+    const blob = await response.blob();
+    const fileUrl = URL.createObjectURL(blob);
+    
+    // Display in the existing document viewer
+    selectedDocument.value = {
+      idDocument: 0, // Dummy ID for fiche technique
+      fichier: fileUrl,
+      detectedType: 'pdf'
+    };
+    
+  } catch (error: any) {
+    console.error('Erreur lors du chargement de la fiche technique:', error);
+    if (error.message === 'Fiche technique non trouvée') {
+      showToast('Aucune fiche technique trouvée pour cette entité', 'error');
+    } else {
+      showToast('Erreur lors du chargement de la fiche technique', 'error');
+    }
+  }
+}
+
 // Confirm delete document function for the new delete mode
 function confirmDeleteDocument(document: any) {
   documentToDelete.value = document;
@@ -3537,9 +3870,9 @@ const contextEntitiesConfig = {
   soustraitants_tvx: {
     label: "Soustraitants de Travaux",
     api: '/soustraitants/',
-    idCol: 'idSoustraitant',
+    idCol: 'idSoustraitants',
     columns: ['ID', 'Désignation', 'Description', 'Téléphone', 'Email'],
-    columnKeys: ['idSoustraitant', 'designationStt', 'description', 'telephone', 'email'],
+    columnKeys: ['idSoustraitants', 'designationStt', 'description', 'telephone', 'email'],
     listRef: soustraitantsList,
     selectedRef: selectedSoustraitants,
     allowMultiple: true,
@@ -3735,23 +4068,7 @@ async function downloadFile(doc: any, fileType: 'fichier' | 'video' | 'plan' = '
   }
 }
 
-function printImage(doc: any) {
-  const printWindow = window.open('', '_blank')
-  if (printWindow) {
-    printWindow.document.write(`
-      <html>
-        <head><title>Print Image</title></head>
-        <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;">
-          <img src="${doc.fichier}" style="max-width:100%;max-height:100%;"/>
-        </body>
-      </html>
-    `)
-    printWindow.document.close()
-    printWindow.focus()
-    printWindow.print()
-    printWindow.close()
-  }
-}
+
 
 // Handle download action from viewer components
 async function handleDownloadAction(documentId: number) {
@@ -4233,6 +4550,92 @@ async function submitImportForm() {
 
 .add-director-btn:hover {
   background: #1976d2;
+  transform: translateY(-1px);
+}
+
+.fiche-technique-btn {
+  background: #FF9800;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5em 1em;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 0.5em;
+}
+
+.fiche-technique-btn:hover {
+  background: #F57C00;
+  transform: translateY(-1px);
+}
+
+.fiche-technique-btn:disabled {
+  background: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.fiche-technique-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.fiche-technique-uploaded {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.uploaded-indicator {
+  background: #4CAF50;
+  color: white;
+  padding: 0.3em 0.8em;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.fiche-technique-btn-modify {
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.fiche-technique-btn-modify:hover {
+  background: #1976d2;
+  transform: scale(1.1);
+}
+
+.view-fiche-btn {
+  background: #9C27B0;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5em 1em;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-fiche-btn:hover {
+  background: #7B1FA2;
   transform: translateY(-1px);
 }
 

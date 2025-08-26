@@ -409,7 +409,8 @@ function validateRequiredFields() {
   const errors = {
     nom: '',
     designation: '',
-    idSubDivisionNv_1: ''
+    idSubDivisionNv_1: '',
+    selectedStructure: ''
   }
   
   let isValid = true

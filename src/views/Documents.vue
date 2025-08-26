@@ -1252,45 +1252,7 @@ function getDocumentType(document: any): string {
   return 'PDF'
 }
 
-async function downloadFile(doc: any) {
-  if (!doc.fichier) return
-  
-  try {
-    const response = await fetch(doc.fichier)
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
-    
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `document-${doc.idDocument}`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    
-    URL.revokeObjectURL(url)
-  } catch (error) {
-    console.error('Download failed:', error)
-    alert('Erreur lors du téléchargement')
-  }
-}
 
-function printImage(doc: any) {
-  const printWindow = window.open('', '_blank')
-  if (printWindow) {
-    printWindow.document.write(`
-      <html>
-        <head><title>Print Image</title></head>
-        <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;">
-          <img src="${doc.fichier}" style="max-width:100%;max-height:100%;"/>
-        </body>
-      </html>
-    `)
-    printWindow.document.close()
-    printWindow.focus()
-    printWindow.print()
-    printWindow.close()
-  }
-}
 
 function closeDocumentViewer() {
   if (selectedDocument.value?.fichier) {

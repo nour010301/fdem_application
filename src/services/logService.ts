@@ -1,9 +1,6 @@
 import axiosInstance from '../axios'
 
-interface LogAction {
-  idDocument: number
-  action: string
-}
+
 
 export const logUserAction = async (idDocument: number, action: string): Promise<void> => {
   try {
