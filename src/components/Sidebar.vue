@@ -81,10 +81,6 @@
                       <span class="icon">📄</span>
                       <span>Subdivisions_Niv3</span>
                     </router-link>
-                     <router-link v-if="!loading && canViewStructurePages" to="/subdivisions_niv4" class="nav-link sublink2" active-class="active">
-                      <span class="icon">📄</span>
-                      <span>Subdivisions_Niv4</span>
-                    </router-link>
                     
                   </div>
                 </transition>

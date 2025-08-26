@@ -95,6 +95,7 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter un Produit</h2>
+        <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
         <div class="form-group">
           <label>Type de Produit *</label>
           <select 
@@ -123,7 +124,7 @@
         </div>
         <div class="modal-actions">
           <button @click="validateAndAddProduit">Ajouter</button>
-          <button @click="showAddPopup = false" class="cancel">Annuler</button>
+          <button @click="closeModal" class="cancel">Fermer</button>
         </div>
       </div>
     </div>
@@ -215,6 +216,9 @@ const validationErrors = ref({
 
 // User store for role-based access control
 const userStore = useUserStore()
+
+// Success message
+const successMessage = ref('')
 
 async function fetchTypes() {
   try {
@@ -321,9 +325,12 @@ async function addProduit() {
       ...res.data,
       typeProduitDesignation: typeDetails.designation
     })
-    showAddPopup.value = false
-    newProduit.value = { idTypeProduit: null, designation: '', description: '' }
+    // Keep modal open and preserve idTypeProduit, only clear designation and description
+    const selectedTypeId = newProduit.value.idTypeProduit
+    newProduit.value = { idTypeProduit: selectedTypeId, designation: '', description: '' }
     validationErrors.value = { idTypeProduit: '', designation: '' }
+    successMessage.value = 'Produit ajouté avec succès!'
+    setTimeout(() => successMessage.value = '', 3000)
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -399,6 +406,14 @@ function validateAndAddProduit() {
   if (validateRequiredFields()) {
     addProduit()
   }
+}
+
+// Close modal and reset all fields
+function closeModal() {
+  showAddPopup.value = false
+  newProduit.value = { idTypeProduit: null, designation: '', description: '' }
+  validationErrors.value = { idTypeProduit: '', designation: '' }
+  successMessage.value = ''
 }
 
 function exportCSV() {
@@ -707,5 +722,14 @@ h1 {
   font-size: 0.85em;
   margin-top: 0.3em;
   font-weight: 500;
+}
+
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border: 1px solid #c3e6cb;
 }
 </style>

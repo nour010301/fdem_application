@@ -91,6 +91,22 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter une Section</h2>
+        <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
+        <div class="form-group">
+          <label>Types de Produit *</label>
+          <div class="checkbox-list" :class="{ 'error': validationErrors.types }">
+            <label v-for="type in types" :key="type.idTypeProduit" 
+                   class="checkbox-item"
+                   :class="{ 'checked': newSection.types.includes(type.idTypeProduit) }">
+              <input type="checkbox" 
+                     :value="type.idTypeProduit"
+                     @change="toggleType(type.idTypeProduit)" 
+                     :checked="newSection.types.includes(type.idTypeProduit)">
+              {{ type.designation }}
+            </label>
+          </div>
+          <div v-if="validationErrors.types" class="error-message">{{ validationErrors.types }}</div>
+        </div>
         <div class="form-group">
           <label>Nom *</label>
           <input 
@@ -111,7 +127,7 @@
         </div>
         <div class="modal-actions">
           <button @click="validateAndAddSection">Ajouter</button>
-          <button @click="showAddPopup = false" class="cancel">Annuler</button>
+          <button @click="closeModal" class="cancel">Fermer</button>
         </div>
       </div>
     </div>
@@ -147,6 +163,12 @@ import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
 import { useUserStore } from '../store/userStore'
 
+interface TypeProduit {
+  idTypeProduit: number
+  designation: string
+  description: string
+}
+
 interface Section {
   idSectionProduit: number
   nom: string
@@ -154,6 +176,7 @@ interface Section {
 }
 
 const sections = ref<Section[]>([])
+const types = ref<TypeProduit[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -165,18 +188,60 @@ const sortColumn = ref<'idSectionProduit' | 'nom' | 'designation'>('idSectionPro
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
-const newSection = ref({ nom: '', designation: '' })
+const newSection = ref<{
+  types: number[]
+  nom: string
+  designation: string
+}>({
+  types: [],
+  nom: '',
+  designation: ''
+})
 const sectionToDelete = ref<Section | null>(null)
 const sectionToUpdate = ref<Section | null>(null)
 
 // Validation errors
 const validationErrors = ref({
+  types: '',
   nom: '',
   designation: ''
 })
 
+// Success message
+const successMessage = ref('')
+
 // User store for role-based access control
 const userStore = useUserStore()
+
+async function fetchTypes() {
+  try {
+    const res = await axiosInstance.get('types/')
+    types.value = res.data
+  } catch (e) {
+    console.error('Erreur lors du chargement des types', e)
+  }
+}
+
+// function getTypeDesignation(typeId: number): string {
+//   const type = types.value.find(t => t.idTypeProduit === typeId)
+//   return type ? type.designation : 'Type inconnu'
+// }
+
+function toggleType(typeId: number) {
+  const index = newSection.value.types.indexOf(typeId)
+  if (index > -1) {
+    newSection.value.types.splice(index, 1)
+  } else {
+    newSection.value.types.push(typeId)
+  }
+}
+
+// function removeType(typeId: number) {
+//   const index = newSection.value.types.indexOf(typeId)
+//   if (index > -1) {
+//     newSection.value.types.splice(index, 1)
+//   }
+// }
 
 function toggleSort(column: typeof sortColumn.value) {
   if (sortColumn.value === column) {
@@ -226,11 +291,19 @@ async function fetchSections() {
 
 async function addSection() {
   try {
-    const res = await axiosInstance.post('sections/', newSection.value)
+    const sectionToSend = {
+      nom: newSection.value.nom,
+      designation: newSection.value.designation,
+      types: newSection.value.types
+    }
+    const res = await axiosInstance.post('sections/', sectionToSend)
     sections.value.push(res.data)
-    showAddPopup.value = false
-    newSection.value = { nom: '', designation: '' }
-    validationErrors.value = { nom: '', designation: '' }
+    // Keep modal open and preserve types, only clear nom and designation
+    const selectedTypes = [...newSection.value.types]
+    newSection.value = { types: selectedTypes, nom: '', designation: '' }
+    validationErrors.value = { types: '', nom: '', designation: '' }
+    successMessage.value = 'Section ajoutée avec succès!'
+    setTimeout(() => successMessage.value = '', 3000)
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -276,11 +349,17 @@ async function deleteSection() {
 // Validate required fields
 function validateRequiredFields() {
   const errors = {
+    types: '',
     nom: '',
     designation: ''
   }
   
   let isValid = true
+  
+  if (newSection.value.types.length === 0) {
+    errors.types = 'Au moins un type de produit est requis'
+    isValid = false
+  }
   
   if (!newSection.value.nom.trim()) {
     errors.nom = 'Le nom est requis'
@@ -301,6 +380,14 @@ function validateAndAddSection() {
   if (validateRequiredFields()) {
     addSection()
   }
+}
+
+// Close modal and reset all fields
+function closeModal() {
+  showAddPopup.value = false
+  newSection.value = { types: [], nom: '', designation: '' }
+  validationErrors.value = { types: '', nom: '', designation: '' }
+  successMessage.value = ''
 }
 
 function exportCSV() {
@@ -330,6 +417,7 @@ function exportCSV() {
 onMounted(async () => {
   await userStore.fetchUserProfile()
   fetchSections()
+  fetchTypes()
 })
 </script>
 
@@ -496,7 +584,7 @@ h1 {
   background: white;
   padding: 1.5rem;
   border-radius: 8px;
-  max-width: 400px;
+  max-width: 600px;
   width: 100%;
 }
 
@@ -575,5 +663,68 @@ h1 {
   font-size: 0.85em;
   margin-top: 0.3em;
   font-weight: 500;
+}
+
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border: 1px solid #c3e6cb;
+}
+
+.checkbox-list {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.checkbox-list.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.1rem 0.8rem;
+  border-radius: 0;
+  background: #f8f9fa;
+  border: none;
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.2s;
+  margin: 0;
+}
+
+.checkbox-item:hover {
+  background: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.checkbox-item.checked {
+  background: #e8f5e8;
+  color: #2e7d32;
+  font-weight: 500;
+  border-color: #c8e6c9;
+}
+
+.checkbox-item input[type="checkbox"] {
+  margin-right: 0.8rem;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.checkbox-item label {
+  color: #333;
+  cursor: pointer;
+  flex: 1;
+  font-weight: normal;
+  margin: 0;
 }
 </style>

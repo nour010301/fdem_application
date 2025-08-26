@@ -111,10 +111,20 @@
             (requiresSubDiv2 && selectedSubDiv4Id)
           )"
         >
-          <button class="save-btn" type="button" @click="openStructureDocContent" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter </button>
+          <button class="save-btn" type="button" @click="openStructureDocContent" :class="{ 'disabled': !canAddDocuments || isCreatingDocument }" :disabled="!canAddDocuments || isCreatingDocument">
+            <span v-if="isCreatingDocument">{{ creationProgress || 'Création en cours...' }}</span>
+            <span v-else>Ajouter</span>
+          </button>
           <button class="consulter-btn" type="button" @click="showSuccessMessage" :disabled="loadingConsulter">
             <span v-if="loadingConsulter">Chargement en cours...</span>
             <span v-else>Consulter</span>
+          </button>
+          <button v-if="canDeleteDocuments" class="delete-btn" type="button" @click="showDeleteMessage" :disabled="loadingConsulter">
+            <span v-if="loadingConsulter">Chargement en cours...</span>
+            <span v-else>Supprimer</span>
+          </button>
+          <button v-if="loadingConsulter" class="cancel-btn" type="button" @click="cancelConsulter">
+            Annuler
           </button>
           <!-- <button v-if="isPiecesGraphiques" class="import-btn" type="button" @click="openImportModal" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Importer Dossier Source</button> -->
           <!-- <button class="delete-btn" type="button" @click="openDocModal('delete')">Supprimer Document</button> -->
@@ -136,7 +146,10 @@
           >
             <span class="context-entity-title">{{ entity.label }}</span>
             <div class="context-actions">
-              <button @click="onAjouter(entity.key)" class="context-action add" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">+ Ajouter/Maj</button>
+              <button @click="onAjouter(entity.key)" class="context-action add" :class="{ 'disabled': !canAddDocuments || isCreatingDocument }" :disabled="!canAddDocuments || isCreatingDocument">
+                <span v-if="isCreatingDocument">Création...</span>
+                <span v-else>+ Ajouter/Maj</span>
+              </button>
               <button @click="onConsulterFunction(entity.key)" class="context-action view">Consulter</button>
             </div>
           </div>
@@ -146,7 +159,7 @@
 
     <!-- Resizable divider -->
     <div 
-      v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess"
+      v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode"
       class="resize-divider"
       @mousedown="startResize"
     >
@@ -154,7 +167,7 @@
     </div>
 
     <!-- Right sidebar for context and structure modes -->
-    <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess">
+    <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode">
 
       <!-- Success Message in Sidebar -->
       <!-- <div v-if="showSuccess" class="success-message-sidebar">
@@ -187,23 +200,34 @@
                       <th>Fichier</th>
                       <th>Vidéo</th>
                       <th>Plan</th>
+                      <th>Images</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="document in filteredDocList" :key="document.idDocument">
                       <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
                       <td>
-                        <button v-if="document.nomFichier" @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
-                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
-                          <span v-else>Consulter</span>
-                        </button>
+                        <div v-if="document.nomFichier" class="document-actions">
+                          <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>Consulter</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
                         <span v-else class="no-file">-</span>
                       </td>
                       <td>
-                        <button v-if="document.video" @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
-                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
-                          <span v-else>▶️ Voir</span>
-                        </button>
+                        <div v-if="document.video" class="document-actions">
+                          <button @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>▶️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
                         <span v-else class="no-file">-</span>
                       </td>
                       <td>
@@ -211,6 +235,113 @@
                           💾 Télécharger
                         </button>
                         <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <div v-if="document.nomPhotos" class="document-actions">
+                          <button @click="viewDocument(document, 'photos')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>🖼️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else-if="!docList.length" class="no-data">
+                  Aucun document trouvé pour l'arborescence sélectionnée.
+                </div>
+                <div v-else class="no-data">
+                  Aucun document trouvé pour "{{ searchQuery }}".
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete content in sidebar -->
+      <div v-if="showDeleteMode" class="sidebar-content modal-section">
+        <div class="sidebar-header">
+          <h3>Supprimer Documents</h3>
+          <button @click="showDeleteMode = false" class="close-btn">&times;</button>
+        </div>
+        <div class="sidebar-body">
+          <div v-if="loadingDocs" class="loading">Chargement...</div>
+          <div v-else>
+            <div v-if="docModalError" class="error">{{ docModalError }}</div>
+            <div class="section">
+              <h4>Documents existants</h4>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Rechercher un document..." 
+                class="search-input-sidebar"
+              />
+              <div class="table-container">
+                <table v-if="filteredDocList.length" class="sidebar-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Fichier</th>
+                      <th>Vidéo</th>
+                      <th>Plan</th>
+                      <th>Images</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="document in filteredDocList" :key="document.idDocument">
+                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td>
+                        <div v-if="document.nomFichier" class="document-actions">
+                          <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>Consulter</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <div v-if="document.video" class="document-actions">
+                          <button @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>▶️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                          💾 Télécharger
+                        </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <div v-if="document.nomPhotos" class="document-actions">
+                          <button @click="viewDocument(document, 'photos')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>🖼️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <button @click="confirmDeleteDocument(document)" class="action-btn delete-btn-small" title="Supprimer">
+                          🗑️
+                        </button>
                       </td>
                     </tr>
                   </tbody>
@@ -288,71 +419,58 @@
       <!-- Ajouter content in sidebar -->
       <div v-if="contextAjouter.visible" class="sidebar-content modal-section">
         <div class="sidebar-header">
-          <h3>Ajouter {{ contextAjouter.entityLabel }}</h3>
+          <h3>{{ contextAjouter.entityLabel }}</h3>
           <button @click="closeContextAjouterModal" class="close-btn">&times;</button>
         </div>
         <div class="sidebar-body">
-          <!-- LEFT: All Items Table -->
+          <!-- Single Merged Table -->
           <div class="section">
             <h4>Liste de {{ contextAjouter.entityLabel }}</h4>
+            <input 
+              v-model="contextAjouterSearchQuery" 
+              type="text" 
+              placeholder="Rechercher..." 
+              class="search-input-sidebar"
+            />
             <div class="table-container limited">
               <table class="sidebar-table">
                 <thead>
                   <tr>
                     <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
                     <th>Action</th>
+                    <th v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
-                    v-for="item in contextAjouter.all"
+                    v-for="item in filteredContextAjouterItems"
                     :key="item[contextAjouter.idCol]"
                     :class="{ selected: isAlreadySelected(contextAjouter.entityKey, item) }"
                   >
                     <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
                     <td>
+                      <!-- Show Enlever button if already selected -->
                       <button
+                        v-if="isAlreadySelected(contextAjouter.entityKey, item)"
+                        class="remove-btn"
+                        @click="removeFromSelected(contextAjouter.entityKey, item)"
+                      >Enlever</button>
+                      <!-- Show Ajouter button if not selected -->
+                      <button
+                        v-else
                         class="add-btn"
                         @click="contextAjouter.entityKey === 'direction_projet' ? openDateModal(item) : addToSelected(contextAjouter.entityKey, item)"
-                        :disabled="isAlreadySelected(contextAjouter.entityKey, item) || (!getEntityConfig(contextAjouter.entityKey)?.allowMultiple && contextAjouter.selected.length >= 1)"
+                        :disabled="!getEntityConfig(contextAjouter.entityKey)?.allowMultiple && contextAjouter.selected.length >= 1"
                       >Ajouter</button>
-                    </td>
-                  </tr>
-                  <tr v-if="!contextAjouter.all.length">
-                    <td :colspan="contextAjouter.columns.length + 1" class="no-data">
-                      Aucun élément à afficher.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          
-          <!-- RIGHT: Selected Table -->
-          <div class="section">
-            <h4>Votre sélection</h4>
-            <div class="table-container limited">
-              <table class="sidebar-table">
-                <thead>
-                  <tr>
-                    <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
-                    <th>Actions</th>
-                    <th v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in contextAjouter.selected" :key="item[contextAjouter.idCol]">
-                    <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
-                    <td>
-                      <button class="remove-btn" @click="removeFromSelected(contextAjouter.entityKey, item)">Enlever</button>
+                      <!-- Add Director button for selected items -->
                       <button
-                        v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'"
+                        v-if="isAlreadySelected(contextAjouter.entityKey, item) && (contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes')"
                         class="add-director-btn"
                         @click="openDirecteurModal(item)"
                       >Ajouter Directeur</button>
                     </td>
                     <td v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">
-                      <div class="dropdown">
+                      <div v-if="isAlreadySelected(contextAjouter.entityKey, item)" class="dropdown">
                         <button class="dropdown-btn" @click="loadDirecteurs(contextAjouter.entityKey, item)">
                           Liste Directeurs
                           <span class="dropdown-arrow">▼</span>
@@ -368,11 +486,12 @@
                           </div>
                         </div>
                       </div>
+                      <span v-else>-</span>
                     </td>
                   </tr>
-                  <tr v-if="!contextAjouter.selected.length">
+                  <tr v-if="!filteredContextAjouterItems.length">
                     <td :colspan="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes' ? contextAjouter.columns.length + 2 : contextAjouter.columns.length + 1" class="no-data">
-                      Aucune sélection pour l'instant.
+                      {{ contextAjouterSearchQuery ? `Aucun résultat pour "${contextAjouterSearchQuery}"` : 'Aucun élément à afficher.' }}
                     </td>
                   </tr>
                 </tbody>
@@ -385,15 +504,21 @@
       <!-- Consulter content in sidebar -->
       <div v-if="contextConsulter.visible" class="sidebar-content modal-section">
         <div class="sidebar-header">
-          <h3>Consulter - {{ contextConsulter.entityLabel }}</h3>
+          <h3>Consultation - {{ contextConsulter.entityLabel }}</h3>
           <button @click="closeContextConsulterModal" class="close-btn">&times;</button>
         </div>
         <div class="sidebar-body">
           <div v-if="contextConsulter.loading" class="loading">Chargement...</div>
           <div v-else-if="contextConsulter.error" class="error">{{ contextConsulter.error }}</div>
           <div v-else class="section">
+            <input 
+              v-model="contextConsulterSearchQuery" 
+              type="text" 
+              placeholder="Rechercher..." 
+              class="search-input-sidebar"
+            />
             <div class="table-container">
-              <table v-if="contextConsulter.data.length" class="sidebar-table">
+              <table v-if="filteredContextConsulterItems.length" class="sidebar-table">
                 <thead>
                   <tr>
                     <th v-for="col in contextConsulter.columns" :key="col">{{ col }}</th>
@@ -401,7 +526,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in contextConsulter.data" :key="row[contextConsulter.columnKeys[0]]">
+                  <tr v-for="row in filteredContextConsulterItems" :key="row[contextConsulter.columnKeys[0]]">
                     <td v-for="colKey in contextConsulter.columnKeys" :key="colKey">{{ row[colKey] ?? '-' }}</td>
                     <td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
                       <div class="dropdown">
@@ -424,8 +549,8 @@
                   </tr>
                 </tbody>
               </table>
-              <div v-if="!contextConsulter.data.length" class="no-data">
-                Aucun élément à afficher.
+              <div v-if="!filteredContextConsulterItems.length" class="no-data">
+                {{ contextConsulterSearchQuery ? `Aucun résultat pour "${contextConsulterSearchQuery}"` : 'Aucun élément à afficher.' }}
               </div>
             </div>
           </div>
@@ -452,6 +577,7 @@
                       <th>Fichier</th>
                       <th>Vidéo</th>
                       <th>Plan</th>
+                      <th>Images</th>
                     </tr>
                   </thead>
                     <tbody>
@@ -477,6 +603,13 @@
                         </button>
                         <span v-else class="no-file">-</span>
                       </td>
+                      <td>
+                        <button v-if="document.nomPhotos" @click="viewDocument(document, 'photos')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                          <span v-else>🖼️ Voir</span>
+                        </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -496,40 +629,86 @@
               
               <!-- File Upload Options -->
               <div class="upload-options">
-                <!-- Option 1: Normal Files -->
-                <div class="step upload-option">
-                  <label for="file-upload" class="file-upload-label">Ajouter Fichier Normal</label>
-                  <input id="file-upload" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.bmp,.webp" @change="onFileChange" />
-                  <div v-if="uploadedFile" class="file-info">
-                    <span class="file-selected-text">Fichier sélectionné: {{ uploadedFile.name }}</span>
-                    <button @click="uploadedFile = null" type="button">Retirer</button>
+                <!-- First Row: PDF and Plan -->
+                <div class="upload-row">
+                  <!-- Option 1: Normal Files -->
+                  <div class="step upload-option upload-option-half">
+                    <label for="file-upload" class="file-upload-label">Ajouter Fichier PDF</label>
+                    <input id="file-upload" type="file" accept=".pdf,.txt,.bmp,.webp" @change="onFileChange" />
+                    <div v-if="uploadedFile" class="file-info">
+                      <span class="file-selected-text">Fichier sélectionné: {{ uploadedFile.name }}</span>
+                      <button @click="uploadedFile = null" type="button">Retirer</button>
+                    </div>
+                  </div>
+                  
+                  <!-- Option 3: Graphics Files (for PiecesGraphiques) -->
+                  <div v-if="isPiecesGraphiques" class="step upload-option upload-option-half" :class="{ 'disabled-section': !uploadedFile }">
+                    <label class="file-upload-label">Importer plan en format source</label>
+                    <div v-if="!uploadedFile" class="requirement-message">
+                      <span>Veuillez d'abord sélectionner un fichier PDF ci-dessus</span>
+                    </div>
+                    <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
+                      <input ref="graphicsFileInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addGraphicsFile" multiple style="display: none;" :disabled="!uploadedFile" />
+                      <input ref="graphicsFolderInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addGraphicsFile" webkitdirectory style="display: none;" :disabled="!uploadedFile" />
+                      <button @click="uploadedFile && graphicsFileInput?.click()" class="save-btn" :class="{ 'disabled': !uploadedFile }" :disabled="!uploadedFile" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Fichiers</button>
+                      <button @click="uploadedFile && graphicsFolderInput?.click()" class="save-btn" :class="{ 'disabled': !uploadedFile }" :disabled="!uploadedFile" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Dossier</button>
+                      <span style="color: #bbdefb; font-size: 0.9em;">{{ graphicsFiles.length }} fichier(s) sélectionné(s)</span>
+                    </div>
+                    <div v-if="graphicsFiles.length > 0" class="files-preview">
+                      <h4>Fichiers sélectionnés ({{ graphicsFiles.length }}):</h4>
+                      <div class="file-list">
+                        <div v-for="(file, index) in graphicsFiles" :key="index" class="file-item">
+                          <span>{{ file.name }}</span>
+                          <button @click="removeGraphicsFile(index)" type="button" class="remove-file" title="Retirer ce fichier">Retirer</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Placeholder for non-PiecesGraphiques mode -->
+                  <div v-else class="step upload-option upload-option-half upload-placeholder">
+                    <label class="file-upload-label">Plan</label>
+                    <p style="color: #888; font-style: italic; margin: 0;">Disponible uniquement pour les Pièces Graphiques</p>
                   </div>
                 </div>
                 
-                <!-- Option 2: Video Files -->
-                <div class="step upload-option">
-                  <label for="video-upload" class="file-upload-label">Ajouter Vidéo</label>
-                  <input id="video-upload" type="file" accept=".mp4,.mov,.avi,.mkv,.webm" @change="onVideoChange" />
-                  <div v-if="uploadedVideo" class="file-info">
-                    <span class="file-selected-text">Vidéo sélectionnée: {{ uploadedVideo.name }}</span>
-                    <button @click="uploadedVideo = null" type="button">Retirer</button>
+                <!-- Second Row: Video and Photos -->
+                <div class="upload-row">
+                  <!-- Option 2: Video Files -->
+                  <div class="step upload-option upload-option-half">
+                    <label for="video-upload" class="file-upload-label">Ajouter Vidéo (compression automatique)</label>
+                    <input id="video-upload" type="file" accept=".mp4,.mov,.avi,.mkv,.webm" @change="onVideoChange" />
+                    <small style="color: #bbdefb; font-size: 0.9em; margin-top: 0.5em; display: block;">
+                      Les vidéos > 10MB seront automatiquement compressées pour économiser l'espace
+                    </small>
+                    <div v-if="uploadedVideo || isCompressingVideo" class="file-info">
+                      <span v-if="isCompressingVideo" class="file-selected-text">{{ compressionProgress }}</span>
+                      <span v-else class="file-selected-text">Vidéo sélectionnée: {{ uploadedVideo?.name }}</span>
+                      <span v-if="uploadedVideo?.name?.includes('_compressed')" class="compression-indicator">
+                        ✓ Compressée
+                      </span>
+                      <button v-if="!isCompressingVideo" @click="uploadedVideo = null" type="button">Retirer</button>
+                    </div>
                   </div>
-                </div>
-                
-                <!-- Option 3: Graphics Files (for PiecesGraphiques) -->
-                <div v-if="isPiecesGraphiques" class="step upload-option">
-                  <label class="file-upload-label">Ajouter Pièces Graphiques</label>
-                  <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
-                    <input ref="graphicsFileInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addGraphicsFile" style="display: none;" />
-                    <button @click="graphicsFileInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Fichier</button>
-                    <span style="color: #bbdefb; font-size: 0.9em;">{{ graphicsFiles.length }} fichier(s) sélectionné(s)</span>
-                  </div>
-                  <div v-if="graphicsFiles.length > 0" class="files-preview">
-                    <h4>Fichiers sélectionnés ({{ graphicsFiles.length }}):</h4>
-                    <div class="file-list">
-                      <div v-for="(file, index) in graphicsFiles" :key="index" class="file-item">
-                        <span>{{ file.name }}</span>
-                        <button @click="removeGraphicsFile(index)" type="button" class="remove-file" title="Retirer ce fichier">Retirer</button>
+                  
+                  <!-- Option 4: Photos (Multiple Images to PDF) -->
+                  <div class="step upload-option upload-option-half">
+                    <label class="file-upload-label">Ajouter Photos (conversion automatique en PDF)</label>
+                    <input ref="photosInput" type="file" accept="image/*" @change="onSinglePhotoChange" style="display: none;" />
+                    <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
+                      <button @click="photosInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Photo</button>
+                      <span style="color: #bbdefb; font-size: 0.9em;">{{ selectedPhotos.length }} photo(s) sélectionnée(s)</span>
+                    </div>
+                    <small style="color: #bbdefb; font-size: 0.9em; margin-top: 0.5em; display: block;">
+                      Cliquez sur "Ajouter Photo" pour sélectionner une image. Les photos seront automatiquement converties en un seul fichier PDF
+                    </small>
+                    <div v-if="selectedPhotos.length > 0" class="files-preview">
+                      <h4>Photos sélectionnées ({{ selectedPhotos.length }}):</h4>
+                      <div class="file-list">
+                        <div v-for="(photo, index) in selectedPhotos" :key="index" class="file-item">
+                          <span>{{ photo.name }}</span>
+                          <button @click="removePhoto(index)" type="button" class="remove-file" title="Retirer cette photo">Retirer</button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -538,7 +717,11 @@
             </div>
         </div>
         <div class="sidebar-footer">
-          <button class="validate-btn" @click="submitForm" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter Document</button>
+          <button class="validate-btn" @click="submitForm" :class="{ 'disabled': !canAddDocuments || isCompressingVideo || isCreatingDocument }" :disabled="!canAddDocuments || isCompressingVideo || isCreatingDocument">
+            <span v-if="isCompressingVideo">Compression en cours...</span>
+            <span v-else-if="isCreatingDocument">{{ creationProgress || 'Création en cours...' }}</span>
+            <span v-else>Ajouter Document</span>
+          </button>
         </div>
       </div>
 
@@ -833,7 +1016,11 @@
             </div>
           </div>
         </div>
-        <button class="save-btn" @click="submitForm" style="margin-top:1em;" :class="{ 'disabled': !canAddDocuments }" :disabled="!canAddDocuments">Ajouter </button>
+        <button class="save-btn" @click="submitForm" style="margin-top:1em;" :class="{ 'disabled': !canAddDocuments || isCompressingVideo || isCreatingDocument }" :disabled="!canAddDocuments || isCompressingVideo || isCreatingDocument">
+          <span v-if="isCompressingVideo">Compression en cours...</span>
+          <span v-else-if="isCreatingDocument">{{ creationProgress || 'Création en cours...' }}</span>
+          <span v-else>Ajouter</span>
+        </button>
       </div>
       <!-- PDF VIEWER MODAL -->
     <!-- PDF VIEWER MODAL -->
@@ -870,61 +1057,30 @@
         :pdfUrl="selectedDocument.fichier"
         :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
         :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
+        :documentId="selectedDocument.idDocument"
+        @download="handleDownloadAction"
+        @print="handlePrintAction"
       />
       
       <!-- Image Viewer -->
-      <div v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'" class="image-viewer">
-        <img 
-          :src="selectedDocument.fichier" 
-          alt="Document" 
-          class="document-image"
-        />
-        <div class="image-actions">
-          <button 
-            @click="downloadFile(selectedDocument)" 
-            :class="['btn', { 'btn-disabled': (userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement) }]" 
-            :disabled="(userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement)"
-            title="Télécharger"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-            </svg>
-          </button>
-          <button 
-            @click="printImage(selectedDocument)" 
-            :class="['btn', { 'btn-disabled': (userStore.user.value?.profil !== 2 && !userStore.user.value?.impression) }]" 
-            :disabled="(userStore.user.value?.profil !== 2 && !userStore.user.value?.impression)"
-            title="Imprimer"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+      <ImageViewer
+        v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'"
+        :imageUrl="selectedDocument.fichier"
+        :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
+        :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
+        :documentId="selectedDocument.idDocument"
+        @download="handleDownloadAction"
+        @print="handlePrintAction"
+      />
       
       <!-- Video Viewer -->
-      <div v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'" class="video-viewer">
-        <video 
-          :src="selectedDocument.fichier" 
-          controls 
-          class="document-video"
-        >
-          Votre navigateur ne supporte pas la lecture vidéo.
-        </video>
-        <div class="video-actions">
-          <button 
-            @click="downloadFile(selectedDocument)" 
-            :class="['btn', { 'btn-disabled': (userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement) }]" 
-            :disabled="(userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement)"
-            title="Télécharger"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+      <VideoViewer
+        v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'"
+        :videoUrl="selectedDocument.fichier"
+        :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
+        :documentId="selectedDocument.idDocument"
+        @download="handleDownloadAction"
+      />
     </div>
   </div>
 </div>
@@ -959,11 +1115,35 @@
         </div>
       </div>
       <div class="doc-modal-footer" style="text-align:right; margin-top:1em;">
-        <button class="save-btn" @click="submitImportForm" :disabled="!importFiles.length || !importNomFichier" style="font-size:1em;">Importer Dossier</button>
+        <button class="save-btn" @click="submitImportForm" :disabled="!importFiles.length || !importNomFichier || isCreatingDocument" style="font-size:1em;">
+          <span v-if="isCreatingDocument">{{ creationProgress || 'Importation en cours...' }}</span>
+          <span v-else>Importer Dossier</span>
+        </button>
       </div>
     </div>
   </div>
 </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteConfirmModal" class="doc-modal-backdrop">
+      <div class="doc-modal" style="min-width: 400px; max-width: 500px; min-height: auto;">
+        <div class="doc-modal-header">
+          <h3>Confirmer la suppression</h3>
+          <button @click="showDeleteConfirmModal = false; documentToDelete = null" class="close-modal">&times;</button>
+        </div>
+        <div class="doc-modal-body">
+          <p style="margin-bottom: 1em; font-size: 1.1rem; line-height: 1.4;">Êtes-vous sûr de vouloir supprimer le document suivant ?</p>
+          <div style="background: rgba(67, 233, 123, 0.1); padding: 1em; border-radius: 6px; border-left: 4px solid #43E97B;">
+            <strong>{{ documentToDelete?.designation || documentToDelete?.nomFichier || 'Document sans nom' }}</strong>
+          </div>
+          <p style="margin-top: 1em; color: #E53935; font-weight: 600;">Cette action est irréversible.</p>
+        </div>
+        <div class="doc-modal-footer" style="text-align: right; padding-top: 1em; border-top: 1px solid #232f4b;">
+          <button @click="showDeleteConfirmModal = false; documentToDelete = null" class="view-button" style="margin-right: 1em;">Annuler</button>
+          <button @click="deleteDocumentConfirmed" class="delete-button">Confirmer</button>
+        </div>
+      </div>
+    </div>
 
   </div>
 </template>
@@ -973,7 +1153,10 @@ import { ref, onMounted, watch, computed } from 'vue'
 import "vue-multiselect/dist/vue-multiselect.css";
 import axios from '../axios'
 import PdfViewer from '../components/PdfViewer.vue'
+import ImageViewer from '../components/ImageViewer.vue'
+import VideoViewer from '../components/VideoViewer.vue'
 import { useUserStore } from '../store/userStore'
+import { logUserAction, LOG_ACTIONS } from '../services/logService'
 
 
 // const API_BASE = 'http://10.10.150.75:8000/api'
@@ -983,6 +1166,7 @@ interface Document {
   fichier?: string | null
   video?: string | null
   plan?: string | null
+  photos?: string | null
   detectedType?: string
 }
 
@@ -992,6 +1176,7 @@ interface Document {
 const userStore = useUserStore()
 const selectedDocument = ref<Document | null>(null)
 const loadingViewDocument = ref<Record<number, boolean>>({})
+const documentAbortControllers = ref<Record<number, AbortController>>({})
 const isAnyDocumentLoading = computed(() => Object.values(loadingViewDocument.value).some(loading => loading))
 
 // Toast notification system
@@ -1035,6 +1220,11 @@ const canAddDocuments = computed(() => {
 const canDownload = computed(() => {
   return userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false
 })
+
+// Computed property to check if user can delete documents
+const canDeleteDocuments = computed(() => {
+  return userStore.user.value?.suppression || false
+})
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1071,10 +1261,17 @@ const selectedSubDiv4Id = ref<number | null>(null)
 const nonFichier = ref<string>('')
 const uploadedFile = ref<File | null>(null)
 const uploadedVideo = ref<File | null>(null)
+const isCompressingVideo = ref(false)
+const compressionProgress = ref('')
+const isCreatingDocument = ref(false)
+const creationProgress = ref('')
 const graphicsFiles = ref<File[]>([])
 const graphicsFileInput = ref<HTMLInputElement>()
+const graphicsFolderInput = ref<HTMLInputElement>()
 const multipleImages = ref<File[]>([])
 const showImageToPdfOption = ref(false)
+const selectedPhotos = ref<File[]>([])
+const photosInput = ref<HTMLInputElement>()
 
 // Import Dossier Source variables
 const showImportModal = ref(false)
@@ -1237,6 +1434,14 @@ watch(selectedStructureId, async (newStructureId) => {
   }
 })
 
+// Watch for any select input changes to clear sidebar content
+watch([selectedSectionId, selectedDivisionId, selectedSubDiv2Id, selectedSubDiv3Id], () => {
+  // Clear sidebar content when any subdivision selection changes
+  showDeleteMode.value = false
+  showSuccess.value = false
+  showStructureDocContent.value = false
+})
+
 const requiresSubDiv2 = computed(() => {
   const division = divisionsNv1.value.find(d => d.idSubDivisionNv_1 === selectedDivisionId.value)
   return division?.subDiv === true
@@ -1303,12 +1508,42 @@ function onFileChange(e: Event) {
   }
 }
 
-function onVideoChange(e: Event) {
+async function onVideoChange(e: Event) {
   const files = (e.target as HTMLInputElement).files
   if (files && files.length > 0) {
-    uploadedVideo.value = files[0]
-    console.log('Selected video:', files[0].name, 'Type:', files[0].type, 'Size:', files[0].size)
-    // Don't clear other file selections - allow multiple file types
+    const originalVideo = files[0]
+    console.log('Selected video:', originalVideo.name, 'Type:', originalVideo.type, 'Size:', originalVideo.size)
+    
+    // For videos >30MB, use original to avoid timeout
+    if (originalVideo.size > 30 * 1024 * 1024) {
+      uploadedVideo.value = originalVideo
+      showToast('Vidéo volumineuse - utilisée sans compression', 'success')
+      return
+    }
+    
+    // For videos 5-30MB, compress with fast method
+    if (originalVideo.size > 5 * 1024 * 1024) {
+      isCompressingVideo.value = true
+      compressionProgress.value = 'Compression rapide en cours...'
+      
+      try {
+        const compressedVideo = await compressVideoFast(originalVideo)
+        uploadedVideo.value = compressedVideo
+        
+        const compressionRatio = ((originalVideo.size - compressedVideo.size) / originalVideo.size * 100).toFixed(1)
+        showToast(`Vidéo compressée! Réduction: ${compressionRatio}%`, 'success')
+      } catch (error) {
+        console.error('Video compression failed:', error)
+        uploadedVideo.value = originalVideo
+        showToast('Compression échouée - vidéo originale utilisée', 'error')
+      } finally {
+        isCompressingVideo.value = false
+        compressionProgress.value = ''
+      }
+    } else {
+      // Small videos, use as-is
+      uploadedVideo.value = originalVideo
+    }
   }
 }
 
@@ -1343,6 +1578,105 @@ function removeImage(index: number) {
   showImageToPdfOption.value = multipleImages.value.length > 0
 }
 
+function onSinglePhotoChange(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    const file = files[0]
+    if (file.type.startsWith('image/')) {
+      // Check if photo already exists
+      if (!selectedPhotos.value.some(p => p.name === file.name && p.size === file.size)) {
+        selectedPhotos.value.push(file)
+        showToast(`Photo "${file.name}" ajoutée!`, 'success')
+      }
+      // Clear the input so the same file can be selected again
+      ;(e.target as HTMLInputElement).value = ''
+    }
+  }
+}
+
+function removePhoto(index: number) {
+  selectedPhotos.value.splice(index, 1)
+}
+
+async function compressVideoFast(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video')
+    video.muted = true
+    video.playsInline = true
+    
+    const timeout = setTimeout(() => {
+      reject(new Error('Compression timeout'))
+    }, 60000) // 1 minute timeout
+    
+    video.onloadedmetadata = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        
+        // More aggressive resolution reduction
+        const scale = Math.min(1, 480 / Math.max(video.videoWidth, video.videoHeight))
+        canvas.width = Math.floor(video.videoWidth * scale)
+        canvas.height = Math.floor(video.videoHeight * scale)
+        
+        const stream = canvas.captureStream(15) // 15 FPS
+        const chunks: Blob[] = []
+        
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'video/webm',
+          videoBitsPerSecond: 300000 // 300kbps
+        })
+        
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data)
+        }
+        
+        mediaRecorder.onstop = () => {
+          clearTimeout(timeout)
+          const blob = new Blob(chunks, { type: 'video/webm' })
+          const compressedFile = new File([blob], 
+            file.name.replace(/\.[^/.]+$/, '_compressed.webm'), 
+            { type: 'video/webm' }
+          )
+          resolve(compressedFile)
+        }
+        
+        mediaRecorder.start()
+        
+        const ctx = canvas.getContext('2d')!
+        let frame = 0
+        const maxFrames = Math.min(video.duration * 15, 600) // Max 40 seconds
+        
+        const drawFrame = () => {
+          if (frame >= maxFrames) {
+            mediaRecorder.stop()
+            return
+          }
+          
+          video.currentTime = frame / 15
+          video.onseeked = () => {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            frame++
+            compressionProgress.value = `Compression: ${Math.round(frame/maxFrames*100)}%`
+            setTimeout(drawFrame, 30) // Faster frame processing
+          }
+        }
+        
+        drawFrame()
+        
+      } catch (error) {
+        clearTimeout(timeout)
+        reject(error)
+      }
+    }
+    
+    video.onerror = () => {
+      clearTimeout(timeout)
+      reject(new Error('Erreur vidéo'))
+    }
+    
+    video.src = URL.createObjectURL(file)
+  })
+}
+
 async function convertImagesToPdf(): Promise<File> {
   const { jsPDF } = await import('jspdf')
   const pdf = new jsPDF('p', 'mm', 'a4')
@@ -1358,12 +1692,11 @@ async function convertImagesToPdf(): Promise<File> {
         // A4 dimensions in mm: 210 x 297, with margins
         const pageWidth = 210
         const pageHeight = 297
-        const margin = 10
+        const margin = 5 // Smaller margins for larger image
         const maxWidth = pageWidth - (margin * 2)
         const maxHeight = pageHeight - (margin * 2)
         
-        // Use high resolution canvas
-        const scale = 2 // Higher scale for better quality
+        // Use original image dimensions for maximum quality
         let { width, height } = img
         
         // Calculate dimensions to fit page while maintaining aspect ratio
@@ -1374,22 +1707,18 @@ async function convertImagesToPdf(): Promise<File> {
         const finalWidth = width * ratio
         const finalHeight = height * ratio
         
-        // Set canvas size with high resolution
-        canvas.width = width * scale
-        canvas.height = height * scale
-        canvas.style.width = width + 'px'
-        canvas.style.height = height + 'px'
+        // Use original image dimensions for canvas to preserve quality
+        canvas.width = width
+        canvas.height = height
         
-        // Scale context for high resolution
-        ctx.scale(scale, scale)
-        ctx.imageSmoothingEnabled = true
-        ctx.imageSmoothingQuality = 'high'
+        // Disable image smoothing for crisp quality
+        ctx.imageSmoothingEnabled = false
         
-        // Draw image at original size on high-res canvas
+        // Draw image at original size
         ctx.drawImage(img, 0, 0, width, height)
         
-        // Convert to high quality JPEG
-        const imgData = canvas.toDataURL('image/jpeg', 0.95)
+        // Convert to maximum quality JPEG (1.0 = no compression)
+        const imgData = canvas.toDataURL('image/jpeg', 1.0)
         
         if (i > 0) pdf.addPage()
         
@@ -1406,6 +1735,66 @@ async function convertImagesToPdf(): Promise<File> {
   
   const pdfBlob = pdf.output('blob')
   return new File([pdfBlob], `${nonFichier.value || 'images'}.pdf`, { type: 'application/pdf' })
+}
+
+async function convertPhotosToPdf(): Promise<File> {
+  const { jsPDF } = await import('jspdf')
+  const pdf = new jsPDF('p', 'mm', 'a4')
+  
+  for (let i = 0; i < selectedPhotos.value.length; i++) {
+    const file = selectedPhotos.value[i]
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    const img = new Image()
+    
+    await new Promise((resolve) => {
+      img.onload = () => {
+        // A4 dimensions in mm: 210 x 297, with margins
+        const pageWidth = 210
+        const pageHeight = 297
+        const margin = 5 // Smaller margins for larger image
+        const maxWidth = pageWidth - (margin * 2)
+        const maxHeight = pageHeight - (margin * 2)
+        
+        // Use original image dimensions for maximum quality
+        let { width, height } = img
+        
+        // Calculate dimensions to fit page while maintaining aspect ratio
+        const widthRatio = maxWidth / width
+        const heightRatio = maxHeight / height
+        const ratio = Math.min(widthRatio, heightRatio)
+        
+        const finalWidth = width * ratio
+        const finalHeight = height * ratio
+        
+        // Use original image dimensions for canvas to preserve quality
+        canvas.width = width
+        canvas.height = height
+        
+        // Disable image smoothing for crisp quality
+        ctx.imageSmoothingEnabled = false
+        
+        // Draw image at original size
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        // Convert to maximum quality JPEG (1.0 = no compression)
+        const imgData = canvas.toDataURL('image/jpeg', 1.0)
+        
+        if (i > 0) pdf.addPage()
+        
+        // Center image on page
+        const x = (pageWidth - finalWidth) / 2
+        const y = (pageHeight - finalHeight) / 2
+        
+        pdf.addImage(imgData, 'JPEG', x, y, finalWidth, finalHeight)
+        resolve(null)
+      }
+      img.src = URL.createObjectURL(file)
+    })
+  }
+  
+  const pdfBlob = pdf.output('blob')
+  return new File([pdfBlob], `${nonFichier.value || 'photos'}.pdf`, { type: 'application/pdf' })
 }
 
 function getTypeDesignation(id: number | null) {
@@ -1437,6 +1826,11 @@ function getSubDiv4Designation(id: number | null) {
 }
 
 async function submitForm() {
+  if (isCreatingDocument.value) return; // Prevent multiple submissions
+  
+  isCreatingDocument.value = true;
+  creationProgress.value = 'Préparation du document...';
+  
   const formData = new FormData();
   
   // Add current date for creation and modification
@@ -1483,6 +1877,7 @@ async function submitForm() {
     
     // If multiple images are selected, convert them to PDF
     if (multipleImages.value.length > 0 && !uploadedFile.value) {
+      creationProgress.value = 'Conversion des images en PDF...';
       fileToUpload = await convertImagesToPdf();
     }
     
@@ -1500,9 +1895,18 @@ async function submitForm() {
     
     // Handle graphics files (zip them for PiecesGraphiques) - append as 'plan'
     if (graphicsFiles.value.length > 0) {
+      creationProgress.value = 'Compression des fichiers graphiques...';
       const zipFile = await createZipFile(graphicsFiles.value, nonFichier.value || 'pieces-graphiques');
       console.log('Appending plan to FormData:', zipFile.name, 'Type:', zipFile.type, 'Size:', zipFile.size)
       formData.append('plan', zipFile, zipFile.name);
+    }
+    
+    // Handle photos (convert to PDF) - append as 'photos'
+    if (selectedPhotos.value.length > 0) {
+      creationProgress.value = 'Conversion des photos en PDF...';
+      const photosPdf = await convertPhotosToPdf();
+      console.log('Appending photos to FormData:', photosPdf.name, 'Type:', photosPdf.type, 'Size:', photosPdf.size)
+      formData.append('photos', photosPdf, photosPdf.name);
     }
     
     // Debug: Log all FormData entries
@@ -1515,6 +1919,7 @@ async function submitForm() {
       }
     }
 
+    creationProgress.value = 'Envoi du document au serveur...';
     const response = await axios.post('documents/create-two-file/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -1530,6 +1935,7 @@ async function submitForm() {
     graphicsFiles.value = [];
     multipleImages.value = [];
     showImageToPdfOption.value = false;
+    selectedPhotos.value = [];
     
     // Close modal or sidebar if open
     if (showDocModal.value) {
@@ -1548,6 +1954,9 @@ async function submitForm() {
     } else {
       showToast('Erreur lors de la création du document', 'error');
     }
+  } finally {
+    isCreatingDocument.value = false;
+    creationProgress.value = '';
   }
 }
 
@@ -1564,10 +1973,16 @@ const showStructureConsulterContent = ref(false);
 
 // SUCCESS MESSAGE VARIABLE
 const showSuccess = ref(false);
+const showDeleteMode = ref(false);
 const loadingConsulter = ref(false);
+const consulterAbortController = ref<AbortController | null>(null);
 
 // Search functionality
 const searchQuery = ref('');
+
+// Context search functionality
+const contextAjouterSearchQuery = ref('');
+const contextConsulterSearchQuery = ref('');
 
 // Computed property to filter documents based on search query
 const filteredDocList = computed(() => {
@@ -1584,9 +1999,37 @@ const filteredDocList = computed(() => {
   );
 });
 
+// Computed property to filter context ajouter items
+const filteredContextAjouterItems = computed(() => {
+  if (!contextAjouterSearchQuery.value.trim()) {
+    return contextAjouter.value.all;
+  }
+  
+  const query = contextAjouterSearchQuery.value.toLowerCase().trim();
+  return contextAjouter.value.all.filter(item => 
+    contextAjouter.value.columnKeys.some(key => 
+      (item[key]?.toString() || '').toLowerCase().includes(query)
+    )
+  );
+});
+
+// Computed property to filter context consulter items
+const filteredContextConsulterItems = computed(() => {
+  if (!contextConsulterSearchQuery.value.trim()) {
+    return contextConsulter.value.data;
+  }
+  
+  const query = contextConsulterSearchQuery.value.toLowerCase().trim();
+  return contextConsulter.value.data.filter(item => 
+    contextConsulter.value.columnKeys.some(key => 
+      (item[key]?.toString() || '').toLowerCase().includes(query)
+    )
+  );
+});
+
 // Resizable panels functionality
-const leftPanelWidth = ref(60); // percentage
-const defaultPanelWidth = 60; // default percentage
+const leftPanelWidth = ref(35); // percentage
+const defaultPanelWidth = 35; // default percentage
 const isResizing = ref(false);
 
 function startResize(e: MouseEvent) {
@@ -1855,6 +2298,7 @@ if (entityKey === 'direction_projet') {
 // --- Function to close popup ---
 function closeContextConsulterModal() {
   contextConsulter.value.visible = false;
+  contextConsulterSearchQuery.value = '';
 }
 
 
@@ -2329,6 +2773,7 @@ async function addDirecteur() {
 // Update your saveSelectedContextEntities to call the above function
 function closeContextAjouterModal() {
   contextAjouter.value.visible = false
+  contextAjouterSearchQuery.value = ''
 }
 
 
@@ -2475,9 +2920,19 @@ async function fetchDocListForCurrentSelection() {
     if (requiresSubDiv2.value && selectedSubDiv4Id.value) {
       params.idSubDivisionNv_4 = selectedSubDiv4Id.value;
     }
-    const { data } = await axios.get('documentsFilter/', { params });
+    
+    // Add abort signal if available
+    const requestConfig: any = { params };
+    if (consulterAbortController.value) {
+      requestConfig.signal = consulterAbortController.value.signal;
+    }
+    
+    const { data } = await axios.get('documentsFilter/', requestConfig);
     docList.value = Array.isArray(data) ? data : [];
   } catch(e: any) {
+    if (e.name === 'AbortError') {
+      throw e; // Re-throw abort errors to be handled by caller
+    }
     docModalError.value = "Erreur lors du chargement des documents.";
     docList.value = [];
   } finally {
@@ -2501,6 +2956,7 @@ function closeDocModal() {
 function openStructureDocContent() {
   contextAjouter.value.visible = false; // Close context ajouter modal
   showSuccess.value = false; // Close success message if open
+  showDeleteMode.value = false; // Close delete mode if open
   showConsulterPanel.value = false; // Close NEW consulter if open
   showStructureDocContent.value = true;
   showStructureConsulterContent.value = false; // Close consulter if open
@@ -2518,13 +2974,63 @@ async function showSuccessMessage() {
   
   loadingConsulter.value = true;
   showStructureDocContent.value = false; // Close ajouter content
+  showDeleteMode.value = false; // Close delete mode
   showSuccess.value = true;
+  
+  // Create abort controller for this request
+  consulterAbortController.value = new AbortController();
   
   try {
     await fetchDocListForCurrentSelection();
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      showToast('Chargement annulé', 'error');
+      showSuccess.value = false;
+    } else {
+      console.error('Error in showSuccessMessage:', error);
+    }
   } finally {
     loadingConsulter.value = false;
+    consulterAbortController.value = null;
   }
+}
+
+// DELETE MESSAGE FUNCTION
+async function showDeleteMessage() {
+  if (loadingConsulter.value) return; // Prevent multiple clicks
+  
+  loadingConsulter.value = true;
+  showStructureDocContent.value = false; // Close ajouter content
+  showSuccess.value = false; // Close consulter mode
+  showDeleteMode.value = true;
+  
+  // Create abort controller for this request
+  consulterAbortController.value = new AbortController();
+  
+  try {
+    await fetchDocListForCurrentSelection();
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      showToast('Chargement annulé', 'error');
+      showDeleteMode.value = false;
+    } else {
+      console.error('Error in showDeleteMessage:', error);
+    }
+  } finally {
+    loadingConsulter.value = false;
+    consulterAbortController.value = null;
+  }
+}
+
+// CANCEL CONSULTER FUNCTION
+function cancelConsulter() {
+  if (consulterAbortController.value) {
+    consulterAbortController.value.abort();
+    consulterAbortController.value = null;
+  }
+  loadingConsulter.value = false;
+  showSuccess.value = false;
+  showToast('Chargement annulé', 'error');
 }
 
 
@@ -2593,27 +3099,83 @@ async function handleDeleteDocument(document: any) {
   }
 }
 
-async function viewDocument(document: Document, fileType: 'fichier' | 'video' = 'fichier') {
+// State for delete confirmation modal
+const showDeleteConfirmModal = ref(false);
+const documentToDelete = ref<any>(null);
+
+// Confirm delete document function for the new delete mode
+function confirmDeleteDocument(document: any) {
+  documentToDelete.value = document;
+  showDeleteConfirmModal.value = true;
+}
+
+// Actually delete the document
+async function deleteDocumentConfirmed() {
+  if (!documentToDelete.value) return;
+  
+  try {
+    await axios.delete(`documents/${documentToDelete.value.idDocument}/`);
+    showToast("Document supprimé avec succès!", 'success');
+    // Refresh the document list
+    await fetchDocListForCurrentSelection();
+  } catch (e: any) {
+    console.error('Error deleting document:', e);
+    showToast("Erreur lors de la suppression du document.", 'error');
+  } finally {
+    showDeleteConfirmModal.value = false;
+    documentToDelete.value = null;
+  }
+}
+
+async function viewDocument(document: Document, fileType: 'fichier' | 'video' | 'photos' = 'fichier') {
   if (loadingViewDocument.value[document.idDocument]) return
   
   loadingViewDocument.value[document.idDocument] = true
   showToast('Veuillez patienter, le document se charge...', 'success')
   
+  // Log the consult action
+  await logUserAction(document.idDocument, LOG_ACTIONS.CONSULT_FILE)
+  
+  const abortController = new AbortController()
+  documentAbortControllers.value[document.idDocument] = abortController
+  
   try {
     if (fileType === 'video' && document.video) {
-      // For video, use the direct URL from API response
       selectedDocument.value = {
         ...document,
         fichier: document.video,
         detectedType: 'video'
       }
-    } else {
-      // For fichier, use the view-file endpoint
-      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
+    } else if (fileType === 'photos') {
+      // Use the specific API endpoint for photos
+      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-photos/${document.idDocument}/`, {
+        signal: abortController.signal
+      })
+      
+      if (abortController.signal.aborted) {
+        throw new Error('Request was cancelled')
+      }
+      
       const blob = await response.blob()
       const fileUrl = URL.createObjectURL(blob)
       
-      // Detect file type from blob content-type
+      selectedDocument.value = {
+        ...document,
+        fichier: fileUrl,
+        detectedType: 'pdf'
+      }
+    } else {
+      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`, {
+        signal: abortController.signal
+      })
+      
+      if (abortController.signal.aborted) {
+        throw new Error('Request was cancelled')
+      }
+      
+      const blob = await response.blob()
+      const fileUrl = URL.createObjectURL(blob)
+      
       let detectedType = 'pdf'
       if (blob.type.startsWith('image/')) {
         detectedType = 'image'
@@ -2625,12 +3187,27 @@ async function viewDocument(document: Document, fileType: 'fichier' | 'video' = 
         detectedType: detectedType
       }
     }
-  } catch (error) {
-    console.error('Error loading document:', error)
-    showToast('Erreur lors du chargement du document', 'error')
+  } catch (error: any) {
+    if (error.name === 'AbortError' || error.message === 'Request was cancelled') {
+      showToast('Chargement du document annulé', 'error')
+    } else {
+      console.error('Error loading document:', error)
+      showToast('Erreur lors du chargement du document', 'error')
+    }
   } finally {
     loadingViewDocument.value[document.idDocument] = false
+    delete documentAbortControllers.value[document.idDocument]
   }
+}
+
+function cancelDocumentView(documentId: number) {
+  const controller = documentAbortControllers.value[documentId]
+  if (controller) {
+    controller.abort()
+    delete documentAbortControllers.value[documentId]
+  }
+  loadingViewDocument.value[documentId] = false
+  showToast('Chargement du document annulé', 'error')
 }
 
 // ==== Context directors logic: string keys for TS safety ====
@@ -3133,6 +3710,9 @@ async function downloadFile(doc: any, fileType: 'fichier' | 'video' | 'plan' = '
   if (!fileUrl) return
   
   try {
+    // Log the download action
+    await logUserAction(doc.idDocument, LOG_ACTIONS.DOWNLOAD)
+    
     showToast('Téléchargement en cours...', 'success')
     // Use the full URL directly since it already contains the base URL
     const response = await fetch(fileUrl)
@@ -3173,6 +3753,16 @@ function printImage(doc: any) {
   }
 }
 
+// Handle download action from viewer components
+async function handleDownloadAction(documentId: number) {
+  await logUserAction(documentId, LOG_ACTIONS.DOWNLOAD)
+}
+
+// Handle print action from viewer components
+async function handlePrintAction(documentId: number) {
+  await logUserAction(documentId, LOG_ACTIONS.PRINT)
+}
+
 function closeDocumentViewer() {
   if (selectedDocument.value?.fichier) {
     URL.revokeObjectURL(selectedDocument.value.fichier)
@@ -3185,6 +3775,7 @@ function clearAllSidebarContent() {
   // Close all modals and sidebar content
   showStructureDocContent.value = false
   showSuccess.value = false
+  showDeleteMode.value = false
   showConsulterPanel.value = false
   showStructureConsulterContent.value = false
   showDocModal.value = false
@@ -3209,6 +3800,7 @@ function clearAllSidebarContent() {
   graphicsFiles.value = []
   multipleImages.value = []
   showImageToPdfOption.value = false
+  selectedPhotos.value = []
   importFiles.value = []
   importNomFichier.value = ''
   
@@ -3283,6 +3875,11 @@ async function submitImportForm() {
     showToast('Veuillez sélectionner des fichiers et saisir un nom de dossier', 'error')
     return
   }
+  
+  if (isCreatingDocument.value) return; // Prevent multiple submissions
+  
+  isCreatingDocument.value = true;
+  creationProgress.value = 'Préparation de l\'importation...';
 
   const formData = new FormData()
   
@@ -3326,8 +3923,11 @@ async function submitImportForm() {
   
   try {
     // Create zip file from selected files
+    creationProgress.value = 'Compression des fichiers...';
     const zipFile = await createZipFile(importFiles.value, importNomFichier.value)
     formData.append('plan', zipFile)
+    
+    creationProgress.value = 'Envoi du dossier au serveur...';
 
     const response = await axios.post('http://10.10.150.75:8000/api/documents/', formData, {
       headers: {
@@ -3353,6 +3953,9 @@ async function submitImportForm() {
     } else {
       showToast('Erreur lors de l\'importation du dossier source', 'error')
     }
+  } finally {
+    isCreatingDocument.value = false;
+    creationProgress.value = '';
   }
 }
 
@@ -3581,7 +4184,9 @@ async function submitImportForm() {
 }
 
 .sidebar-table tr.selected {
-  background: rgba(67, 233, 123, 0.1);
+  background: rgba(67, 233, 123, 0.15);
+  border-left: 3px solid #43E97B;
+  font-weight: 600;
 }
 
 .add-btn, .remove-btn, .add-director-btn, .validate-btn {
@@ -3729,8 +4334,8 @@ async function submitImportForm() {
 /* Structure mode: side by side layout */
 .structure-step-form .step {
   display: grid;
-  grid-template-columns: minmax(200px, 300px) 1fr;
-  gap: 1.5em;
+  grid-template-columns: minmax(150px, 200px) 1fr;
+  gap: 0.2em;
   align-items: start;
   padding: 1.2em 2em;
 }
@@ -3747,7 +4352,7 @@ async function submitImportForm() {
 .structure-step-form .step select,
 .structure-step-form .step input {
   margin-bottom: 0;
-  min-width: 250px;
+  min-width: 200px;
   width: 100%;
 }
 
@@ -3856,6 +4461,17 @@ select:focus, input:focus {
   font-size: 1.5rem;
   font-weight: 600;
 }
+
+.compression-indicator {
+  background: linear-gradient(90deg, #43E97B 0%, #4CAF50 100%);
+  color: white;
+  padding: 0.3em 0.8em;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 1em;
+  box-shadow: 0 2px 8px rgba(67, 233, 123, 0.3);
+}
 .pdf-btn, .save-btn {
   /* margin-top: 1.2em; */
   background: linear-gradient(90deg, #2196F3 0%, #43E97B 100%);
@@ -3875,6 +4491,47 @@ select:focus, input:focus {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.6;
+}
+
+/* Loading animation for buttons */
+.save-btn:disabled span,
+.validate-btn:disabled span,
+.context-action:disabled span {
+  position: relative;
+}
+
+.save-btn:disabled span::after,
+.validate-btn:disabled span::after,
+.context-action:disabled span::after {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: translateY(-50%) rotate(0deg); }
+  100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Progress text styling */
+.creation-progress {
+  color: #43E97B;
+  font-weight: 600;
+  font-size: 0.9em;
+  animation: pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
 }
 .pdf-preview {
   margin-top: 2em;
@@ -4139,6 +4796,27 @@ ul {
   background: #e53935;
 }
 
+.delete-btn-small {
+  background: #E53935;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.3em 0.5em;
+  cursor: pointer;
+  font-size: 1em;
+  transition: all 0.2s;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-btn-small:hover {
+  background: #d32f2f;
+  transform: scale(1.1);
+}
+
 
 
 
@@ -4250,6 +4928,8 @@ ul {
   cursor: not-allowed !important;
   opacity: 0.6;
   filter: none !important;
+  position: relative;
+  padding-right: 2.5em;
 }
 
 .doc-modal.selected { background-color: #e4f7ed!important; }
@@ -4523,6 +5203,23 @@ ul {
   opacity: 0.7;
 }
 
+.cancel-btn {
+  background: #E53935;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.8em 1.5em;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-left: 1em;
+}
+
+.cancel-btn:hover {
+  background: #d32f2f;
+}
+
 .files-preview {
   margin-top: 1em;
   padding: 1em;
@@ -4541,7 +5238,13 @@ ul {
 .upload-options {
   display: flex;
   flex-direction: column;
-  gap: 1em;
+  gap: 1.5em;
+}
+
+.upload-row {
+  display: flex;
+  gap: 1.5em;
+  width: 100%;
 }
 
 .upload-option {
@@ -4550,10 +5253,65 @@ ul {
   padding: 1em;
   background: rgba(26, 35, 126, 0.3);
   transition: border-color 0.2s;
+  flex: 1;
 }
 
-.upload-option:hover {
+.upload-option-half {
+  flex: 1;
+  min-width: 0; /* Allows flex items to shrink below their content size */
+}
+
+.upload-placeholder {
+  background: rgba(26, 35, 126, 0.1) !important;
+  border-color: #444 !important;
+  opacity: 0.6;
+}
+
+.upload-option:hover:not(.upload-placeholder) {
   border-color: #43E97B;
+}
+
+/* Responsive design for upload options */
+@media (max-width: 1200px) {
+  .upload-row {
+    flex-direction: column;
+    gap: 1em;
+  }
+  
+  .upload-option-half {
+    flex: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .upload-options {
+    gap: 1em;
+  }
+  
+  .upload-row {
+    gap: 0.8em;
+  }
+  
+  .upload-option {
+    padding: 0.8em;
+  }
+}
+
+.upload-option.disabled-section {
+  opacity: 0.5;
+  pointer-events: none;
+  background: rgba(26, 35, 126, 0.1);
+}
+
+.requirement-message {
+  margin-bottom: 1em;
+  padding: 0.8em;
+  background: #E53935;
+  color: white;
+  border-radius: 6px;
+  font-style: italic;
+  font-weight: 500;
+  text-align: center;
 }
 
 .upload-option .file-upload-label {
@@ -4593,6 +5351,66 @@ ul {
 
 .remove-file:hover {
   background: #d32f2f;
+}
+
+/* Photo selection specific styles */
+.pending-photos {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid #FFC107;
+}
+
+.pending-photos h4 {
+  color: #FFC107;
+}
+
+.confirmed-photos {
+  background: rgba(67, 233, 123, 0.1);
+  border: 1px solid #43E97B;
+}
+
+.confirmed-photos h4 {
+  color: #43E97B;
+}
+
+.pending-item {
+  background: rgba(255, 193, 7, 0.2);
+  border-left: 3px solid #FFC107;
+}
+
+.confirmed-item {
+  background: rgba(67, 233, 123, 0.2);
+  border-left: 3px solid #43E97B;
+}
+
+.photo-actions {
+  display: flex;
+  gap: 0.5em;
+  align-items: center;
+}
+
+.add-photo-btn {
+  background: #43E97B;
+  color: #111;
+  border: none;
+  border-radius: 4px;
+  padding: 0.3em 0.8em;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.85em;
+  transition: background 0.2s;
+}
+
+.add-photo-btn:hover {
+  background: #3bc96a;
+}
+
+.added-indicator {
+  color: #43E97B;
+  font-weight: bold;
+  font-size: 0.85em;
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
 }
 
 .image-viewer, .video-viewer {
@@ -4764,6 +5582,25 @@ ul {
   background: #888 !important;
   cursor: not-allowed !important;
   opacity: 0.7;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.3em;
+  align-items: center;
+}
+
+.cancel-doc-btn {
+  background: #E53935 !important;
+  color: white !important;
+  border-color: #E53935 !important;
+  min-width: 28px !important;
+  font-size: 0.9em;
+}
+
+.cancel-doc-btn:hover {
+  background: #d32f2f !important;
+  transform: scale(1.1);
 }
 
 /* File type indicators and action buttons */

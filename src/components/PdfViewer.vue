@@ -19,9 +19,9 @@
         🖨
       </button>
 
-      <button @click="zoomOut" class="btn" title="Zoom out">➖</button>
-      <button @click="resetZoom" class="btn" title="Fit to page">🔲</button>
-      <button @click="zoomIn" class="btn" title="Zoom in">➕</button>
+      <button @click="zoomOut" class="btn" title="Zoom out">🔍-</button>
+      <button @click="resetZoom" class="btn" title="État initial">🔲</button>
+      <button @click="zoomIn" class="btn" title="Zoom in">🔍+</button>
       <button @click="rotateLeft" class="btn" title="Rotate left">⟲</button>
       <button @click="rotateRight" class="btn" title="Rotate right">⟳</button>
     </div>
@@ -58,6 +58,12 @@ const props = defineProps<{
   pdfUrl: string
   canDownload?: boolean
   canPrint?: boolean
+  documentId?: number
+}>()
+
+const emit = defineEmits<{
+  download: [documentId: number]
+  print: [documentId: number]
 }>()
 
 const numPages = ref(0)
@@ -151,6 +157,11 @@ onBeforeUnmount(() => {
 function downloadPdf() {
   if (!pdfData.value || !props.canDownload) return
 
+  // Emit download event for logging
+  if (props.documentId) {
+    emit('download', props.documentId)
+  }
+
   const blob = new Blob([pdfData.value], { type: 'application/pdf' })
   const url = URL.createObjectURL(blob)
 
@@ -164,6 +175,11 @@ function downloadPdf() {
 
 function printPdf() {
   if (!pdfData.value || !props.canPrint) return
+
+  // Emit print event for logging
+  if (props.documentId) {
+    emit('print', props.documentId)
+  }
 
   const blob = new Blob([pdfData.value], { type: 'application/pdf' })
   const url = URL.createObjectURL(blob)
@@ -221,6 +237,8 @@ function printPdf() {
 
 .btn:hover:not(.btn-disabled) {
   background-color: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 .btn-disabled {

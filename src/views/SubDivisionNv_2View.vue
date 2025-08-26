@@ -65,6 +65,39 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter une Subdivision</h2>
+        
+        <div v-if="successMessage" class="success-message">
+          {{ successMessage }}
+        </div>
+        
+        <div class="form-group">
+          <label>Structure *</label>
+          <select 
+            v-model="newSubdivision.selectedStructure"
+            @change="onStructureChange"
+            :class="{ 'error': validationErrors.selectedStructure }"
+          >
+            <option value="" disabled>Sélectionnez une structure</option>
+            <option v-for="structure in structures" :key="structure.idStructure" :value="structure.idStructure">
+              {{ structure.nom }}
+            </option>
+          </select>
+          <div v-if="validationErrors.selectedStructure" class="error-message">{{ validationErrors.selectedStructure }}</div>
+        </div>
+        <div class="form-group">
+          <label>Subdivision Niveau 1 *</label>
+          <select 
+            v-model="newSubdivision.idSubDivisionNv_1"
+            :class="{ 'error': validationErrors.idSubDivisionNv_1 }"
+            :disabled="!newSubdivision.selectedStructure"
+          >
+            <option value="" disabled>{{ !newSubdivision.selectedStructure ? 'Sélectionnez d\'abord une structure' : 'Sélectionnez une subdivision Niveau 1' }}</option>
+            <option v-for="subdiv in filteredSubdivisionsNv1" :key="subdiv.idSubDivisionNv_1" :value="subdiv.idSubDivisionNv_1">
+              {{ subdiv.nom }}
+            </option>
+          </select>
+          <div v-if="validationErrors.idSubDivisionNv_1" class="error-message">{{ validationErrors.idSubDivisionNv_1 }}</div>
+        </div>
         <div class="form-group">
           <label>Nom *</label>
           <input 
@@ -84,26 +117,16 @@
           <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div>
         </div>
         <div class="form-group">
-          <label>Subdivision Niveau 1 *</label>
-          <select 
-            v-model="newSubdivision.idSubDivisionNv_1"
-            :class="{ 'error': validationErrors.idSubDivisionNv_1 }"
-          >
-            <option value="" disabled>Sélectionnez une subdivision Niveau 1</option>
-            <option v-for="subdiv in subdivisionsNv1" :key="subdiv.idSubDivisionNv_1" :value="subdiv.idSubDivisionNv_1">
-              {{ subdiv.nom }}
-            </option>
+          <label>SubDiv</label>
+          <select v-model="newSubdivision.subDiv">
+            <option value="" disabled>Sélectionnez une valeur</option>
+            <option :value="true">Oui</option>
+            <option :value="false">Non</option>
           </select>
-          <div v-if="validationErrors.idSubDivisionNv_1" class="error-message">{{ validationErrors.idSubDivisionNv_1 }}</div>
         </div>
-        <select v-model="newSubdivision.subDiv">
-          <option value="" disabled>Sélectionnez une valeur</option>
-          <option :value="true">Oui</option>
-          <option :value="false">Non</option>
-        </select>
         <div class="modal-actions">
           <button @click="validateAndAddSubdivision">Ajouter</button>
-          <button @click="showAddPopup = false" class="cancel">Annuler</button>
+          <button @click="closeModal" class="cancel">Fermer</button>
         </div>
       </div>
     </div>
@@ -163,10 +186,19 @@ interface SubdivisionNv1 {
   nom: string
   designation: string | null
   subDiv: boolean
+  idStructure: number
+}
+
+interface Structure {
+  idStructure: number
+  nom: string
+  designation: string
 }
 
 const data = ref<SubdivisionNv2[]>([])
 const subdivisionsNv1 = ref<SubdivisionNv1[]>([])
+const structures = ref<Structure[]>([])
+const filteredSubdivisionsNv1 = ref<SubdivisionNv1[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -178,13 +210,15 @@ const sortColumn = ref<keyof SubdivisionNv2>('idSubDivisionNv_2')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
-const newSubdivision = ref({ nom: '', designation: '', subDiv: true, idSubDivisionNv_1: null })
+const newSubdivision = ref({ nom: '', designation: '', subDiv: true, idSubDivisionNv_1: null, selectedStructure: null })
+const successMessage = ref('')
 
 // Validation errors
 const validationErrors = ref({
   nom: '',
   designation: '',
-  idSubDivisionNv_1: ''
+  idSubDivisionNv_1: '',
+  selectedStructure: ''
 })
 const subdivisionToDelete = ref<SubdivisionNv2 | null>(null)
 const subdivisionToUpdate = ref<SubdivisionNv2 | null>(null)
@@ -252,13 +286,44 @@ async function fetchSubdivisionsNv1() {
   }
 }
 
+async function fetchStructures() {
+  try {
+    const response = await axiosInstance.get('structures/')
+    structures.value = response.data
+  } catch (e: any) {
+    error.value = e?.message || 'Erreur inconnue'
+  }
+}
+
+function onStructureChange() {
+  // Filter subdivisions nv1 based on selected structure
+  if (newSubdivision.value.selectedStructure) {
+    filteredSubdivisionsNv1.value = subdivisionsNv1.value.filter(
+      subdiv => subdiv.idStructure === newSubdivision.value.selectedStructure
+    )
+  } else {
+    filteredSubdivisionsNv1.value = []
+  }
+  // Reset subdivision nv1 selection when structure changes
+  newSubdivision.value.idSubDivisionNv_1 = null
+}
+
 async function addSubdivision() {
   try {
     const res = await axiosInstance.post('subdivision-nv2/', newSubdivision.value)
     data.value.push(res.data)
-    showAddPopup.value = false
-    newSubdivision.value = { nom: '', designation: '', subDiv: true, idSubDivisionNv_1: null }
-    validationErrors.value = { nom: '', designation: '', idSubDivisionNv_1: '' }
+    
+    // Show success message
+    successMessage.value = 'Subdivision ajoutée avec succès !'
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+    
+    // Keep modal open, preserve structure and subdivision nv1 selections, only clear nom and designation
+    const preservedStructure = newSubdivision.value.selectedStructure
+    const preservedSubdivNv1 = newSubdivision.value.idSubDivisionNv_1
+    newSubdivision.value = { nom: '', designation: '', subDiv: true, idSubDivisionNv_1: preservedSubdivNv1, selectedStructure: preservedStructure }
+    validationErrors.value = { nom: '', designation: '', idSubDivisionNv_1: '', selectedStructure: '' }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -324,10 +389,19 @@ function exportCSV() {
   document.body.removeChild(link)
 }
 
+function closeModal() {
+  showAddPopup.value = false
+  newSubdivision.value = { nom: '', designation: '', subDiv: true, idSubDivisionNv_1: null, selectedStructure: null }
+  validationErrors.value = { nom: '', designation: '', idSubDivisionNv_1: '', selectedStructure: '' }
+  successMessage.value = ''
+  filteredSubdivisionsNv1.value = []
+}
+
 onMounted(async () => {
   await userStore.fetchUserProfile()
   fetchData()
   fetchSubdivisionsNv1()
+  fetchStructures()
 })
 
 // Validate required fields
@@ -347,6 +421,11 @@ function validateRequiredFields() {
   
   if (!newSubdivision.value.designation.trim()) {
     errors.designation = 'La désignation est requise'
+    isValid = false
+  }
+  
+  if (!newSubdivision.value.selectedStructure) {
+    errors.selectedStructure = 'La structure est requise'
     isValid = false
   }
   
@@ -637,6 +716,16 @@ h1 {
   color: #e74c3c;
   font-size: 0.85em;
   margin-top: 0.3em;
+  font-weight: 500;
+}
+
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border: 1px solid #c3e6cb;
   font-weight: 500;
 }
 </style>

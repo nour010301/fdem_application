@@ -1,5 +1,67 @@
 <template>
   <div class="main-container">
+    <!-- Fixed action bar at the top -->
+    <div class="action-buttons">
+      <button 
+        @click="downloadFile" 
+        :class="['btn', { 'btn-disabled': !canDownload }]" 
+        :disabled="!canDownload"
+        title="Télécharger"
+      >
+        ⬇
+      </button>
+      <button 
+        v-if="fileType === 'pdf' || fileType === 'image'"
+        @click="printFile" 
+        :class="['btn', { 'btn-disabled': !canPrint }]" 
+        :disabled="!canPrint"
+        title="Imprimer"
+      >
+        🖨
+      </button>
+
+      <button 
+        v-if="fileType === 'image' || fileType === 'video'"
+        @click="zoomOut" 
+        class="btn" 
+        title="Zoom out"
+      >
+        🔍-
+      </button>
+      <button 
+        v-if="fileType === 'image' || fileType === 'video'"
+        @click="resetZoom" 
+        class="btn" 
+        title="État initial"
+      >
+        🔲
+      </button>
+      <button 
+        v-if="fileType === 'image' || fileType === 'video'"
+        @click="zoomIn" 
+        class="btn" 
+        title="Zoom in"
+      >
+        🔍+
+      </button>
+      <button 
+        v-if="fileType === 'image'"
+        @click="rotateLeft" 
+        class="btn" 
+        title="Rotate left"
+      >
+        ⟲
+      </button>
+      <button 
+        v-if="fileType === 'image'"
+        @click="rotateRight" 
+        class="btn" 
+        title="Rotate right"
+      >
+        ⟳
+      </button>
+    </div>
+
     <!-- PDF Viewer -->
     <div v-if="fileType === 'pdf'" class="grid-container">
       <canvas
@@ -12,12 +74,22 @@
     
     <!-- Image Viewer -->
     <div v-else-if="fileType === 'image'" class="image-container">
-      <img :src="fileUrl" alt="Document" class="document-image" />
+      <img 
+        :src="fileUrl" 
+        alt="Document" 
+        class="document-image" 
+        :style="imageStyle"
+      />
     </div>
     
     <!-- Video Viewer -->
     <div v-else-if="fileType === 'video'" class="video-container">
-      <video :src="fileUrl" controls class="document-video">
+      <video 
+        :src="fileUrl" 
+        controls 
+        class="document-video"
+        :style="videoStyle"
+      >
         Votre navigateur ne supporte pas la lecture vidéo.
       </video>
     </div>
@@ -31,30 +103,6 @@
     <div v-else class="unsupported-container">
       <p>Type de fichier non supporté pour la prévisualisation</p>
       <button @click="downloadFile" class="btn">Télécharger le fichier</button>
-    </div>
-    
-    <div class="action-buttons">
-      <button 
-        @click="downloadFile" 
-        :class="['btn', { 'btn-disabled': !canDownload }]" 
-        :disabled="!canDownload"
-        title="Télécharger"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-        </svg>
-      </button>
-      <button 
-        v-if="fileType === 'pdf' || fileType === 'image'"
-        @click="printFile" 
-        :class="['btn', { 'btn-disabled': !canPrint }]" 
-        :disabled="!canPrint"
-        title="Imprimer"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
-        </svg>
-      </button>
     </div>
   </div>
 </template>
@@ -79,6 +127,10 @@ const fileData = ref<Uint8Array | null>(null)
 const textContent = ref('')
 const detectedFileType = ref('')
 
+// Zoom and rotation for images/videos
+const zoomLevel = ref(1)
+const rotation = ref(0)
+
 const fileType = computed(() => {
   if (detectedFileType.value) return detectedFileType.value
   
@@ -91,6 +143,38 @@ const fileType = computed(() => {
   if (url.includes('txt') || url.endsWith('.txt')) return 'text'
   return 'unknown'
 })
+
+const imageStyle = computed(() => ({
+  transform: `scale(${zoomLevel.value}) rotate(${rotation.value}deg)`,
+  transition: 'transform 0.2s ease'
+}))
+
+const videoStyle = computed(() => ({
+  transform: `scale(${zoomLevel.value})`,
+  transition: 'transform 0.2s ease'
+}))
+
+// Zoom and rotation functions
+function zoomIn() {
+  zoomLevel.value *= 1.25
+}
+
+function zoomOut() {
+  zoomLevel.value /= 1.25
+}
+
+function resetZoom() {
+  zoomLevel.value = 1
+  rotation.value = 0
+}
+
+function rotateLeft() {
+  rotation.value = (rotation.value - 90 + 360) % 360
+}
+
+function rotateRight() {
+  rotation.value = (rotation.value + 90) % 360
+}
 
 function setCanvasRef(el: Element | ComponentPublicInstance | null, index: number) {
   if (el instanceof HTMLCanvasElement) {
@@ -272,6 +356,7 @@ canvas {
   width: 100%;
   max-width: min(90vw, 800px);
   flex: 1;
+  margin-top: 5rem;
 }
 
 .unsupported-container {
@@ -280,6 +365,7 @@ canvas {
   color: #666;
 }
 
+/* General button styles */
 .btn {
   padding: 0.5rem;
   background-color: #3b82f6;
@@ -294,10 +380,13 @@ canvas {
   transition: background-color 0.2s;
   min-width: 2.5rem;
   min-height: 2.5rem;
+  font-size: 1rem;
 }
 
 .btn:hover:not(.btn-disabled) {
   background-color: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 .btn-disabled {
@@ -306,40 +395,42 @@ canvas {
   opacity: 0.6;
 }
 
+/* Page container */
 .main-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
   width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;
-  padding: 1rem;
+  overflow: auto;
   box-sizing: border-box;
 }
 
+/* FIXED top toolbar, same as PdfViewer */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  position: fixed;
+  top: 5;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  justify-content: center;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  max-width: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Push content below toolbar */
 .grid-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: min(90vw, 800px);
-  flex: 1;
-  overflow: visible;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding: 1rem 0;
-  position: sticky;
-  bottom: 0;
-  background: white;
-  border-top: 1px solid #e5e7eb;
-  width: 100%;
-  justify-content: center;
-  flex-shrink: 0;
+  margin-top: 5rem;
 }
 
 @media (max-width: 768px) {

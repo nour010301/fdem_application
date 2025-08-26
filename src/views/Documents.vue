@@ -97,6 +97,7 @@
           <th>Fichier</th>
           <th>Vidéo</th>
           <th>Plan</th>
+          <th>Photos</th>
           <th>Actions</th>
         </tr>
         </thead>
@@ -113,17 +114,27 @@
             <td>{{ document.subDivisionNv3Nom || '—' }}</td>
             <td v-if="canSeeCreatedBy">{{ document.creerParUsername || '—' }}</td>
             <td>
-              <button v-if="document.nomFichier" @click="viewDocument(document, 'fichier')" class="file-btn" :disabled="loadingConsulter" title="Consulter">
-                <span v-if="loadingConsulter && loadingDocumentId === document.idDocument">...</span>
-                <span v-else>Consulter</span>
-              </button>
+              <div v-if="document.nomFichier" class="document-actions">
+                <button @click="viewDocument(document, 'fichier')" class="file-btn" :disabled="loadingConsulter" title="Consulter">
+                  <span v-if="loadingConsulter && loadingDocumentId === document.idDocument">...</span>
+                  <span v-else>Consulter</span>
+                </button>
+                <button v-if="loadingConsulter && loadingDocumentId === document.idDocument" @click="cancelDocumentView(document.idDocument)" class="cancel-doc-btn" title="Annuler">
+                  ✕
+                </button>
+              </div>
               <span v-else class="no-file">—</span>
             </td>
             <td>
-              <button v-if="document.video" @click="viewDocument(document, 'video')" class="file-btn" :disabled="loadingConsulter" title="Voir vidéo">
-                <span v-if="loadingConsulter && loadingDocumentId === document.idDocument">...</span>
-                <span v-else>Voir vidéo</span>
-              </button>
+              <div v-if="document.video" class="document-actions">
+                <button @click="viewDocument(document, 'video')" class="file-btn" :disabled="loadingConsulter" title="Voir vidéo">
+                  <span v-if="loadingConsulter && loadingDocumentId === document.idDocument">...</span>
+                  <span v-else>Voir vidéo</span>
+                </button>
+                <button v-if="loadingConsulter && loadingDocumentId === document.idDocument" @click="cancelDocumentView(document.idDocument)" class="cancel-doc-btn" title="Annuler">
+                  ✕
+                </button>
+              </div>
               <span v-else class="no-file">—</span>
             </td>
             <td>
@@ -132,8 +143,25 @@
               </button>
               <span v-else class="no-file">—</span>
             </td>
+            <td>
+              <div v-if="document.nomPhotos" class="document-actions">
+                <button @click="viewDocument(document, 'photos')" class="file-btn" :disabled="loadingConsulter" title="Voir photos">
+                  <span v-if="loadingConsulter && loadingDocumentId === document.idDocument">...</span>
+                  <span v-else>🖼️ Voir</span>
+                </button>
+                <button v-if="loadingConsulter && loadingDocumentId === document.idDocument" @click="cancelDocumentView(document.idDocument)" class="cancel-doc-btn" title="Annuler">
+                  ✕
+                </button>
+              </div>
+              <span v-else class="no-file">—</span>
+            </td>
             <td class="action-buttons">
-              <button class="action-btn delete-btn" @click="confirmDelete(document)" title="Supprimer">
+              <button 
+                v-if="canDeleteDocuments" 
+                class="action-btn delete-btn" 
+                @click="confirmDelete(document)" 
+                title="Supprimer"
+              >
                 🗑️
               </button>
               <button class="action-btn update-btn" @click="confirmUpdate(document)" :disabled="!canAddDocuments" title="Modifier">
@@ -336,61 +364,30 @@
             :pdfUrl="selectedDocument.fichier"
             :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
             :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
+            :documentId="selectedDocument.idDocument"
+            @download="handleDownloadAction"
+            @print="handlePrintAction"
           />
           
           <!-- Image Viewer -->
-          <div v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'" class="image-viewer">
-            <img 
-              :src="selectedDocument.fichier" 
-              alt="Document" 
-              class="document-image"
-            />
-            <div class="image-actions">
-              <button 
-                @click="downloadFile(selectedDocument)" 
-                :class="['btn', { 'btn-disabled': userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement }]" 
-                :disabled="userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement"
-                title="Télécharger"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                </svg>
-              </button>
-              <button 
-                @click="printImage(selectedDocument)" 
-                :class="['btn', { 'btn-disabled': userStore.user.value?.profil !== 2 && !userStore.user.value?.impression }]" 
-                :disabled="userStore.user.value?.profil !== 2 && !userStore.user.value?.impression"
-                title="Imprimer"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
-                </svg>
-              </button>
-            </div>
-          </div>
+          <ImageViewer
+            v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'"
+            :imageUrl="selectedDocument.fichier"
+            :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
+            :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
+            :documentId="selectedDocument.idDocument"
+            @download="handleDownloadAction"
+            @print="handlePrintAction"
+          />
           
           <!-- Video Viewer -->
-          <div v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'" class="video-viewer">
-            <video 
-              :src="selectedDocument.fichier" 
-              controls 
-              class="document-video"
-            >
-              Votre navigateur ne supporte pas la lecture vidéo.
-            </video>
-            <div class="video-actions">
-              <button 
-                @click="downloadFile(selectedDocument)" 
-                :class="['btn', { 'btn-disabled': userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement }]" 
-                :disabled="userStore.user.value?.profil !== 2 && !userStore.user.value?.telechargement"
-                title="Télécharger"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                </svg>
-              </button>
-            </div>
-          </div>
+          <VideoViewer
+            v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'"
+            :videoUrl="selectedDocument.fichier"
+            :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
+            :documentId="selectedDocument.idDocument"
+            @download="handleDownloadAction"
+          />
         </div>
         
         <div class="modal-actions">
@@ -408,7 +405,10 @@ import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
 // import { useRouter } from 'vue-router'
 import PdfViewer from '../components/PdfViewer.vue'
+import ImageViewer from '../components/ImageViewer.vue'
+import VideoViewer from '../components/VideoViewer.vue'
 import { useUserStore } from '../store/userStore'
+import { logUserAction, LOG_ACTIONS } from '../services/logService'
 
 // State for table and basic features (search, sort, etc.)
 interface Document {
@@ -437,6 +437,8 @@ interface Document {
   fichier?: string | null
   nomFichier?: string | null
   video?: string | null
+  photos?: string | null
+  nomPhotos?: string | null
   detectedType?: string
   creerPar?: number | null
   creerParUsername?: string | null
@@ -462,6 +464,7 @@ const showImageToPdfOption = ref(false)
 const selectedDocument = ref<Document | null>(null)
 const loadingConsulter = ref(false)
 const loadingDocumentId = ref<number | null>(null)
+const documentAbortControllers = ref<Map<number, AbortController>>(new Map())
 
 
 // User store for role-based access control
@@ -483,6 +486,12 @@ const canSeeCreatedBy = computed(() => {
 // Users with plan permission or admin informatique can download plans
 const canDownloadPlan = computed(() => {
   return userStore.user.value?.profil === 2 || userStore.user.value?.plan || false
+})
+
+// Computed property to check if user can delete documents
+// Only users with suppression permission can delete documents
+const canDeleteDocuments = computed(() => {
+  return userStore.user.value?.suppression || false
 })
 
 
@@ -819,6 +828,9 @@ async function fetchDocuments() {
 async function deleteDocument() {
   if (!documentToDelete.value) return
   try {
+    // Log the delete action
+    await logUserAction(documentToDelete.value.idDocument, LOG_ACTIONS.DELETE)
+    
     await axiosInstance.delete(`documents/${documentToDelete.value.idDocument}/`)
     documents.value = documents.value.filter(d => d.idDocument !== documentToDelete.value!.idDocument)
     documentToDelete.value = null
@@ -827,9 +839,16 @@ async function deleteDocument() {
   }
 }
 // function redirectToAddDocument() { router.push('/add-document') }
-async function viewDocument(document: Document, fileType: 'fichier' | 'video' = 'fichier') {
+async function viewDocument(document: Document, fileType: 'fichier' | 'video' | 'photos' = 'fichier') {
   loadingConsulter.value = true
   loadingDocumentId.value = document.idDocument
+  
+  // Log the consult action
+  await logUserAction(document.idDocument, LOG_ACTIONS.CONSULT_FILE)
+  
+  // Create abort controller for this document
+  const abortController = new AbortController()
+  documentAbortControllers.value.set(document.idDocument, abortController)
   
   try {
     if (fileType === 'video' && document.video) {
@@ -839,28 +858,64 @@ async function viewDocument(document: Document, fileType: 'fichier' | 'video' = 
         fichier: document.video,
         detectedType: 'video'
       }
+    } else if (fileType === 'photos') {
+      // For photos, use the view-photos endpoint
+      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-photos/${document.idDocument}/`, {
+        signal: abortController.signal
+      })
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const fileUrl = URL.createObjectURL(blob)
+        
+        selectedDocument.value = {
+          ...document,
+          fichier: fileUrl,
+          detectedType: 'pdf'
+        }
+      }
     } else {
       // For fichier, use the view-file endpoint
-      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`)
-      const blob = await response.blob()
-      const fileUrl = URL.createObjectURL(blob)
+      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`, {
+        signal: abortController.signal
+      })
       
-      // Detect file type from blob content-type
-      let detectedType = 'pdf'
-      if (blob.type.startsWith('image/')) {
-        detectedType = 'image'
-      }
-      
-      selectedDocument.value = {
-        ...document,
-        fichier: fileUrl,
-        detectedType: detectedType
+      if (response.ok) {
+        const blob = await response.blob()
+        const fileUrl = URL.createObjectURL(blob)
+        
+        // Detect file type from blob content-type
+        let detectedType = 'pdf'
+        if (blob.type.startsWith('image/')) {
+          detectedType = 'image'
+        }
+        
+        selectedDocument.value = {
+          ...document,
+          fichier: fileUrl,
+          detectedType: detectedType
+        }
       }
     }
-  } catch (error) {
-    console.error('Error loading document:', error)
-    alert('Erreur lors du chargement du document')
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.log('Document loading cancelled')
+    } else {
+      console.error('Error loading document:', error)
+      alert('Erreur lors du chargement du document')
+    }
   } finally {
+    loadingConsulter.value = false
+    loadingDocumentId.value = null
+    documentAbortControllers.value.delete(document.idDocument)
+  }
+}
+
+function cancelDocumentView(documentId: number) {
+  const controller = documentAbortControllers.value.get(documentId)
+  if (controller) {
+    controller.abort()
+    documentAbortControllers.value.delete(documentId)
     loadingConsulter.value = false
     loadingDocumentId.value = null
   }
@@ -1267,11 +1322,24 @@ function clearRightSideContent() {
   }
 }
 
+// Handle download action from viewer components
+async function handleDownloadAction(documentId: number) {
+  await logUserAction(documentId, LOG_ACTIONS.DOWNLOAD)
+}
+
+// Handle print action from viewer components
+async function handlePrintAction(documentId: number) {
+  await logUserAction(documentId, LOG_ACTIONS.PRINT)
+}
+
 // Download plan function
 async function downloadPlan(doc: Document) {
   if (!doc.plan || !canDownloadPlan.value) return
   
   try {
+    // Log the download action
+    await logUserAction(doc.idDocument, LOG_ACTIONS.DOWNLOAD)
+    
     const response = await fetch(doc.plan)
     const blob = await response.blob()
     const url = URL.createObjectURL(blob)
@@ -2160,6 +2228,30 @@ h1 {
   cursor: not-allowed !important;
   opacity: 0.6;
   transform: none !important;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.3em;
+  align-items: center;
+}
+
+.cancel-doc-btn {
+  background: #E53935 !important;
+  color: white !important;
+  border-color: #E53935 !important;
+  min-width: 28px !important;
+  font-size: 0.9em;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-doc-btn:hover {
+  background: #d32f2f !important;
+  transform: scale(1.1);
 }
 
 /* Responsive design */

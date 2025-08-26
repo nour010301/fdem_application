@@ -65,6 +65,24 @@
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
         <h2>Ajouter une Subdivision</h2>
+        
+        <div v-if="successMessage" class="success-message">
+          {{ successMessage }}
+        </div>
+        
+        <div class="form-group">
+          <label>Structure *</label>
+          <select 
+            v-model="newSubdivision.idStructure"
+            :class="{ 'error': validationErrors.idStructure }"
+          >
+            <option value="" disabled>Sélectionnez une structure</option>
+            <option v-for="structure in structures" :key="structure.idStructure" :value="structure.idStructure">
+              {{ structure.nom }}
+            </option>
+          </select>
+          <div v-if="validationErrors.idStructure" class="error-message">{{ validationErrors.idStructure }}</div>
+        </div>
         <div class="form-group">
           <label>Nom *</label>
           <input 
@@ -83,22 +101,9 @@
           />
           <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div>
         </div>
-        <div class="form-group">
-          <label>Structure *</label>
-          <select 
-            v-model="newSubdivision.idStructure"
-            :class="{ 'error': validationErrors.idStructure }"
-          >
-            <option value="" disabled>Sélectionnez une structure</option>
-            <option v-for="structure in structures" :key="structure.idStructure" :value="structure.idStructure">
-              {{ structure.nom }}
-            </option>
-          </select>
-          <div v-if="validationErrors.idStructure" class="error-message">{{ validationErrors.idStructure }}</div>
-        </div>
         <div class="modal-actions">
           <button @click="validateAndAddSubdivision">Ajouter</button>
-          <button @click="showAddPopup = false" class="cancel">Annuler</button>
+          <button @click="closeModal" class="cancel">Fermer</button>
         </div>
       </div>
     </div>
@@ -168,6 +173,7 @@ const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
 const newSubdivision = ref({ nom: '', designation: '', idStructure: null })
+const successMessage = ref('')
 
 // Validation errors
 const validationErrors = ref({
@@ -246,8 +252,16 @@ async function addSubdivision() {
   try {
     const res = await axiosInstance.post('subdivision-nv1/', newSubdivision.value)
     data.value.push(res.data)
-    showAddPopup.value = false
-    newSubdivision.value = { nom: '', designation: '', idStructure: null }
+    
+    // Show success message
+    successMessage.value = 'Subdivision ajoutée avec succès !'
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+    
+    // Keep modal open, preserve structure selection, only clear nom and designation
+    const preservedStructure = newSubdivision.value.idStructure
+    newSubdivision.value = { nom: '', designation: '', idStructure: preservedStructure }
     validationErrors.value = { nom: '', designation: '', idStructure: '' }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
@@ -346,6 +360,13 @@ function validateRequiredFields() {
   
   validationErrors.value = errors
   return isValid
+}
+
+function closeModal() {
+  showAddPopup.value = false
+  newSubdivision.value = { nom: '', designation: '', idStructure: null }
+  validationErrors.value = { nom: '', designation: '', idStructure: '' }
+  successMessage.value = ''
 }
 
 // Validate and add subdivision
@@ -626,6 +647,16 @@ h1 {
   color: #e74c3c;
   font-size: 0.85em;
   margin-top: 0.3em;
+  font-weight: 500;
+}
+
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border: 1px solid #c3e6cb;
   font-weight: 500;
 }
 </style>
