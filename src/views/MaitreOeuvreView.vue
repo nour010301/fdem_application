@@ -20,10 +20,10 @@
       <table v-if="filteredMaitresOeuvre.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idMaitreOeuvre')" class="sortable">
+            <!-- <th @click="toggleSort('idMaitreOeuvre')" class="sortable">
               ID
               <span v-if="sortColumn === 'idMaitreOeuvre'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('designationMO')" class="sortable">
               Désignation
               <span v-if="sortColumn === 'designationMO'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -46,7 +46,7 @@
 
         <tbody>
           <tr v-for="maitreOeuvre in paginatedMaitresOeuvre" :key="maitreOeuvre.idMaitreOeuvre">
-            <td>{{ maitreOeuvre.idMaitreOeuvre }}</td>
+            <!-- <td>{{ maitreOeuvre.idMaitreOeuvre }}</td> -->
             <td>{{ maitreOeuvre.designationMO }}</td>
             <td>{{ maitreOeuvre.description || '—' }}</td>
             <td>{{ maitreOeuvre.adresse || '—' }}</td>

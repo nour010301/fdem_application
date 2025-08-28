@@ -20,10 +20,10 @@
       <table v-if="filteredStructures.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idStructure')" class="sortable">
+            <!-- <th @click="toggleSort('idStructure')" class="sortable">
               ID
               <span v-if="sortColumn === 'idStructure'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('nom')" class="sortable">
               Nom
               <span v-if="sortColumn === 'nom'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -37,7 +37,7 @@
         </thead>
         <tbody>
           <tr v-for="structure in paginatedStructures" :key="structure.idStructure">
-            <td>{{ structure.idStructure }}</td>
+            <!-- <td>{{ structure.idStructure }}</td> -->
             <td>{{ structure.nom }}</td>
             <td>{{ structure.designation }}</td>
             <td>

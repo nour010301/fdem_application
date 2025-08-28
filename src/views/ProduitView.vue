@@ -34,10 +34,10 @@
       <table v-if="!loading && !error && filteredProduits.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idProduit')" class="sortable">
+            <!-- <th @click="toggleSort('idProduit')" class="sortable">
               ID
               <span v-if="sortColumn === 'idProduit'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('typeProduitDesignation')" class="sortable">
               Type Désignation
               <span v-if="sortColumn === 'typeProduitDesignation'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -55,7 +55,7 @@
         </thead>
         <tbody>
           <tr v-for="produit in paginatedProduits" :key="produit.idProduit">
-            <td>{{ produit.idProduit }}</td>
+            <!-- <td>{{ produit.idProduit }}</td> -->
             <td>{{ produit.typeProduitDesignation || '—' }}</td>
             <td>{{ produit.designation }}</td>
             <td>{{ produit.description || '—' }}</td>

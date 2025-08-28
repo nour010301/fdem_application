@@ -20,10 +20,10 @@
       <table v-if="filteredFournisseurs.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idFournisseur')" class="sortable">
+            <!-- <th @click="toggleSort('idFournisseur')" class="sortable">
               ID
               <span v-if="sortColumn === 'idFournisseur'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('designationFournisseur')" class="sortable">
               Désignation
               <span v-if="sortColumn === 'designationFournisseur'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -50,7 +50,7 @@
 
         <tbody>
           <tr v-for="fournisseur in paginatedFournisseurs" :key="fournisseur.idFournisseur">
-            <td>{{ fournisseur.idFournisseur }}</td>
+            <!-- <td>{{ fournisseur.idFournisseur }}</td> -->
             <td>{{ fournisseur.designationFournisseur }}</td>
             <td>{{ fournisseur.description || '—' }}</td>
             <td>{{ fournisseur.adresse || '—' }}</td>

@@ -20,10 +20,10 @@
       <table v-if="filteredBEs.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idBET')" class="sortable">
+            <!-- <th @click="toggleSort('idBET')" class="sortable">
               ID
               <span v-if="sortColumn === 'idBET'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('nom')" class="sortable">
               Nom
               <span v-if="sortColumn === 'nom'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -50,7 +50,7 @@
 
         <tbody>
           <tr v-for="be in paginatedBEs" :key="be.idBET">
-            <td>{{ be.idBET }}</td>
+            <!-- <td>{{ be.idBET }}</td> -->
             <td>{{ be.nom }}</td>
             <td>{{ be.description || '—' }}</td>
             <td>{{ be.adresse || '—' }}</td>

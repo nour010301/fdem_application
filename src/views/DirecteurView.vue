@@ -20,10 +20,10 @@
       <table v-if="filteredDirecteurs.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idDirecteur')" class="sortable">
+            <!-- <th @click="toggleSort('idDirecteur')" class="sortable">
               ID
               <span v-if="sortColumn === 'idDirecteur'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('nomPrenomDirecteur')" class="sortable">
               Nom et Prénom
               <span v-if="sortColumn === 'nomPrenomDirecteur'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -42,7 +42,7 @@
 
         <tbody>
           <tr v-for="directeur in paginatedDirecteurs" :key="directeur.idDirecteur">
-            <td>{{ directeur.idDirecteur }}</td>
+            <!-- <td>{{ directeur.idDirecteur }}</td> -->
             <td>{{ directeur.nomPrenomDirecteur }}</td>
             <td>{{ directeur.fonction || '—' }}</td>
             <td>{{ directeur.telephone || '—' }}</td>

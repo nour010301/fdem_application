@@ -20,10 +20,10 @@
       <table v-if="filteredSubdivs.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idSubDivisionNv_1')" class="sortable">
+            <!-- <th @click="toggleSort('idSubDivisionNv_1')" class="sortable">
               ID
               <span v-if="sortColumn === 'idSubDivisionNv_1'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('nom')" class="sortable">
               Nom
               <span v-if="sortColumn === 'nom'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -41,7 +41,7 @@
         </thead>
         <tbody>
           <tr v-for="item in paginatedSubdivs" :key="item.idSubDivisionNv_1">
-            <td>{{ item.idSubDivisionNv_1 }}</td>
+            <!-- <td>{{ item.idSubDivisionNv_1 }}</td> -->
             <td>{{ item.nom }}</td>
             <td>{{ item.designation || '—' }}</td>
             <td>{{ item.idStructure }}</td>

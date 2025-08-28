@@ -74,7 +74,7 @@ instance.interceptors.response.use(
         // const response = await axios.post('http://10.10.150.75:8000/api/token/refresh/', {
         //   refresh: refreshToken,
         // })
-          const response = await axios.post(`${import.meta.env.VITE_API_URL}token/refresh/`, {
+          const response = await axios.post(`${import.meta.env.VITE_API_URL}api/refresh/`, {
             refresh: refreshToken,
           })
 

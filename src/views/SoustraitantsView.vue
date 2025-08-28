@@ -20,10 +20,10 @@
       <table v-if="filteredSoustraitants.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idSoustraitants')" class="sortable">
+            <!-- <th @click="toggleSort('idSoustraitants')" class="sortable">
               ID
               <span v-if="sortColumn === 'idSoustraitants'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('designationStt')" class="sortable">
               Désignation
               <span v-if="sortColumn === 'designationStt'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -50,7 +50,7 @@
 
         <tbody>
           <tr v-for="soustraitant in paginatedSoustraitants" :key="soustraitant.idSoustraitants">
-            <td>{{ soustraitant.idSoustraitants }}</td>
+            <!-- <td>{{ soustraitant.idSoustraitants }}</td> -->
             <td>{{ soustraitant.designationStt }}</td>
             <td>{{ soustraitant.description || '—' }}</td>
             <td>{{ soustraitant.adresse || '—' }}</td>

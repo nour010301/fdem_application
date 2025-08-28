@@ -34,10 +34,10 @@
       <table v-if="filteredSections.length > 0" class="product-table">
         <thead>
           <tr>
-            <th @click="toggleSort('idSectionProduit')" class="sortable">
+            <!-- <th @click="toggleSort('idSectionProduit')" class="sortable">
               ID
               <span v-if="sortColumn === 'idSectionProduit'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('nom')" class="sortable">
               Nom
               <span v-if="sortColumn === 'nom'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -52,7 +52,7 @@
 
         <tbody>
           <tr v-for="section in paginatedSections" :key="section.idSectionProduit">
-            <td>{{ section.idSectionProduit }}</td>
+            <!-- <td>{{ section.idSectionProduit }}</td> -->
             <td>{{ section.nom }}</td>
             <td>{{ section.designation }}</td>
             <td>

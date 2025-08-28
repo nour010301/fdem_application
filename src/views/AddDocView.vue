@@ -119,6 +119,10 @@
             <span v-if="loadingConsulter">Chargement en cours...</span>
             <span v-else>Consulter</span>
           </button>
+          <button class="mise-a-jour-btn" type="button" @click="showMiseAJourMessage" :disabled="loadingConsulter">
+            <span v-if="loadingConsulter">Chargement en cours...</span>
+            <span v-else>Mise à jour</span>
+          </button>
           <button v-if="canDeleteDocuments" class="delete-btn" type="button" @click="showDeleteMessage" :disabled="loadingConsulter">
             <span v-if="loadingConsulter">Chargement en cours...</span>
             <span v-else>Supprimer</span>
@@ -159,7 +163,7 @@
 
     <!-- Resizable divider -->
     <div 
-      v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode"
+      v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode"
       class="resize-divider"
       @mousedown="startResize"
     >
@@ -167,7 +171,7 @@
     </div>
 
     <!-- Right sidebar for context and structure modes -->
-    <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode">
+    <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode">
 
       <!-- Success Message in Sidebar -->
       <!-- <div v-if="showSuccess" class="success-message-sidebar">
@@ -198,9 +202,108 @@
                     <tr>
                       <th>Description</th>
                       <th>Fichier</th>
-                      <th>Vidéo</th>
                       <th>Plan</th>
+                      <th>Vidéo</th>
                       <th>Images</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="document in filteredDocList" :key="document.idDocument">
+                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td>
+                        <div v-if="document.nomFichier" class="document-actions">
+                          <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>Consulter</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                        <td>
+                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                          💾 Télécharger
+                        </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <div v-if="document.video" class="document-actions">
+                          <button @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>▶️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <div v-if="document.nomPhotos" class="document-actions">
+                          <button @click="viewDocument(document, 'photos')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>🖼️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td class="action-buttons">
+                        <button class="action-btn update-btn" @click="confirmUpdate(document)" :disabled="!canAddDocuments" title="Modifier">
+                          ✎
+                        </button>
+                        <button class="action-btn move-btn" @click="confirmMove(document)" :disabled="!canAddDocuments" title="Déplacer">
+                          ↗
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else-if="!docList.length" class="no-data">
+                  Aucun document trouvé pour l'arborescence sélectionnée.
+                </div>
+                <div v-else class="no-data">
+                  Aucun document trouvé pour "{{ searchQuery }}".
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mise à jour content in sidebar -->
+      <div v-if="showMiseAJourMode" class="sidebar-content modal-section">
+        <div class="sidebar-header">
+          <h3>Mise à jour Documents</h3>
+          <button @click="showMiseAJourMode = false" class="close-btn">&times;</button>
+        </div>
+        <div class="sidebar-body">
+          <div v-if="loadingDocs" class="loading">Chargement...</div>
+          <div v-else>
+            <div v-if="docModalError" class="error">{{ docModalError }}</div>
+            <div class="section">
+              <h4>Documents existants</h4>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Rechercher un document..." 
+                class="search-input-sidebar"
+              />
+              <div class="table-container">
+                <table v-if="filteredDocList.length" class="sidebar-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Fichier</th>
+                      <th>Plan</th>
+                      <th>Vidéo</th>
+                      <th>Images</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -219,6 +322,14 @@
                         <span v-else class="no-file">-</span>
                       </td>
                       <td>
+                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                          💾 Télécharger
+                        </button>
+                        <button v-else @click="openImportPlanModal(document)" class="action-btn import-btn" :disabled="!canAddDocuments">
+                          📁 Importer
+                        </button>
+                      </td>
+                      <td>
                         <div v-if="document.video" class="document-actions">
                           <button @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
                             <span v-if="loadingViewDocument[document.idDocument]">...</span>
@@ -228,12 +339,6 @@
                             ✕
                           </button>
                         </div>
-                        <span v-else class="no-file">-</span>
-                      </td>
-                      <td>
-                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
-                          💾 Télécharger
-                        </button>
                         <span v-else class="no-file">-</span>
                       </td>
                       <td>
@@ -247,6 +352,14 @@
                           </button>
                         </div>
                         <span v-else class="no-file">-</span>
+                      </td>
+                      <td class="action-buttons">
+                        <button class="action-btn update-btn" @click="confirmUpdate(document)" :disabled="!canAddDocuments" title="Modifier">
+                          ✎
+                        </button>
+                        <button class="action-btn move-btn" @click="confirmMove(document)" :disabled="!canAddDocuments" title="Déplacer">
+                          ↗
+                        </button>
                       </td>
                     </tr>
                   </tbody>
@@ -287,8 +400,8 @@
                     <tr>
                       <th>Description</th>
                       <th>Fichier</th>
+                       <th>Plan</th>
                       <th>Vidéo</th>
-                      <th>Plan</th>
                       <th>Images</th>
                       <th>Actions</th>
                     </tr>
@@ -309,6 +422,12 @@
                         <span v-else class="no-file">-</span>
                       </td>
                       <td>
+                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                          💾 Télécharger
+                        </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
                         <div v-if="document.video" class="document-actions">
                           <button @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
                             <span v-if="loadingViewDocument[document.idDocument]">...</span>
@@ -318,12 +437,6 @@
                             ✕
                           </button>
                         </div>
-                        <span v-else class="no-file">-</span>
-                      </td>
-                      <td>
-                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
-                          💾 Télécharger
-                        </button>
                         <span v-else class="no-file">-</span>
                       </td>
                       <td>
@@ -339,7 +452,7 @@
                         <span v-else class="no-file">-</span>
                       </td>
                       <td>
-                        <button @click="confirmDeleteDocument(document)" class="action-btn delete-btn-small" title="Supprimer">
+                        <button @click="openDeleteModal(document)" class="action-btn delete-btn-small" title="Supprimer">
                           🗑️
                         </button>
                       </td>
@@ -383,33 +496,52 @@
             || selectedSoustraitants.length > 0
             || selectedProjets.length > 0">
             <div class="arb-content">
+              <!-- Always show projects -->
               <div v-if="selectedProjetNoms.length" class="arb-line">
                 <span class="arb-label">Projets:</span>
                 <span class="arb-value">{{ selectedProjetNoms.join(', ') }}<span v-if="hasMoreProjets" class="more-indicator"> (+plus...)</span></span>
               </div>
-              <div v-if="selectedBureauEtudeNoms.length" class="arb-line">
-                <span class="arb-label">Bureaux Études:</span>
-                <span class="arb-value">{{ selectedBureauEtudeNoms.join(', ') }}<span v-if="hasMoreBET" class="more-indicator"> (+plus...)</span></span>
-              </div>
-              <div v-if="selectedFournisseurNoms.length" class="arb-line">
-                <span class="arb-label">Fournisseurs:</span>
-                <span class="arb-value">{{ selectedFournisseurNoms.join(', ') }}<span v-if="hasMoreFournisseurs" class="more-indicator"> (+plus...)</span></span>
-              </div>
-              <div v-if="selectedMaitreOeuvreNoms.length" class="arb-line">
-                <span class="arb-label">Maîtres d'Œuvre:</span>
-                <span class="arb-value">{{ selectedMaitreOeuvreNoms.join(', ') }}<span v-if="hasMoreMOE" class="more-indicator"> (+plus...)</span></span>
-              </div>
-              <div v-if="selectedMaitreOuvrageNoms.length" class="arb-line">
-                <span class="arb-label">Maîtres d'Ouvrage:</span>
-                <span class="arb-value">{{ selectedMaitreOuvrageNoms.join(', ') }}<span v-if="hasMoreMOA" class="more-indicator"> (+plus...)</span></span>
-              </div>
-              <div v-if="selectedSoustraitantNoms.length" class="arb-line">
-                <span class="arb-label">Soustraitants:</span>
-                <span class="arb-value">{{ selectedSoustraitantNoms.join(', ') }}<span v-if="hasMoreSoustraitants" class="more-indicator"> (+plus...)</span></span>
-              </div>
-              <div v-if="selectedDirectionsProjets.length" class="arb-line">
-                <span class="arb-label">Directeurs:</span>
-                <span class="arb-value">{{ selectedDirectionsProjets.map(d => d.nomPrenomDirecteur || `${d.nom} ${d.prenom}`).join(', ') }}<span v-if="hasMoreDirecteurs" class="more-indicator"> (+plus...)</span></span>
+              
+              <!-- Collapsible details section -->
+              <div v-if="hasOtherDetails" class="arb-details-section">
+                <div class="arb-toggle-container">
+                  <button 
+                    @click="toggleArborescenceDetails" 
+                    class="arb-toggle-btn"
+                    :class="{ 'expanded': showArborescenceDetails }"
+                  >
+                    <span class="arb-toggle-icon">{{ showArborescenceDetails ? '▼' : '▶' }}</span>
+                    <span class="arb-toggle-text">{{ showArborescenceDetails ? 'Voir moins' : 'Voir plus' }}</span>
+                  </button>
+                </div>
+                
+                <!-- Collapsible content -->
+                <div v-show="showArborescenceDetails" class="arb-details-content">
+                  <div v-if="selectedMaitreOuvrageNoms.length" class="arb-line">
+                    <span class="arb-label">Maîtres d'Ouvrage:</span>
+                    <span class="arb-value">{{ selectedMaitreOuvrageNoms.join(', ') }}<span v-if="hasMoreMOA" class="more-indicator"> (+plus...)</span></span>
+                  </div>
+                  <div v-if="selectedMaitreOeuvreNoms.length" class="arb-line">
+                    <span class="arb-label">Maîtres d'Œuvre:</span>
+                    <span class="arb-value">{{ selectedMaitreOeuvreNoms.join(', ') }}<span v-if="hasMoreMOE" class="more-indicator"> (+plus...)</span></span>
+                  </div>
+                  <div v-if="selectedSoustraitantNoms.length" class="arb-line">
+                    <span class="arb-label">Soustraitants:</span>
+                    <span class="arb-value">{{ selectedSoustraitantNoms.join(', ') }}<span v-if="hasMoreSoustraitants" class="more-indicator"> (+plus...)</span></span>
+                  </div>
+                  <div v-if="selectedFournisseurNoms.length" class="arb-line">
+                    <span class="arb-label">Fournisseurs:</span>
+                    <span class="arb-value">{{ selectedFournisseurNoms.join(', ') }}<span v-if="hasMoreFournisseurs" class="more-indicator"> (+plus...)</span></span>
+                  </div>
+                  <div v-if="selectedBureauEtudeNoms.length" class="arb-line">
+                    <span class="arb-label">Bureaux Études:</span>
+                    <span class="arb-value">{{ selectedBureauEtudeNoms.join(', ') }}<span v-if="hasMoreBET" class="more-indicator"> (+plus...)</span></span>
+                  </div>
+                  <div v-if="selectedDirectionsProjets.length" class="arb-line">
+                    <span class="arb-label">Directeurs:</span>
+                    <span class="arb-value">{{ selectedDirectionsProjets.map(d => d.nomPrenomDirecteur || `${d.nom} ${d.prenom}`).join(', ') }}<span v-if="hasMoreDirecteurs" class="more-indicator"> (+plus...)</span></span>
+                  </div>
+                </div>
               </div>
             </div>
           </template>
@@ -419,13 +551,13 @@
       <!-- Ajouter content in sidebar -->
       <div v-if="contextAjouter.visible" class="sidebar-content modal-section">
         <div class="sidebar-header">
-          <h3>{{ contextAjouter.entityLabel }}</h3>
+          <h3>Liste de {{ contextAjouter.entityLabel }}</h3>
           <button @click="closeContextAjouterModal" class="close-btn">&times;</button>
         </div>
         <div class="sidebar-body">
           <!-- Single Merged Table -->
           <div class="section">
-            <h4>Liste de {{ contextAjouter.entityLabel }}</h4>
+            <!-- <h4>Liste de {{ contextAjouter.entityLabel }}</h4> -->
             <input 
               v-model="contextAjouterSearchQuery" 
               type="text" 
@@ -590,68 +722,17 @@
       <!-- Structure mode document content in sidebar -->
       <div v-if="showStructureDocContent" class="sidebar-content modal-section">
         <div class="sidebar-header">
-          <h3>Ajouter Document</h3>
+          <!-- <h3>Ajouter Document</h3> -->
+           <h3>Créer un nouveau document</h3>
           <button @click="closeStructureDocContent" class="close-btn">&times;</button>
         </div>
         <div class="sidebar-body">
           <div v-if="loadingDocs" class="loading">Chargement...</div>
           <div v-else>
-            <div v-if="docModalError" class="error">{{ docModalError }}</div>
-            <div class="section">
-              <h4>Documents existants</h4>
-              <div class="table-container">
-                <table v-if="docList.length" class="sidebar-table">
-                  <thead>
-                    <tr>
-                      <th>Description</th>
-                      <th>Fichier</th>
-                      <th>Vidéo</th>
-                      <th>Plan</th>
-                      <th>Images</th>
-                    </tr>
-                  </thead>
-                    <tbody>
-                    <tr v-for="document in docList" :key="document.idDocument">
-                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
-                      <td>
-                        <button v-if="document.nomFichier" @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
-                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
-                          <span v-else>Consulter</span>
-                        </button>
-                        <span v-else class="no-file">-</span>
-                      </td>
-                      <td>
-                        <button v-if="document.video" @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
-                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
-                          <span v-else>▶️ Voir</span>
-                        </button>
-                        <span v-else class="no-file">-</span>
-                      </td>
-                      <td>
-                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
-                          💾 Télécharger
-                        </button>
-                        <span v-else class="no-file">-</span>
-                      </td>
-                      <td>
-                        <button v-if="document.nomPhotos" @click="viewDocument(document, 'photos')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
-                          <span v-if="loadingViewDocument[document.idDocument]">...</span>
-                          <span v-else>🖼️ Voir</span>
-                        </button>
-                        <span v-else class="no-file">-</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <div v-else class="no-data">
-                  Aucun document trouvé pour l'arborescence sélectionnée.
-                </div>
-              </div>
-            </div>
-            
+            <div v-if="docModalError" class="error">{{ docModalError }}</div> 
             <!-- Form for Create Mode -->
             <div v-if="isSubDivAllowed" class="section">
-              <h4>Créer un nouveau document</h4>
+              <!-- <h4>Créer un nouveau document</h4> -->
               <div class="step" id="nonFichier">
                 <label for="nonFichier">Description</label>
                 <input id="nonFichier-input" v-model="nonFichier" type="text" />
@@ -659,32 +740,36 @@
               
               <!-- File Upload Options -->
               <div class="upload-options">
-                <!-- First Row: PDF and Plan -->
-                <div class="upload-row">
-                  <!-- Option 1: Normal Files -->
-                  <div class="step upload-option upload-option-half">
-                    <label for="file-upload" class="file-upload-label">Ajouter Fichier PDF</label>
-                    <input id="file-upload" type="file" accept=".pdf,.txt,.bmp,.webp" @change="onFileChange" />
-                    <div v-if="uploadedFile" class="file-info">
-                      <span class="file-selected-text">Fichier sélectionné: {{ uploadedFile.name }}</span>
-                      <button @click="uploadedFile = null" type="button">Retirer</button>
+                <!-- Option 1: PDF Files -->
+                <div class="step upload-option">
+                  <label for="file-upload" class="file-upload-label">Sélectionner Fichier PDF</label>
+                  <input id="file-upload" type="file" accept=".pdf" @change="onFileChange" />
+                  <div v-if="uploadedFile" class="file-info">
+                    <span class="file-selected-text">Fichier sélectionné: {{ uploadedFile.name }}</span>
+                    <button @click="showPdfDetails = !showPdfDetails" class="toggle-btn">{{ showPdfDetails ? 'Voir moins' : 'Voir plus' }}</button>
+                  </div>
+                  
+                  <div v-if="showPdfDetails && uploadedFile" class="file-details">
+                    <div class="file-item">
+                      <span>{{ uploadedFile.name }}</span>
+                      <button @click="uploadedFile = null" type="button" class="remove-file">Retirer</button>
                     </div>
                   </div>
                   
-                  <!-- Option 3: Graphics Files (for PiecesGraphiques) -->
-                  <div v-if="isPiecesGraphiques" class="step upload-option upload-option-half" :class="{ 'disabled-section': !uploadedFile }">
-                    <label class="file-upload-label">Importer plan en format source</label>
-                    <div v-if="!uploadedFile" class="requirement-message">
-                      <span>Veuillez d'abord sélectionner un fichier PDF ci-dessus</span>
-                    </div>
-                    <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
-                      <input ref="graphicsFileInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addGraphicsFile" multiple style="display: none;" :disabled="!uploadedFile" />
-                      <input ref="graphicsFolderInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addGraphicsFile" webkitdirectory style="display: none;" :disabled="!uploadedFile" />
-                      <button @click="uploadedFile && graphicsFileInput?.click()" class="save-btn" :class="{ 'disabled': !uploadedFile }" :disabled="!uploadedFile" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Fichiers</button>
-                      <button @click="uploadedFile && graphicsFolderInput?.click()" class="save-btn" :class="{ 'disabled': !uploadedFile }" :disabled="!uploadedFile" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Dossier</button>
+                  <!-- Plan Files (Only for PiecesGraphiques and when PDF is selected) -->
+                  <div v-if="isPiecesGraphiques && uploadedFile" class="plan-section">
+                    <label class="file-upload-label">Vous pouvez importer un plan en format source (optionnel)</label>
+                    <div style="display: flex; gap: 0.8em; align-items: center; margin-bottom: 0.5em;">
+                      <input ref="graphicsFolderInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addGraphicsFile" webkitdirectory style="display: none;" />
+                      <button @click="graphicsFolderInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Sélectionner Dossier Plan</button>
                       <span style="color: #bbdefb; font-size: 0.9em;">{{ graphicsFiles.length }} fichier(s) sélectionné(s)</span>
                     </div>
-                    <div v-if="graphicsFiles.length > 0" class="files-preview">
+                    <div v-if="graphicsFiles.length > 0" class="file-info">
+                      <span class="file-selected-text">{{ graphicsFiles.length }} fichier(s) sélectionné(s)</span>
+                      <button @click="showPlanDetails = !showPlanDetails" class="toggle-btn">{{ showPlanDetails ? 'Voir moins' : 'Voir plus' }}</button>
+                    </div>
+                    
+                    <div v-if="showPlanDetails && graphicsFiles.length > 0" class="file-details">
                       <h4>Fichiers sélectionnés ({{ graphicsFiles.length }}):</h4>
                       <div class="file-list">
                         <div v-for="(file, index) in graphicsFiles" :key="index" class="file-item">
@@ -694,51 +779,47 @@
                       </div>
                     </div>
                   </div>
+                </div>
+                
+                <!-- Option 3: Video Files -->
+                <div class="step upload-option">
+                  <label for="video-upload" class="file-upload-label">Sélectionner Vidéo</label>
+                  <input id="video-upload" type="file" accept=".mp4,.mov,.avi,.mkv,.webm" @change="onVideoChange" />
+                  <div v-if="uploadedVideo || isCompressingVideo" class="file-info">
+                    <span v-if="isCompressingVideo" class="file-selected-text">{{ compressionProgress }}</span>
+                    <span v-else class="file-selected-text">1 vidéo sélectionnée</span>
+                    <button v-if="!isCompressingVideo" @click="showVideoDetails = !showVideoDetails" class="toggle-btn">{{ showVideoDetails ? 'Voir moins' : 'Voir plus' }}</button>
+                    <span v-if="uploadedVideo?.name?.includes('_compressed')" class="compression-indicator">
+                      ✓ Compressée
+                    </span>
+                  </div>
                   
-                  <!-- Placeholder for non-PiecesGraphiques mode -->
-                  <div v-else class="step upload-option upload-option-half upload-placeholder">
-                    <label class="file-upload-label">Plan</label>
-                    <p style="color: #888; font-style: italic; margin: 0;">Disponible uniquement pour les Pièces Graphiques</p>
+                  <div v-if="showVideoDetails && uploadedVideo" class="file-details">
+                    <div class="file-item">
+                      <span>{{ uploadedVideo.name }}</span>
+                      <button @click="uploadedVideo = null" type="button" class="remove-file">Retirer</button>
+                    </div>
                   </div>
                 </div>
                 
-                <!-- Second Row: Video and Photos -->
-                <div class="upload-row">
-                  <!-- Option 2: Video Files -->
-                  <div class="step upload-option upload-option-half">
-                    <label for="video-upload" class="file-upload-label">Ajouter Vidéo (compression automatique)</label>
-                    <input id="video-upload" type="file" accept=".mp4,.mov,.avi,.mkv,.webm" @change="onVideoChange" />
-                    <small style="color: #bbdefb; font-size: 0.9em; margin-top: 0.5em; display: block;">
-                      Les vidéos > 10MB seront automatiquement compressées pour économiser l'espace
-                    </small>
-                    <div v-if="uploadedVideo || isCompressingVideo" class="file-info">
-                      <span v-if="isCompressingVideo" class="file-selected-text">{{ compressionProgress }}</span>
-                      <span v-else class="file-selected-text">Vidéo sélectionnée: {{ uploadedVideo?.name }}</span>
-                      <span v-if="uploadedVideo?.name?.includes('_compressed')" class="compression-indicator">
-                        ✓ Compressée
-                      </span>
-                      <button v-if="!isCompressingVideo" @click="uploadedVideo = null" type="button">Retirer</button>
-                    </div>
+                <!-- Option 4: Photos (Multiple Images to PDF) -->
+                <div class="step upload-option">
+                  <label class="file-upload-label">Sélectionner Photos</label>
+                  <input ref="photosInput" type="file" accept="image/*" @change="onSinglePhotoChange" style="display: none;" />
+                  <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
+                    <button @click="photosInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Sélectionner Photo</button>
+                    <span style="color: #bbdefb; font-size: 0.9em;">{{ selectedPhotos.length }} photo(s) sélectionnée(s)</span>
+                  </div>
+                  <div v-if="selectedPhotos.length > 0" class="file-info">
+                    <span class="file-selected-text">{{ selectedPhotos.length }} photo(s) sélectionnée(s)</span>
+                    <button @click="showPhotosDetails = !showPhotosDetails" class="toggle-btn">{{ showPhotosDetails ? 'Voir moins' : 'Voir plus' }}</button>
                   </div>
                   
-                  <!-- Option 4: Photos (Multiple Images to PDF) -->
-                  <div class="step upload-option upload-option-half">
-                    <label class="file-upload-label">Ajouter Photos (conversion automatique en PDF)</label>
-                    <input ref="photosInput" type="file" accept="image/*" @change="onSinglePhotoChange" style="display: none;" />
-                    <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
-                      <button @click="photosInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Photo</button>
-                      <span style="color: #bbdefb; font-size: 0.9em;">{{ selectedPhotos.length }} photo(s) sélectionnée(s)</span>
-                    </div>
-                    <small style="color: #bbdefb; font-size: 0.9em; margin-top: 0.5em; display: block;">
-                      Cliquez sur "Ajouter Photo" pour sélectionner une image. Les photos seront automatiquement converties en un seul fichier PDF
-                    </small>
-                    <div v-if="selectedPhotos.length > 0" class="files-preview">
-                      <h4>Photos sélectionnées ({{ selectedPhotos.length }}):</h4>
-                      <div class="file-list">
-                        <div v-for="(photo, index) in selectedPhotos" :key="index" class="file-item">
-                          <span>{{ photo.name }}</span>
-                          <button @click="removePhoto(index)" type="button" class="remove-file" title="Retirer cette photo">Retirer</button>
-                        </div>
+                  <div v-if="showPhotosDetails && selectedPhotos.length > 0" class="files-preview">
+                    <div class="file-list scrollable-list">
+                      <div v-for="(photo, index) in selectedPhotos" :key="index" class="file-item">
+                        <span>{{ photo.name }}</span>
+                        <button @click="removePhoto(index)" type="button" class="remove-file" title="Retirer cette photo">Retirer</button>
                       </div>
                     </div>
                   </div>
@@ -1154,23 +1235,73 @@
   </div>
 </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteConfirmModal" class="doc-modal-backdrop">
-      <div class="doc-modal" style="min-width: 400px; max-width: 500px; min-height: auto;">
-        <div class="doc-modal-header">
-          <h3>Confirmer la suppression</h3>
-          <button @click="showDeleteConfirmModal = false; documentToDelete = null" class="close-modal">&times;</button>
-        </div>
-        <div class="doc-modal-body">
-          <p style="margin-bottom: 1em; font-size: 1.1rem; line-height: 1.4;">Êtes-vous sûr de vouloir supprimer le document suivant ?</p>
-          <div style="background: rgba(67, 233, 123, 0.1); padding: 1em; border-radius: 6px; border-left: 4px solid #43E97B;">
-            <strong>{{ documentToDelete?.designation || documentToDelete?.nomFichier || 'Document sans nom' }}</strong>
+    <!-- Enhanced Delete Confirmation Modal -->
+    <div v-if="showDeleteConfirmModal" class="delete-modal-backdrop">
+      <div class="delete-modal">
+        <div class="delete-modal-header">
+          <div class="delete-modal-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </div>
-          <p style="margin-top: 1em; color: #E53935; font-weight: 600;">Cette action est irréversible.</p>
+          <h3>Supprimer le document</h3>
+          <button @click="closeDeleteModal" class="delete-modal-close">&times;</button>
         </div>
-        <div class="doc-modal-footer" style="text-align: right; padding-top: 1em; border-top: 1px solid #232f4b;">
-          <button @click="showDeleteConfirmModal = false; documentToDelete = null" class="view-button" style="margin-right: 1em;">Annuler</button>
-          <button @click="deleteDocumentConfirmed" class="delete-button">Confirmer</button>
+        
+        <div class="delete-modal-body">
+          <div class="delete-warning">
+            <p>Vous êtes sur le point de supprimer :</p>
+            <div class="document-info">
+              <strong>{{ documentToDelete?.designation || documentToDelete?.nomFichier || 'Document sans nom' }}</strong>
+            </div>
+          </div>
+          
+          <div class="delete-actions">
+            <button @click="confirmFullDelete" class="delete-btn-full">
+              <span class="btn-icon">🗑️</span>
+              <span class="btn-text">Supprimer complètement</span>
+            </button>
+            
+            <div class="delete-separator">ou</div>
+            
+            <button @click="showSelectiveDelete" class="delete-btn-selective">
+              <span class="btn-icon">📝</span>
+              <span class="btn-text">Retirer des fichiers</span>
+            </button>
+          </div>
+          
+          <!-- Selective file deletion section -->
+          <div v-if="deleteMode === 'selective'" class="selective-delete-section">
+            <h4>Sélectionnez les fichiers à retirer :</h4>
+            <div class="file-checkboxes">
+              <label v-if="documentToDelete?.fichier" class="file-checkbox">
+                <input type="checkbox" v-model="filesToDelete.fichier">
+                <span>Fichier PDF</span>
+              </label>
+              <label v-if="documentToDelete?.plan" class="file-checkbox">
+                <input type="checkbox" v-model="filesToDelete.plan">
+                <span>Plan</span>
+              </label>
+              <label v-if="documentToDelete?.video" class="file-checkbox">
+                <input type="checkbox" v-model="filesToDelete.video">
+                <span>Vidéo</span>
+              </label>
+              <label v-if="documentToDelete?.nomPhotos" class="file-checkbox">
+                <input type="checkbox" v-model="filesToDelete.photos">
+                <span>Photos</span>
+              </label>
+            </div>
+          </div>
+          
+          <div class="delete-warning-text">
+            ⚠️ Cette action est irréversible
+          </div>
+        </div>
+        
+        <div class="delete-modal-footer">
+          <button @click="closeDeleteModal" class="btn-cancel">Annuler</button>
+          <button v-if="deleteMode === 'full'" @click="executeFullDelete" class="btn-delete">Confirmer la suppression</button>
+          <button v-if="deleteMode === 'selective'" @click="executeSelectiveDelete" class="btn-delete" :disabled="!hasSelectedFiles">Retirer les fichiers</button>
         </div>
       </div>
     </div>
@@ -1207,8 +1338,538 @@
       </div>
     </div>
 
+    <!-- UPDATE MODAL -->
+    <div v-if="documentToUpdate" class="doc-modal-backdrop">
+      <div class="doc-modal update-modal white-modal">
+        <div class="modal-header">
+          <h2><i class="fas fa-edit"></i> Modifier Document</h2>
+          <button @click="documentToUpdate = null" class="close-btn">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Désignation</label>
+              <input v-model="documentToUpdate.designation" placeholder="Désignation du document" />
+            </div>
+            
+            <div class="form-group">
+              <label>Fichier PDF</label>
+              <div class="current-file-info" v-if="documentToUpdate?.fichier">
+                <span>Actuel: {{ getFileName(documentToUpdate.fichier) }}</span>
+              </div>
+              <input type="file" @change="onPdfFileSelect" accept=".pdf" />
+              <div v-if="selectedPdfFile" class="file-info">
+                <span>Nouveau: {{ selectedPdfFile.name }}</span>
+                <button @click="selectedPdfFile = null" type="button" class="remove-file">Retirer</button>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Vidéo</label>
+              <div class="current-file-info" v-if="documentToUpdate?.video">
+                <span>Actuel: {{ getFileName(documentToUpdate.video) }}</span>
+              </div>
+              <input type="file" @change="onVideoFileSelect" accept=".mp4,.mov,.avi,.mkv,.webm" />
+              <div v-if="selectedVideoFile" class="file-info">
+                <span>Nouveau: {{ selectedVideoFile.name }}</span>
+                <button @click="selectedVideoFile = null" type="button" class="remove-file">Retirer</button>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Plan (Fichiers ZIP)</label>
+              <div class="current-file-info" v-if="documentToUpdate?.plan">
+                <span>Actuel: {{ getFileName(documentToUpdate.plan) }}</span>
+              </div>
+              <input ref="planFilesInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addPlanFile" style="display: none;" />
+              <button @click="planFilesInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Fichier Plan</button>
+              <div v-if="selectedPlanFiles.length > 0" class="file-info">
+                <span>{{ selectedPlanFiles.length }} fichier(s) sélectionné(s)</span>
+                <div class="image-list">
+                  <div v-for="(file, index) in selectedPlanFiles" :key="index" class="image-item">
+                    <span>{{ file.name }}</span>
+                    <button @click="removePlanFile(index)" type="button" class="remove-image">×</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Photos (Images)</label>
+              <div class="current-file-info" v-if="documentToUpdate?.photos">
+                <span>Actuel: {{ getFileName(documentToUpdate.photos) }}</span>
+              </div>
+              <input ref="photosUpdateInput" type="file" accept="image/*" @change="onSinglePhotoUpdateChange" style="display: none;" />
+              <button @click="photosUpdateInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Photo</button>
+              <div v-if="selectedUpdatePhotos.length > 0" class="file-info">
+                <span>{{ selectedUpdatePhotos.length }} photo(s) sélectionnée(s)</span>
+                <div class="image-list">
+                  <div v-for="(photo, index) in selectedUpdatePhotos" :key="index" class="image-item">
+                    <span>{{ photo.name }}</span>
+                    <button @click="removeUpdatePhoto(index)" type="button" class="remove-image">×</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button @click="documentToUpdate = null" class="btn-cancel">Annuler</button>
+          <button @click="updateDocument" class="btn-update"><i class="fas fa-save"></i> Modifier</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Plan Modal -->
+    <div v-if="showImportPlanModal" class="doc-modal-backdrop">
+      <div class="doc-modal">
+        <div class="doc-modal-header">
+          <h3>Importer Plan en Format Source</h3>
+          <button @click="closeImportPlanModal" class="close-modal">&times;</button>
+        </div>
+        <div class="doc-modal-body">
+          <div class="step">
+            <label>Ajouter des fichiers (plans)</label>
+            <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
+              <input ref="planImportInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addPlanImportFile" style="display: none;" />
+              <button @click="planImportInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Fichier</button>
+              <span style="color: #bbdefb; font-size: 0.9em;">{{ planImportFiles.length }} fichier(s) sélectionné(s)</span>
+            </div>
+            <div v-if="planImportFiles.length > 0" class="files-preview">
+              <h4>Fichiers sélectionnés ({{ planImportFiles.length }}):</h4>
+              <div class="file-list">
+                <div v-for="(file, index) in planImportFiles" :key="index" class="file-item">
+                  <span>{{ file.name }}</span>
+                  <button @click="removePlanImportFile(index)" type="button" class="remove-file" title="Retirer ce fichier">Retirer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="doc-modal-footer" style="text-align:right; margin-top:1em;">
+            <button class="save-btn" @click="submitPlanImport" :disabled="!planImportFiles.length || isUploadingPlan" style="font-size:1em;">
+              <span v-if="isUploadingPlan">Importation en cours...</span>
+              <span v-else>Importer Plan</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOVE MODAL -->
+    <div v-if="documentToMove" class="doc-modal-backdrop">
+      <div class="doc-modal move-modal white-modal">
+        <div class="modal-header">
+          <h2><i class="fas fa-arrows-alt"></i> Déplacer Document</h2>
+          <button @click="documentToMove = null" class="close-btn">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Type Produit</label>
+              <select v-model="documentToMove.idTypeProduit">
+                <option value="">Sélectionner un type produit</option>
+                <option v-for="type in typeProduits" :key="type.idTypeProduit" :value="type.idTypeProduit">
+                  {{ type.designation }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Produit</label>
+              <select v-model="documentToMove.idProduit">
+                <option value="">Sélectionner un produit</option>
+                <option v-for="prod in produits" :key="prod.idProduit" :value="prod.idProduit">
+                  {{ prod.designation }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Structure</label>
+              <select v-model="documentToMove.idStructure">
+                <option value="">Sélectionner une structure</option>
+                <option v-for="str in structures" :key="str.idStructure" :value="str.idStructure">
+                  {{ str.designation || str.nom }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Section</label>
+              <select v-model="documentToMove.idSection">
+                <option value="">Sélectionner une section</option>
+                <option v-for="s in sections" :key="s.idSectionProduit" :value="s.idSectionProduit">
+                  {{ s.designation }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Subdivision Niveau 1</label>
+              <select v-model="documentToMove.idSubDivisionNv_1">
+                <option value="">Sélectionner subdivision 1</option>
+                <option v-for="sub1 in divisionsNv1" :key="sub1.idSubDivisionNv_1" :value="sub1.idSubDivisionNv_1">
+                  {{ sub1.nom }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Subdivision Niveau 2</label>
+              <select v-model="documentToMove.idSubDivisionNv_2">
+                <option value="">Sélectionner subdivision 2</option>
+                <option v-for="sub2 in filteredSubDiv2List" :key="sub2.idSubDivisionNv_2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2.idSubDivisionNv_2">
+                  {{ sub2.idSubDivisionNv_2.nom }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Subdivision Niveau 3</label>
+              <select v-model="documentToMove.idSubDivisionNv_3">
+                <option value="">Sélectionner subdivision 3</option>
+                <option v-for="sub3 in filteredSubDiv3List" :key="sub3.idSubDivisionNv_3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3.idSubDivisionNv_3">
+                  {{ sub3.idSubDivisionNv_3.nom }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button @click="documentToMove = null" class="btn-cancel">Annuler</button>
+          <button @click="moveDocument" class="btn-move"><i class="fas fa-arrows-alt"></i> Déplacer</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
+
+<style scoped>
+/* Delete Modal Styles */
+.delete-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.delete-modal {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  width: 90%;
+  max-width: 480px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.delete-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.delete-modal-icon {
+  margin-right: 12px;
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+}
+
+.delete-modal-header h3 {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.delete-modal-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.delete-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+.delete-modal-body {
+  padding: 24px;
+}
+
+.delete-warning {
+  margin-bottom: 24px;
+}
+
+.delete-warning p {
+  color: #374151;
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+}
+
+.document-info {
+  background: rgba(67, 233, 123, 0.1);
+  border: 1px solid rgba(67, 233, 123, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.document-info strong {
+  color: #43e97b;
+  font-size: 1.1rem;
+}
+
+.delete-actions {
+  margin: 24px 0;
+}
+
+.delete-btn-full {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.delete-btn-full:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.btn-icon {
+  margin-right: 8px;
+  font-size: 1.2rem;
+}
+
+.btn-text {
+  font-weight: 600;
+}
+
+.delete-warning-text {
+  text-align: center;
+  color: #fbbf24;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(251, 191, 36, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.delete-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.btn-cancel {
+  padding: 12px 24px;
+  background: rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+  background: rgba(148, 163, 184, 0.3);
+  color: #f8fafc;
+}
+
+.btn-delete {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.btn-delete:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* Selective Delete Styles */
+.delete-separator {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 16px 0;
+  position: relative;
+}
+
+.delete-separator::before,
+.delete-separator::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.3);
+}
+
+.delete-separator::before {
+  left: 0;
+}
+
+.delete-separator::after {
+  right: 0;
+}
+
+.delete-btn-selective {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.delete-btn-selective:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.selective-delete-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+}
+
+.selective-delete-section h4 {
+  color: #3b82f6;
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.file-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-checkbox:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.file-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
+.file-checkbox span {
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Import button styles */
+.import-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.import-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}
+
+.import-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+</style>
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
@@ -1328,18 +1989,28 @@ const compressionProgress = ref('')
 const isCreatingDocument = ref(false)
 const creationProgress = ref('')
 const graphicsFiles = ref<File[]>([])
-const graphicsFileInput = ref<HTMLInputElement>()
 const graphicsFolderInput = ref<HTMLInputElement>()
-const multipleImages = ref<File[]>([])
-const showImageToPdfOption = ref(false)
 const selectedPhotos = ref<File[]>([])
 const photosInput = ref<HTMLInputElement>()
+
+// Toggle states for file lists
+const showPdfDetails = ref(false)
+const showPlanDetails = ref(false)
+const showVideoDetails = ref(false)
+const showPhotosDetails = ref(false)
 
 // Import Dossier Source variables
 const showImportModal = ref(false)
 const importFiles = ref<File[]>([])
 const importNomFichier = ref<string>('')
 const fileInput = ref<HTMLInputElement>()
+
+// Import Plan variables
+const showImportPlanModal = ref(false)
+const planImportFiles = ref<File[]>([])
+const planImportInput = ref<HTMLInputElement>()
+const documentToImportPlan = ref<any>(null)
+const isUploadingPlan = ref(false)
 
 
 // Initial fetch
@@ -1566,6 +2237,8 @@ function onFileChange(e: Event) {
     const file = files[0]
     console.log('Selected file:', file.name, 'Type:', file.type, 'Size:', file.size)
     uploadedFile.value = file
+    // Reset PDF details state when a new file is selected
+    showPdfDetails.value = false
     // Don't clear other file selections - allow multiple file types
   }
 }
@@ -1615,6 +2288,8 @@ function addGraphicsFile(e: Event) {
     const newFile = files[0]
     graphicsFiles.value = [...graphicsFiles.value, newFile]
     console.log('Added graphics file:', newFile.name, 'Total graphics files:', graphicsFiles.value.length)
+    // Reset plan details state when new files are selected
+    showPlanDetails.value = false
     // Don't clear other file selections - allow multiple file types
     // Clear the input so the same file can be selected again
     ;(e.target as HTMLInputElement).value = ''
@@ -1625,15 +2300,7 @@ function removeGraphicsFile(index: number) {
   graphicsFiles.value.splice(index, 1)
 }
 
-function onMultipleImagesChange(e: Event) {
-  const files = (e.target as HTMLInputElement).files
-  if (files && files.length > 0) {
-    multipleImages.value = Array.from(files).filter(file => 
-      file.type.startsWith('image/')
-    )
-    showImageToPdfOption.value = multipleImages.value.length > 0
-  }
-}
+
 
 function removeImage(index: number) {
   multipleImages.value.splice(index, 1)
@@ -1739,65 +2406,7 @@ async function compressVideoFast(file: File): Promise<File> {
   })
 }
 
-async function convertImagesToPdf(): Promise<File> {
-  const { jsPDF } = await import('jspdf')
-  const pdf = new jsPDF('p', 'mm', 'a4')
-  
-  for (let i = 0; i < multipleImages.value.length; i++) {
-    const file = multipleImages.value[i]
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')!
-    const img = new Image()
-    
-    await new Promise((resolve) => {
-      img.onload = () => {
-        // A4 dimensions in mm: 210 x 297, with margins
-        const pageWidth = 210
-        const pageHeight = 297
-        const margin = 5 // Smaller margins for larger image
-        const maxWidth = pageWidth - (margin * 2)
-        const maxHeight = pageHeight - (margin * 2)
-        
-        // Use original image dimensions for maximum quality
-        let { width, height } = img
-        
-        // Calculate dimensions to fit page while maintaining aspect ratio
-        const widthRatio = maxWidth / width
-        const heightRatio = maxHeight / height
-        const ratio = Math.min(widthRatio, heightRatio)
-        
-        const finalWidth = width * ratio
-        const finalHeight = height * ratio
-        
-        // Use original image dimensions for canvas to preserve quality
-        canvas.width = width
-        canvas.height = height
-        
-        // Disable image smoothing for crisp quality
-        ctx.imageSmoothingEnabled = false
-        
-        // Draw image at original size
-        ctx.drawImage(img, 0, 0, width, height)
-        
-        // Convert to maximum quality JPEG (1.0 = no compression)
-        const imgData = canvas.toDataURL('image/jpeg', 1.0)
-        
-        if (i > 0) pdf.addPage()
-        
-        // Center image on page
-        const x = (pageWidth - finalWidth) / 2
-        const y = (pageHeight - finalHeight) / 2
-        
-        pdf.addImage(imgData, 'JPEG', x, y, finalWidth, finalHeight)
-        resolve(null)
-      }
-      img.src = URL.createObjectURL(file)
-    })
-  }
-  
-  const pdfBlob = pdf.output('blob')
-  return new File([pdfBlob], `${nonFichier.value || 'images'}.pdf`, { type: 'application/pdf' })
-}
+
 
 async function convertPhotosToPdf(): Promise<File> {
   const { jsPDF } = await import('jspdf')
@@ -1857,6 +2466,57 @@ async function convertPhotosToPdf(): Promise<File> {
   
   const pdfBlob = pdf.output('blob')
   return new File([pdfBlob], `${nonFichier.value || 'photos'}.pdf`, { type: 'application/pdf' })
+}
+
+async function convertUpdatePhotosToPdf(): Promise<File> {
+  const { jsPDF } = await import('jspdf')
+  const pdf = new jsPDF('p', 'mm', 'a4')
+  
+  for (let i = 0; i < selectedUpdatePhotos.value.length; i++) {
+    const file = selectedUpdatePhotos.value[i]
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    const img = new Image()
+    
+    await new Promise((resolve) => {
+      img.onload = () => {
+        const pageWidth = 210
+        const pageHeight = 297
+        const margin = 5
+        const maxWidth = pageWidth - (margin * 2)
+        const maxHeight = pageHeight - (margin * 2)
+        
+        let { width, height } = img
+        
+        const widthRatio = maxWidth / width
+        const heightRatio = maxHeight / height
+        const ratio = Math.min(widthRatio, heightRatio)
+        
+        const finalWidth = width * ratio
+        const finalHeight = height * ratio
+        
+        canvas.width = width
+        canvas.height = height
+        
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        const imgData = canvas.toDataURL('image/jpeg', 1.0)
+        
+        if (i > 0) pdf.addPage()
+        
+        const x = (pageWidth - finalWidth) / 2
+        const y = (pageHeight - finalHeight) / 2
+        
+        pdf.addImage(imgData, 'JPEG', x, y, finalWidth, finalHeight)
+        resolve(null)
+      }
+      img.src = URL.createObjectURL(file)
+    })
+  }
+  
+  const pdfBlob = pdf.output('blob')
+  return new File([pdfBlob], 'update-photos.pdf', { type: 'application/pdf' })
 }
 
 function getTypeDesignation(id: number | null) {
@@ -1940,7 +2600,7 @@ async function submitForm() {
     // If multiple images are selected, convert them to PDF
     if (multipleImages.value.length > 0 && !uploadedFile.value) {
       creationProgress.value = 'Conversion des images en PDF...';
-      fileToUpload = await convertImagesToPdf();
+      fileToUpload = await convertPhotosToPdf();
     }
     
     // Handle normal files - append as 'fichier'
@@ -1998,6 +2658,11 @@ async function submitForm() {
     multipleImages.value = [];
     showImageToPdfOption.value = false;
     selectedPhotos.value = [];
+    // Reset toggle states
+    showPdfDetails.value = false;
+    showPlanDetails.value = false;
+    showVideoDetails.value = false;
+    showPhotosDetails.value = false;
     
     // Close modal or sidebar if open
     if (showDocModal.value) {
@@ -2036,8 +2701,24 @@ const showStructureConsulterContent = ref(false);
 // SUCCESS MESSAGE VARIABLE
 const showSuccess = ref(false);
 const showDeleteMode = ref(false);
+const showMiseAJourMode = ref(false);
 const loadingConsulter = ref(false);
 const consulterAbortController = ref<AbortController | null>(null);
+
+// Document to update and move states
+const documentToUpdate = ref<any>(null);
+const documentToMove = ref<any>(null);
+const selectedFile = ref<File | null>(null);
+const multipleImages = ref<File[]>([]);
+const showImageToPdfOption = ref(false);
+
+// Update modal file states
+const selectedPdfFile = ref<File | null>(null);
+const selectedVideoFile = ref<File | null>(null);
+const selectedPlanFiles = ref<File[]>([]);
+const selectedUpdatePhotos = ref<File[]>([]);
+const planFilesInput = ref<HTMLInputElement>();
+const photosUpdateInput = ref<HTMLInputElement>();
 
 // Search functionality
 const searchQuery = ref('');
@@ -3030,6 +3711,7 @@ function openStructureDocContent() {
   contextAjouter.value.visible = false; // Close context ajouter modal
   showSuccess.value = false; // Close success message if open
   showDeleteMode.value = false; // Close delete mode if open
+  showMiseAJourMode.value = false; // Close mise à jour mode if open
   showConsulterPanel.value = false; // Close NEW consulter if open
   showStructureDocContent.value = true;
   showStructureConsulterContent.value = false; // Close consulter if open
@@ -3048,6 +3730,7 @@ async function showSuccessMessage() {
   loadingConsulter.value = true;
   showStructureDocContent.value = false; // Close ajouter content
   showDeleteMode.value = false; // Close delete mode
+  showMiseAJourMode.value = false; // Close mise à jour mode
   showSuccess.value = true;
   
   // Create abort controller for this request
@@ -3068,6 +3751,34 @@ async function showSuccessMessage() {
   }
 }
 
+// MISE À JOUR MESSAGE FUNCTION
+async function showMiseAJourMessage() {
+  if (loadingConsulter.value) return; // Prevent multiple clicks
+  
+  loadingConsulter.value = true;
+  showStructureDocContent.value = false; // Close ajouter content
+  showSuccess.value = false; // Close consulter mode
+  showDeleteMode.value = false; // Close delete mode
+  showMiseAJourMode.value = true;
+  
+  // Create abort controller for this request
+  consulterAbortController.value = new AbortController();
+  
+  try {
+    await fetchDocListForCurrentSelection();
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      showToast('Chargement annulé', 'error');
+      showMiseAJourMode.value = false;
+    } else {
+      console.error('Error in showMiseAJourMessage:', error);
+    }
+  } finally {
+    loadingConsulter.value = false;
+    consulterAbortController.value = null;
+  }
+}
+
 // DELETE MESSAGE FUNCTION
 async function showDeleteMessage() {
   if (loadingConsulter.value) return; // Prevent multiple clicks
@@ -3075,6 +3786,7 @@ async function showDeleteMessage() {
   loadingConsulter.value = true;
   showStructureDocContent.value = false; // Close ajouter content
   showSuccess.value = false; // Close consulter mode
+  showMiseAJourMode.value = false; // Close mise à jour mode
   showDeleteMode.value = true;
   
   // Create abort controller for this request
@@ -3175,6 +3887,26 @@ async function handleDeleteDocument(document: any) {
 // State for delete confirmation modal
 const showDeleteConfirmModal = ref(false);
 const documentToDelete = ref<any>(null);
+const deleteMode = ref<'full' | 'selective'>('full');
+const filesToDelete = ref({
+  fichier: false,
+  plan: false,
+  video: false,
+  photos: false
+});
+
+// Computed properties for delete modal
+const hasSelectableFiles = computed(() => {
+  if (!documentToDelete.value) return false;
+  return !!(documentToDelete.value.fichier || documentToDelete.value.plan || documentToDelete.value.video || documentToDelete.value.nomPhotos);
+});
+
+const hasSelectedFiles = computed(() => {
+  return filesToDelete.value.fichier || filesToDelete.value.plan || filesToDelete.value.video || filesToDelete.value.photos;
+});
+
+// Computed properties for delete modal
+
 
 // Fiche Technique modal state
 const ficheTechniqueModal = ref({
@@ -3436,27 +4168,100 @@ async function viewFicheTechnique(entityKey: string, item: any) {
   }
 }
 
-// Confirm delete document function for the new delete mode
-function confirmDeleteDocument(document: any) {
+// Open delete modal function
+function openDeleteModal(document: any) {
   documentToDelete.value = document;
   showDeleteConfirmModal.value = true;
 }
 
-// Actually delete the document
-async function deleteDocumentConfirmed() {
+// Confirm delete document function for the new delete mode
+function confirmDeleteDocument(document: any) {
+  documentToDelete.value = document;
+  deleteMode.value = 'full';
+  // Reset file selection
+  filesToDelete.value = {
+    fichier: false,
+    plan: false,
+    video: false,
+    photos: false
+  };
+  showDeleteConfirmModal.value = true;
+}
+
+
+
+// Close delete modal
+function closeDeleteModal() {
+  showDeleteConfirmModal.value = false;
+  documentToDelete.value = null;
+}
+
+// Confirm full delete
+function confirmFullDelete() {
+  // This function can be used for additional confirmation if needed
+}
+
+// Show selective delete mode
+function showSelectiveDelete() {
+  deleteMode.value = 'selective';
+  // Reset file selection
+  filesToDelete.value = {
+    fichier: false,
+    plan: false,
+    video: false,
+    photos: false
+  };
+}
+
+// Execute full delete
+async function executeFullDelete() {
   if (!documentToDelete.value) return;
   
   try {
     await axios.delete(`documents/${documentToDelete.value.idDocument}/`);
     showToast("Document supprimé avec succès!", 'success');
-    // Refresh the document list
     await fetchDocListForCurrentSelection();
   } catch (e: any) {
     console.error('Error deleting document:', e);
     showToast("Erreur lors de la suppression du document.", 'error');
   } finally {
-    showDeleteConfirmModal.value = false;
-    documentToDelete.value = null;
+    closeDeleteModal();
+  }
+}
+
+// Execute selective delete
+async function executeSelectiveDelete() {
+  if (!documentToDelete.value || !hasSelectedFiles.value) return;
+  
+  try {
+    const formData = new FormData();
+    
+    // Set files to null for selected ones
+    if (filesToDelete.value.fichier) {
+      formData.append('fichier', 'null');
+    }
+    if (filesToDelete.value.plan) {
+      formData.append('plan', 'null');
+    }
+    if (filesToDelete.value.video) {
+      formData.append('video', 'null');
+    }
+    if (filesToDelete.value.photos) {
+      formData.append('photos', 'null');
+    }
+    
+    // Use the PUT endpoint to update the document
+    await axios.put(`http://10.10.150.75:8000/api/documents/create-two-file/${documentToDelete.value.idDocument}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    
+    showToast("Fichiers retirés avec succès!", 'success');
+    await fetchDocListForCurrentSelection();
+  } catch (e: any) {
+    console.error('Error removing files:', e);
+    showToast("Erreur lors de la suppression des fichiers.", 'error');
+  } finally {
+    closeDeleteModal();
   }
 }
 
@@ -3642,6 +4447,24 @@ const hasMoreMOE = ref(false)
 const hasMoreMOA = ref(false)
 const hasMoreSoustraitants = ref(false)
 const hasMoreDirecteurs = ref(false)
+
+// Arborescence collapsible state
+const showArborescenceDetails = ref(false)
+
+// Computed property to check if there are other details besides projects
+const hasOtherDetails = computed(() => {
+  return selectedBureauxEtudes.value.length > 0 ||
+         selectedFournisseurs.value.length > 0 ||
+         selectedMaitresOeuvre.value.length > 0 ||
+         selectedMaitresOuvrage.value.length > 0 ||
+         selectedSoustraitants.value.length > 0 ||
+         selectedDirectionsProjets.value.length > 0
+})
+
+// Function to toggle arborescence details
+function toggleArborescenceDetails() {
+  showArborescenceDetails.value = !showArborescenceDetails.value
+}
 
 
 
@@ -4093,10 +4916,12 @@ function clearAllSidebarContent() {
   showStructureDocContent.value = false
   showSuccess.value = false
   showDeleteMode.value = false
+  showMiseAJourMode.value = false
   showConsulterPanel.value = false
   showStructureConsulterContent.value = false
   showDocModal.value = false
   showImportModal.value = false
+  showImportPlanModal.value = false
   
   // Close context modals
   contextAjouter.value.visible = false
@@ -4120,6 +4945,11 @@ function clearAllSidebarContent() {
   selectedPhotos.value = []
   importFiles.value = []
   importNomFichier.value = ''
+  // Reset toggle states
+  showPdfDetails.value = false
+  showPlanDetails.value = false
+  showVideoDetails.value = false
+  showPhotosDetails.value = false
   
   // Clear document lists
   docList.value = []
@@ -4171,6 +5001,64 @@ function removeImportFile(index: number) {
   importFiles.value.splice(index, 1)
 }
 
+// Import Plan functions
+function openImportPlanModal(document: any) {
+  documentToImportPlan.value = document
+  showImportPlanModal.value = true
+  planImportFiles.value = []
+}
+
+function closeImportPlanModal() {
+  showImportPlanModal.value = false
+  planImportFiles.value = []
+  documentToImportPlan.value = null
+  isUploadingPlan.value = false
+}
+
+function addPlanImportFile(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    const newFile = files[0]
+    planImportFiles.value = [...planImportFiles.value, newFile]
+    ;(e.target as HTMLInputElement).value = ''
+  }
+}
+
+function removePlanImportFile(index: number) {
+  planImportFiles.value.splice(index, 1)
+}
+
+async function submitPlanImport() {
+  if (!planImportFiles.value.length || !documentToImportPlan.value) {
+    showToast('Veuillez sélectionner des fichiers', 'error')
+    return
+  }
+  
+  isUploadingPlan.value = true
+  
+  try {
+    const formData = new FormData()
+    
+    // Create zip file from selected files
+    const zipFile = await createZipFile(planImportFiles.value, `plan-${documentToImportPlan.value.idDocument}`)
+    formData.append('plan', zipFile)
+    
+    // Use the PUT endpoint to update the document with the plan
+    await axios.put(`http://10.10.150.75:8000/api/documents/create-two-file/${documentToImportPlan.value.idDocument}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    showToast('Plan importé avec succès!', 'success')
+    await fetchDocListForCurrentSelection()
+    closeImportPlanModal()
+  } catch (error: any) {
+    console.error('Error importing plan:', error)
+    showToast('Erreur lors de l\'importation du plan', 'error')
+  } finally {
+    isUploadingPlan.value = false
+  }
+}
+
 async function createZipFile(files: File[], zipName: string): Promise<File> {
   // @ts-ignore
   const JSZip = (await import('jszip')).default
@@ -4185,6 +5073,171 @@ async function createZipFile(files: File[], zipName: string): Promise<File> {
   // Generate the zip file
   const zipBlob = await zip.generateAsync({ type: 'blob' })
   return new File([zipBlob], `${zipName}.zip`, { type: 'application/zip' })
+}
+
+// Functions for document update and move (from Documents.vue)
+function confirmUpdate(document: any) {
+  documentToUpdate.value = { ...document }
+  selectedFile.value = null
+  multipleImages.value = []
+  showImageToPdfOption.value = false
+  // Clear update modal file states
+  selectedPdfFile.value = null
+  selectedVideoFile.value = null
+  selectedPlanFiles.value = []
+  selectedUpdatePhotos.value = []
+}
+
+// Update modal file handling functions
+function onPdfFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files[0]) {
+    selectedPdfFile.value = target.files[0]
+  }
+}
+
+function onVideoFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files[0]) {
+    selectedVideoFile.value = target.files[0]
+  }
+}
+
+function addPlanFile(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    const newFile = files[0]
+    selectedPlanFiles.value = [...selectedPlanFiles.value, newFile]
+    ;(e.target as HTMLInputElement).value = ''
+  }
+}
+
+function removePlanFile(index: number) {
+  selectedPlanFiles.value.splice(index, 1)
+}
+
+function onSinglePhotoUpdateChange(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    const file = files[0]
+    if (file.type.startsWith('image/')) {
+      selectedUpdatePhotos.value.push(file)
+      ;(e.target as HTMLInputElement).value = ''
+    }
+  }
+}
+
+function removeUpdatePhoto(index: number) {
+  selectedUpdatePhotos.value.splice(index, 1)
+}
+
+function confirmMove(document: any) {
+  documentToMove.value = { 
+    ...document,
+    // Ensure all subdivision properties exist
+    idSubDivisionNv_1: document.idSubDivisionNv_1 || null,
+    idSubDivisionNv_2: document.idSubDivisionNv_2 || null,
+    idSubDivisionNv_3: document.idSubDivisionNv_3 || null,
+    idSubDivisionNv_4: document.idSubDivisionNv_4 || null
+  }
+}
+
+
+
+function onMultipleImagesChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    multipleImages.value = Array.from(target.files).filter(file => 
+      file.type.startsWith('image/')
+    )
+    showImageToPdfOption.value = multipleImages.value.length > 0
+    // Clear single file if multiple images are selected
+    if (multipleImages.value.length > 0) {
+      selectedFile.value = null
+    }
+  }
+}
+
+function getFileName(filePath: string): string {
+  if (!filePath) return 'Aucun fichier'
+  return filePath.split('/').pop() || filePath
+}
+
+async function updateDocument() {
+  if (!documentToUpdate.value) return
+  try {
+    const formData = new FormData()
+    
+    // Add designation
+    formData.append('designation', documentToUpdate.value.designation || '')
+    
+    // Add PDF file if selected
+    if (selectedPdfFile.value) {
+      formData.append('fichier', selectedPdfFile.value)
+    }
+    
+    // Add video file if selected
+    if (selectedVideoFile.value) {
+      formData.append('video', selectedVideoFile.value)
+    }
+    
+    // Add plan files (zip them) if selected
+    if (selectedPlanFiles.value.length > 0) {
+      const zipFile = await createZipFile(selectedPlanFiles.value, 'plan-files')
+      formData.append('plan', zipFile)
+    }
+    
+    // Add photos (convert to PDF) if selected
+    if (selectedUpdatePhotos.value.length > 0) {
+      const photosPdf = await convertUpdatePhotosToPdf()
+      formData.append('photos', photosPdf)
+    }
+    
+    // Use the new API endpoint
+    await axios.put(`http://10.10.150.75:8000/api/documents/create-two-file/${documentToUpdate.value.idDocument}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    await fetchDocListForCurrentSelection()
+    documentToUpdate.value = null
+    selectedFile.value = null
+    multipleImages.value = []
+    showImageToPdfOption.value = false
+    selectedPdfFile.value = null
+    selectedVideoFile.value = null
+    selectedPlanFiles.value = []
+    selectedUpdatePhotos.value = []
+    showToast('Document modifié avec succès!', 'success')
+  } catch (e: any) {
+    showToast('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'), 'error')
+  }
+}
+
+async function moveDocument() {
+  if (!documentToMove.value) return
+  try {
+    const formData = new FormData()
+    
+    // Add all fields to form data, including empty ones as empty strings
+    formData.append('idTypeProduit', documentToMove.value.idTypeProduit?.toString() || '')
+    formData.append('idProduit', documentToMove.value.idProduit?.toString() || '')
+    formData.append('idStructure', documentToMove.value.idStructure?.toString() || '')
+    formData.append('idSection', documentToMove.value.idSection?.toString() || '')
+    formData.append('idSubDivisionNv_1', documentToMove.value.idSubDivisionNv_1?.toString() || '')
+    formData.append('idSubDivisionNv_2', documentToMove.value.idSubDivisionNv_2?.toString() || '')
+    formData.append('idSubDivisionNv_3', documentToMove.value.idSubDivisionNv_3?.toString() || '')
+    formData.append('idSubDivisionNv_4', documentToMove.value.idSubDivisionNv_4?.toString() || '')
+    
+    await axios.post(`documents/${documentToMove.value.idDocument}/move/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    await fetchDocListForCurrentSelection()
+    documentToMove.value = null
+    showToast('Document déplacé avec succès!', 'success')
+  } catch (e: any) {
+    showToast('Erreur lors du déplacement : ' + (e?.message || 'Erreur inconnue'), 'error')
+  }
 }
 
 async function submitImportForm() {
@@ -4283,6 +5336,21 @@ async function submitImportForm() {
 <!-- <style src="vue-multiselect/dist/vue-multiselect.min.css"></style> -->
 
 <style scoped>
+.optional-message {
+  color: #43E97B;
+  font-style: italic;
+  margin-bottom: 1em;
+  padding: 0.8em;
+  background: rgba(67, 233, 123, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #43E97B;
+}
+
+.plan-section {
+  margin-top: 0.4em;
+  padding-top: 0.3em;
+  border-top: 1px solid #232f4b;
+}
 .add-doc-root {
   display: flex;
   min-height: 100vh;
@@ -4295,10 +5363,10 @@ async function submitImportForm() {
 .doc-sidebar {
   background: rgba(22,33,62,0.98);
   border-left: 2px solid #232f4b;
-  padding: 1.5em 2em 1em 2em;
+  padding: 1em 1.5em 0.8em 1.5em;
   min-height: 100vh;
   box-shadow: -2px 0 16px 0 #151e3044;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   order: 3;
   overflow-y: auto;
   width: v-bind('(100 - leftPanelWidth) + "%"');
@@ -4417,8 +5485,8 @@ async function submitImportForm() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.1em;
-  padding-bottom: 0.1em;
+  margin-bottom: 0.01em;
+  padding-bottom: 0.01em;
   border-bottom: 2px solid #232f4b;
 }
 
@@ -4451,6 +5519,7 @@ async function submitImportForm() {
 
 .section {
   margin-bottom: 1em;
+  margin-top: 0.2em;
 }
 
 .section h4 {
@@ -4461,16 +5530,16 @@ async function submitImportForm() {
 }
 
 .table-container {
-  max-height: 300px;
+  max-height: 500px;
   overflow-y: auto;
   border: 1px solid #232f4b;
   border-radius: 6px;
   margin-bottom: 1em;
 }
 
-/* Limit tables to 5 rows with scrolling */
+/* Limit tables to 10 rows with scrolling */
 .table-container.limited {
-  max-height: 250px;
+  max-height: 480px;
   overflow-y: auto;
 }
 
@@ -4488,12 +5557,14 @@ async function submitImportForm() {
 }
 
 .sidebar-table th {
-  background: rgba(33, 150, 243, 0.1);
+  background: #16213e;
   color: #bbdefb;
   font-weight: 600;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 10;
+  border-bottom: 2px solid #232f4b;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .sidebar-table tr:hover {
@@ -4653,7 +5724,7 @@ async function submitImportForm() {
 }
 
 .sidebar-footer {
-  padding-top: 0.1em;
+  padding-top: 0.01em;
   border-top: 2px solid #232f4b;
   text-align: center;
 }
@@ -4708,6 +5779,371 @@ async function submitImportForm() {
   font-size: 0.85em;
   opacity: 0.8;
 }
+
+/* Arborescence collapsible styles */
+.arb-details-section {
+  margin-top: 0.5em;
+}
+
+.arb-toggle-container {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0.5em;
+}
+
+.arb-toggle-btn {
+  background: rgba(67, 233, 123, 0.1);
+  border: 1px solid #43E97B;
+  border-radius: 6px;
+  color: #43E97B;
+  padding: 0.4em 0.8em;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  transition: all 0.3s ease;
+}
+
+.arb-toggle-btn:hover {
+  background: rgba(67, 233, 123, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(67, 233, 123, 0.3);
+}
+
+.arb-toggle-btn.expanded {
+  background: rgba(67, 233, 123, 0.15);
+}
+
+.arb-toggle-icon {
+  font-size: 0.8em;
+  transition: transform 0.3s ease;
+}
+
+.arb-toggle-btn.expanded .arb-toggle-icon {
+  transform: rotate(0deg);
+}
+
+.arb-toggle-text {
+  font-size: 0.85em;
+}
+
+.arb-details-content {
+  animation: slideDown 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+}
+
+.arb-details-content .arb-line {
+  padding-left: 1em;
+  border-left: 2px solid rgba(67, 233, 123, 0.3);
+  margin-left: 0.5em;
+}
+
+/* Modern white modal styles for update and move modals */
+.white-modal {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  color: #1e293b !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+.white-modal .modal-header {
+  background: linear-gradient(135deg, #f1f5f9 0%, #ffffff 100%) !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+  border-radius: 16px 16px 0 0 !important;
+  padding: 1.5rem 2rem !important;
+  position: relative !important;
+}
+
+.white-modal .modal-header::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 4px !important;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4) !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+.white-modal .modal-header h2 {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  font-size: 1.5rem !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+.white-modal .modal-header h2 i {
+  color: #3b82f6 !important;
+  font-size: 1.25rem !important;
+}
+
+.white-modal .close-btn {
+  color: #64748b !important;
+  background: rgba(248, 250, 252, 0.8) !important;
+  border: 1px solid rgba(226, 232, 240, 0.6) !important;
+  border-radius: 8px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.25rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.white-modal .close-btn:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  transform: scale(1.05) !important;
+}
+
+.white-modal .modal-body {
+  background: transparent !important;
+  color: #334155 !important;
+  padding: 2rem !important;
+}
+
+.white-modal .form-grid {
+  display: grid !important;
+  gap: 1.5rem !important;
+  grid-template-columns: 1fr !important;
+}
+
+.white-modal.move-modal .form-grid {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 1.5rem 1rem !important;
+}
+
+.white-modal .form-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+}
+
+.white-modal .form-group label {
+  color: #475569 !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.white-modal .form-group input,
+.white-modal .form-group select {
+  background: rgba(248, 250, 252, 0.8) !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 1rem !important;
+  transition: all 0.2s ease !important;
+  outline: none !important;
+}
+
+.white-modal .form-group input:focus,
+.white-modal .form-group select:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  background: #ffffff !important;
+}
+
+.white-modal .form-group input:hover,
+.white-modal .form-group select:hover {
+  border-color: #94a3b8 !important;
+}
+
+.white-modal .current-file-info,
+.white-modal .no-file-info {
+  background: rgba(241, 245, 249, 0.8) !important;
+  border: 1px solid rgba(226, 232, 240, 0.6) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  color: #64748b !important;
+  font-style: italic !important;
+}
+
+.white-modal .file-info {
+  background: rgba(34, 197, 94, 0.1) !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  margin-top: 0.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.white-modal .file-info span {
+  color: #166534 !important;
+  font-weight: 500 !important;
+}
+
+.white-modal .remove-file {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  border-radius: 6px !important;
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.white-modal .remove-file:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+  transform: scale(1.05) !important;
+}
+
+.white-modal .images-preview {
+  background: rgba(241, 245, 249, 0.5) !important;
+  border: 1px solid rgba(226, 232, 240, 0.6) !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  margin-top: 0.5rem !important;
+}
+
+.white-modal .images-preview h4 {
+  color: #475569 !important;
+  margin: 0 0 0.75rem 0 !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+}
+
+.white-modal .image-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+  max-height: 150px !important;
+  overflow-y: auto !important;
+}
+
+.white-modal .image-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(226, 232, 240, 0.6) !important;
+  border-radius: 6px !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.white-modal .image-item span {
+  color: #64748b !important;
+  font-size: 0.875rem !important;
+}
+
+.white-modal .remove-image {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  border-radius: 50% !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.875rem !important;
+  font-weight: bold !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.white-modal .remove-image:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+  transform: scale(1.1) !important;
+}
+
+.white-modal .modal-footer {
+  background: rgba(248, 250, 252, 0.8) !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.6) !important;
+  border-radius: 0 0 16px 16px !important;
+  padding: 1.5rem 2rem !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 1rem !important;
+}
+
+.white-modal .btn-cancel {
+  background: rgba(248, 250, 252, 0.8) !important;
+  color: #64748b !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.white-modal .btn-cancel:hover {
+  background: rgba(226, 232, 240, 0.3) !important;
+  color: #475569 !important;
+  transform: translateY(-1px) !important;
+}
+
+.white-modal .btn-update {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+.white-modal .btn-update:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4) !important;
+}
+
+.white-modal .btn-move {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3) !important;
+}
+
+.white-modal .btn-move:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4) !important;
+}
 .add-doc-main {
   padding: 0.01em 2em 0.1em 3em;
   margin: 0;
@@ -4726,10 +6162,10 @@ async function submitImportForm() {
   letter-spacing: 1px;
 }
 .step {
-  margin-bottom: 0.5em;
+  margin-bottom: 0.3em;
   background: rgba(22,33,62,0.85);
-  border-radius: 12px;
-  padding: 0.5em 2em 1em 1.5em;
+  border-radius: 8px;
+  padding: 0.4em 1em 0.6em 1em;
   box-shadow: 0 2px 12px 0 #1a237e22;
   border-left: 4px solid #2196F3;
 }
@@ -4785,13 +6221,13 @@ label {
 select, input[type="text"], input[type="date"], input[type="email"], input[type="tel"] {
   width: 100%;
   min-width: 300px;
-  padding: 0.8em 1.2em;
-  border-radius: 6px;
+  padding: 0.5em 0.8em;
+  border-radius: 4px;
   border: 1.5px solid #232f4b;
   background: #1a237e;
   color: #fff;
-  font-size: 1.1rem;
-  margin-bottom: 1em;
+  font-size: 1rem;
+  margin-bottom: 0.6em;
   transition: border 0.2s, box-shadow 0.2s;
   outline: none;
   box-sizing: border-box;
@@ -4819,13 +6255,13 @@ select:focus, input:focus {
 
 #nonFichier-input {
   width: 100%;
-  padding: 0.7em 0em;
-  border-radius: 6px;
+  padding: 0.5em 0.8em;
+  border-radius: 4px;
   border: 1.5px solid #232f4b;
   background: #1a237e;
   color: #fff;
-  font-size: 1rem;
-  margin-bottom: 1em;
+  font-size: 0.95rem;
+  margin-bottom: 0.6em;
   transition: border 0.2s, box-shadow 0.2s;
   outline: none;
 }
@@ -4840,10 +6276,10 @@ select:focus, input:focus {
 
 
 .file-info {
-  margin-top: 0.5em;
+  margin-top: 0.3em;
   display: flex;
   align-items: center;
-  gap: 1em;
+  gap: 0.8em;
   color: #43E97B;
 }
 .file-info button {
@@ -4855,14 +6291,15 @@ select:focus, input:focus {
 }
 
 .file-upload-label {
-  font-size: 1.5rem !important;
-  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
   color: #43E97B !important;
+  margin-bottom: 0.2em !important;
 }
 
 .file-selected-text {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .compression-indicator {
@@ -5039,7 +6476,7 @@ ul {
   }
   
   .table-container {
-    max-height: 250px;
+    max-height: 400px;
   }
   
   .sidebar-table {
@@ -5181,6 +6618,21 @@ ul {
 }
 
 
+
+.mise-a-jour-btn {
+  background: linear-gradient(90deg, #FF9800 0%, #F57C00 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.8em 1.5em;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.mise-a-jour-btn:hover {
+  background: linear-gradient(90deg, #F57C00 0%, #E65100 100%);
+}
 
 .delete-btn {
   background: #f44336; /* Red */
@@ -5338,9 +6790,281 @@ ul {
 .doc-modal.selected { background-color: #e4f7ed!important; }
 .doc-table tr.selected { background: #e8ffe2;}
 
+/* Action buttons styles */
+.action-buttons {
+  display: flex;
+  gap: 0.3em;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  background: none;
+  border: 1px solid #232f4b;
+  border-radius: 4px;
+  padding: 0.3em 0.5em;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s;
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1px;
+}
+
+.update-btn {
+  background: #17a2b8;
+  color: white;
+  border-color: #17a2b8;
+}
+
+.update-btn:hover:not(:disabled) {
+  background: #138496;
+  transform: scale(1.1);
+}
+
+.move-btn {
+  background: #ffc107;
+  color: #212529;
+  border-color: #ffc107;
+}
+
+.move-btn:hover:not(:disabled) {
+  background: #e0a800;
+  transform: scale(1.1);
+}
+
+.action-btn:disabled {
+  background: #888 !important;
+  color: #ccc !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+  transform: none !important;
+}
+
+/* Modal styles */
+.update-modal, .move-modal {
+  max-width: 800px !important;
+  width: 90vw !important;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-body {
+  padding: 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select {
+  padding: 12px 16px;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #2196F3;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  background: #f8f9fa;
+  border-radius: 0 0 12px 12px;
+}
+
+.btn-cancel {
+  padding: 12px 24px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.btn-update {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-update:hover {
+  background: linear-gradient(135deg, #1976D2, #1565C0);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+.btn-move {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #ffc107, #e0a800);
+  color: #212529;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-move:hover {
+  background: linear-gradient(135deg, #e0a800, #d39e00);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.current-file-info {
+  padding: 8px 12px;
+  background: #e8f5e8;
+  border: 1px solid #28a745;
+  border-radius: 4px;
+  color: #155724;
+  font-weight: 500;
+}
+
+.no-file-info {
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.images-preview {
+  margin-top: 1em;
+  padding: 1em;
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 8px;
+  border: 1px solid #2196F3;
+}
+
+.images-preview h4 {
+  color: #2196F3;
+  margin-bottom: 0.5em;
+  font-size: 1rem;
+}
+
+.image-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.image-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5em;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #2c3e50;
+}
+
+.remove-image {
+  background: #E53935;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-image:hover {
+  background: #d32f2f;
+}
+
 @media (max-width: 768px) {
   .doc-modal-body {
     flex-direction: column;
+  }
+  
+  .update-modal, .move-modal {
+    width: 95vw !important;
+    margin: 10px;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.2rem;
   }
 }
 .selected {
@@ -5426,6 +7150,69 @@ ul {
   /* min-height: 30px; */
 }
 
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3em 0.4em;
+  background: rgba(26, 35, 126, 0.5);
+  border-radius: 3px;
+  color: #e3eafc;
+  font-size: 0.85rem;
+}
+
+.remove-file {
+  background: #E53935;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 0.2em 0.4em;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.remove-file:hover {
+  background: #d32f2f;
+}
+
+.scrollable-list {
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid #232f4b;
+  border-radius: 4px;
+  padding: 0.2em;
+}
+
+.toggle-btn {
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.3em 0.8em;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.toggle-btn:hover {
+  background: #1976d2;
+}
+
+.file-details {
+  margin-top: 0.5em;
+  padding: 0.5em;
+  background: rgba(255, 152, 0, 0.1);
+  border-radius: 6px;
+  border: 1px solid #FF9800;
+}
 
 .modal-overlay {
   position: fixed;
@@ -5624,24 +7411,24 @@ ul {
 }
 
 .files-preview {
-  margin-top: 1em;
-  padding: 1em;
+  margin-top: 0.5em;
+  padding: 0.5em;
   background: rgba(255, 152, 0, 0.1);
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #FF9800;
 }
 
 .files-preview h4 {
   color: #FF9800;
-  margin-bottom: 0.5em;
-  font-size: 1rem;
+  margin-bottom: 0.3em;
+  font-size: 0.85rem;
 }
 
 /* Upload options styling */
 .upload-options {
   display: flex;
   flex-direction: column;
-  gap: 1.5em;
+  gap: 0.8em;
 }
 
 .upload-row {
