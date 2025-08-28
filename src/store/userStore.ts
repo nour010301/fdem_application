@@ -63,6 +63,28 @@ export const useUserStore = () => {
   
   // Bibliotheque pages permissions - only ADMIN_INFORMATIQUE (profile 2) has access
   const canAccessBibliothequePages = computed(() => isAdminInformatique.value)
+  
+  // Document-specific permissions based on user profile
+  const canDownloadDocuments = computed(() => {
+    // Admin informatique (profile 2) can always download
+    if (isAdminInformatique.value) return true
+    // Other users need explicit telechargement permission
+    return currentUser.value?.telechargement === true
+  })
+  
+  const canPrintDocuments = computed(() => {
+    // Admin informatique (profile 2) can always print
+    if (isAdminInformatique.value) return true
+    // Other users need explicit impression permission
+    return currentUser.value?.impression === true
+  })
+  
+  const canAccessPlans = computed(() => {
+    // Admin informatique (profile 2) can always access plans
+    if (isAdminInformatique.value) return true
+    // Other users need explicit plan permission
+    return currentUser.value?.plan === true
+  })
 
   return {
     user: computed(() => currentUser.value),
@@ -82,6 +104,9 @@ export const useUserStore = () => {
     canViewBibliothequeActions,
     canViewStructurePages,
     canAccessBibliothequePages,
+    canDownloadDocuments,
+    canPrintDocuments,
+    canAccessPlans,
     ROLES
   }
 }

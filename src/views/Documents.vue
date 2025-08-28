@@ -362,8 +362,6 @@
           <PdfViewer
             v-if="selectedDocument.fichier && getFileType(selectedDocument) === 'pdf'"
             :pdfUrl="selectedDocument.fichier"
-            :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
-            :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
             :documentId="selectedDocument.idDocument"
             @download="handleDownloadAction"
             @print="handlePrintAction"
@@ -373,8 +371,6 @@
           <ImageViewer
             v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'"
             :imageUrl="selectedDocument.fichier"
-            :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
-            :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
             :documentId="selectedDocument.idDocument"
             @download="handleDownloadAction"
             @print="handlePrintAction"
@@ -384,7 +380,6 @@
           <VideoViewer
             v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'"
             :videoUrl="selectedDocument.fichier"
-            :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
             :documentId="selectedDocument.idDocument"
             @download="handleDownloadAction"
           />
@@ -443,6 +438,7 @@ interface Document {
   creerPar?: number | null
   creerParUsername?: string | null
   plan?: string | null
+  valide?: boolean | null
 }
 
 const documents = ref<Document[]>([])
@@ -758,6 +754,11 @@ function toggleSort(column: typeof sortColumn.value) {
 
 const filteredDocuments = computed(() => {
   let filtered = documents.value;
+  
+  // Apply validation filter for users with profile ID 3 (CONSULTATION)
+  if (userStore.userRole.value === userStore.ROLES.CONSULTATION) {
+    filtered = filtered.filter(doc => doc.valide === true);
+  }
   
   // Apply Type Doc filter
   if (selectedTypeDoc.value && selectedTypeDoc.value !== 'Tous') {
@@ -1286,21 +1287,24 @@ function clearRightSideContent() {
 
 // Handle download action from viewer components
 async function handleDownloadAction(documentId: number) {
-  await logUserAction(documentId, LOG_ACTIONS.DOWNLOAD)
+  await logUserAction(documentId, LOG_ACTIONS.DOWNLOAD_FILE)
 }
 
 // Handle print action from viewer components
 async function handlePrintAction(documentId: number) {
-  await logUserAction(documentId, LOG_ACTIONS.PRINT)
+  await logUserAction(documentId, LOG_ACTIONS.PRINT_FILE)
 }
 
 // Download plan function
 async function downloadPlan(doc: Document) {
-  if (!doc.plan || !canDownloadPlan.value) return
+  if (!doc.plan || !canDownloadPlan.value) {
+    console.warn('Plan download not allowed: missing plan or insufficient permissions')
+    return
+  }
   
   try {
     // Log the download action
-    await logUserAction(doc.idDocument, LOG_ACTIONS.DOWNLOAD)
+    await logUserAction(doc.idDocument, LOG_ACTIONS.DOWNLOAD_FILE)
     
     const response = await fetch(doc.plan)
     const blob = await response.blob()

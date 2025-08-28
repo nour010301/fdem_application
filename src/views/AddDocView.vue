@@ -19,7 +19,7 @@
     </div>
     <!-- Main content with forms -->
     <div class="add-doc-main">
-      <h1>Fond Documentaire</h1>
+      <h1>Fonds Documentaire pour les Études et Méthodes</h1>
 
       <!-- INITIAL FORM FIELDS -->
       <form v-if="mode !== 'contexte'" class="structure-step-form" @submit.prevent="submitForm">
@@ -111,7 +111,7 @@
             (requiresSubDiv2 && selectedSubDiv4Id)
           )"
         >
-          <button class="save-btn" type="button" @click="openStructureDocContent" :class="{ 'disabled': !canAddDocuments || isCreatingDocument }" :disabled="!canAddDocuments || isCreatingDocument">
+          <button v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION" class="save-btn" type="button" @click="openStructureDocContent" :class="{ 'disabled': !canAddDocuments || isCreatingDocument }" :disabled="!canAddDocuments || isCreatingDocument">
             <span v-if="isCreatingDocument">{{ creationProgress || 'Création en cours...' }}</span>
             <span v-else>Ajouter</span>
           </button>
@@ -119,13 +119,13 @@
             <span v-if="loadingConsulter">Chargement en cours...</span>
             <span v-else>Consulter</span>
           </button>
-          <button class="mise-a-jour-btn" type="button" @click="showMiseAJourMessage" :disabled="loadingConsulter">
+          <button v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION" class="mise-a-jour-btn" type="button" @click="showMiseAJourMessage" :disabled="loadingConsulter">
             <span v-if="loadingConsulter">Chargement en cours...</span>
-            <span v-else>Mise à jour</span>
+            <span v-else>Modifier</span>
           </button>
-          <button class="import-dossier-btn" type="button" @click="showImportDossierMessage" :disabled="loadingConsulter">
+          <button v-if="isPiecesGraphiques && userStore.userRole.value !== userStore.ROLES.CONSULTATION" class="import-dossier-btn" type="button" @click="showImportDossierMessage" :disabled="loadingConsulter">
             <span v-if="loadingConsulter">Chargement en cours...</span>
-            <span v-else>Importer Dossier Source</span>
+            <span v-else>Importer Fichiers Source</span>
           </button>
           <button v-if="canDeleteDocuments" class="delete-btn" type="button" @click="showDeleteMessage" :disabled="loadingConsulter">
             <span v-if="loadingConsulter">Chargement en cours...</span>
@@ -154,7 +154,7 @@
           >
             <span class="context-entity-title">{{ entity.label }}</span>
             <div class="context-actions">
-              <button @click="onAjouter(entity.key)" class="context-action add" :class="{ 'disabled': !canAddDocuments || isCreatingDocument }" :disabled="!canAddDocuments || isCreatingDocument">
+              <button v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION" @click="onAjouter(entity.key)" class="context-action add" :class="{ 'disabled': !canAddDocuments || isCreatingDocument }" :disabled="!canAddDocuments || isCreatingDocument">
                 <span v-if="isCreatingDocument">Création...</span>
                 <span v-else>+ Ajouter/Maj</span>
               </button>
@@ -205,11 +205,10 @@
                   <thead>
                     <tr>
                       <th>Description</th>
-                      <th>Fichier</th>
-                      <th>Plan</th>
+                      <th>Fichier PDF</th>
+                      <th v-if="isPiecesGraphiques">Fichiers source</th>
                       <th>Vidéo</th>
                       <th>Images</th>
-                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -227,8 +226,8 @@
                         </div>
                         <span v-else class="no-file">-</span>
                       </td>
-                        <td>
-                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                        <td v-if="isPiecesGraphiques">
+                        <button v-if="document.plan && isPiecesGraphiques" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canAccessPlans">
                           💾 Télécharger
                         </button>
                         <span v-else class="no-file">-</span>
@@ -256,14 +255,6 @@
                           </button>
                         </div>
                         <span v-else class="no-file">-</span>
-                      </td>
-                      <td class="action-buttons">
-                        <button class="action-btn update-btn" @click="confirmUpdate(document)" :disabled="!canAddDocuments" title="Modifier">
-                          ✎
-                        </button>
-                        <button class="action-btn move-btn" @click="confirmMove(document)" :disabled="!canAddDocuments" title="Déplacer">
-                          ↗
-                        </button>
                       </td>
                     </tr>
                   </tbody>
@@ -303,8 +294,8 @@
                   <thead>
                     <tr>
                       <th>Description</th>
-                      <th>Fichier</th>
-                      <th>Plan</th>
+                      <th>Fichier PDF</th>
+                      <th>Fichiers source</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -369,8 +360,8 @@
                   <thead>
                     <tr>
                       <th>Description</th>
-                      <th>Fichier</th>
-                      <th>Plan</th>
+                      <th>Fichier PDF</th>
+                      <th v-if="isPiecesGraphiques">Fichiers source</th>
                       <th>Vidéo</th>
                       <th>Images</th>
                       <th>Actions</th>
@@ -391,8 +382,8 @@
                         </div>
                         <span v-else class="no-file">-</span>
                       </td>
-                      <td>
-                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                      <td v-if="isPiecesGraphiques">
+                        <button v-if="document.plan && isPiecesGraphiques" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canAccessPlans">
                           💾 Télécharger
                         </button>
                         <button v-else-if="document.nomFichier && !document.plan" @click="openImportPlanModal(document)" class="action-btn import-btn" :disabled="!canAddDocuments">
@@ -429,7 +420,7 @@
                           ✎
                         </button>
                         <button class="action-btn move-btn" @click="confirmMove(document)" :disabled="!canAddDocuments" title="Déplacer">
-                          ↗
+                          <span style="color: white; font-size: 18px;">↗</span>
                         </button>
                       </td>
                     </tr>
@@ -470,8 +461,8 @@
                   <thead>
                     <tr>
                       <th>Description</th>
-                      <th>Fichier</th>
-                       <th>Plan</th>
+                      <th>Fichier PDF</th>
+                       <th v-if="isPiecesGraphiques">Fichiers source</th>
                       <th>Vidéo</th>
                       <th>Images</th>
                       <th>Actions</th>
@@ -492,8 +483,8 @@
                         </div>
                         <span v-else class="no-file">-</span>
                       </td>
-                      <td>
-                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                      <td v-if="isPiecesGraphiques">
+                        <button v-if="document.plan && isPiecesGraphiques" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
                           💾 Télécharger
                         </button>
                         <span v-else class="no-file">-</span>
@@ -832,7 +823,7 @@
                     <label class="file-upload-label">Vous pouvez importer un plan en format source (optionnel)</label>
                     <div style="display: flex; gap: 0.8em; align-items: center; margin-bottom: 0.5em;">
                       <input ref="graphicsFolderInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addGraphicsFile" webkitdirectory style="display: none;" />
-                      <button @click="graphicsFolderInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Sélectionner Dossier Plan</button>
+                      <button @click="graphicsFolderInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Sélectionner Fichiers Source</button>
                       <span style="color: #bbdefb; font-size: 0.9em;">{{ graphicsFiles.length }} fichier(s) sélectionné(s)</span>
                     </div>
                     <div v-if="graphicsFiles.length > 0" class="file-info">
@@ -877,7 +868,7 @@
                 <div class="step upload-option">
                   <label class="file-upload-label">Sélectionner Photos</label>
                   <input ref="photosInput" type="file" accept="image/*" @change="onSinglePhotoChange" style="display: none;" />
-                  <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
+                  <div style="display: flex; gap: 1em; align-items: center; justify-content: center; margin-bottom: 1em;">
                     <button @click="photosInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Sélectionner Photo</button>
                     <span style="color: #bbdefb; font-size: 0.9em;">{{ selectedPhotos.length }} photo(s) sélectionnée(s)</span>
                   </div>
@@ -902,8 +893,97 @@
           <button class="validate-btn" @click="submitForm" :class="{ 'disabled': !canAddDocuments || isCompressingVideo || isCreatingDocument }" :disabled="!canAddDocuments || isCompressingVideo || isCreatingDocument">
             <span v-if="isCompressingVideo">Compression en cours...</span>
             <span v-else-if="isCreatingDocument">{{ creationProgress || 'Création en cours...' }}</span>
-            <span v-else>Ajouter Document</span>
+            <span v-else>Valider Document</span>
           </button>
+        </div>
+      </div>
+
+      <!-- Structure mode consulter content in sidebar -->
+      <div v-if="showStructureConsulterContent" class="sidebar-content modal-section">
+        <div class="sidebar-header">
+          <h3>Consulter Documents - Structure</h3>
+          <button @click="closeStructureConsulterContent" class="close-btn">&times;</button>
+        </div>
+        <div class="sidebar-body">
+          <div v-if="loadingDocs" class="loading">Chargement...</div>
+          <div v-else>
+            <div v-if="docModalError" class="error">{{ docModalError }}</div>
+            <div class="section">
+              <h4>Documents existants</h4>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Rechercher un document..." 
+                class="search-input-sidebar"
+              />
+              <div class="table-container">
+                <table v-if="filteredDocList.length" class="sidebar-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Fichier PDF</th>
+                      <th v-if="isPiecesGraphiques">Fichiers source</th>
+                      <th>Vidéo</th>
+                      <th>Images</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="document in filteredDocList" :key="document.idDocument">
+                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td>
+                        <div v-if="document.nomFichier" class="document-actions">
+                          <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>Consulter</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                        <td v-if="isPiecesGraphiques">
+                        <button v-if="document.plan && isPiecesGraphiques" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canAccessPlans">
+                          💾 Télécharger
+                        </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <div v-if="document.video" class="document-actions">
+                          <button @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>▶️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <div v-if="document.nomPhotos" class="document-actions">
+                          <button @click="viewDocument(document, 'photos')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>🖼️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else-if="!docList.length" class="no-data">
+                  Aucun document trouvé pour l'arborescence sélectionnée.
+                </div>
+                <div v-else class="no-data">
+                  Aucun document trouvé pour "{{ searchQuery }}".
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1237,8 +1317,8 @@
       <PdfViewer
         v-if="selectedDocument.fichier && getFileType(selectedDocument) === 'pdf'"
         :pdfUrl="selectedDocument.fichier"
-        :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
-        :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
+        :canDownload="canDownload"
+        :canPrint="canPrint"
         :documentId="selectedDocument.idDocument"
         @download="handleDownloadAction"
         @print="handlePrintAction"
@@ -1248,8 +1328,8 @@
       <ImageViewer
         v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'"
         :imageUrl="selectedDocument.fichier"
-        :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
-        :canPrint="userStore.user.value?.profil === 2 || userStore.user.value?.impression || false"
+        :canDownload="canDownload"
+        :canPrint="canPrint"
         :documentId="selectedDocument.idDocument"
         @download="handleDownloadAction"
         @print="handlePrintAction"
@@ -1259,7 +1339,7 @@
       <VideoViewer
         v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'"
         :videoUrl="selectedDocument.fichier"
-        :canDownload="userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false"
+        :canDownload="canDownload"
         :documentId="selectedDocument.idDocument"
         @download="handleDownloadAction"
       />
@@ -1351,7 +1431,7 @@
               </label>
               <label v-if="documentToDelete?.plan" class="file-checkbox">
                 <input type="checkbox" v-model="filesToDelete.plan">
-                <span>Plan</span>
+                <span>Fichiers source</span>
               </label>
               <label v-if="documentToDelete?.video" class="file-checkbox">
                 <input type="checkbox" v-model="filesToDelete.video">
@@ -1448,7 +1528,7 @@
               </div>
             </div>
             
-            <div class="form-group">
+            <div class="form-group" v-if="isPiecesGraphiques">
               <label>Plan (Fichiers ZIP)</label>
               <div class="current-file-info" v-if="documentToUpdate?.plan">
                 <span>Actuel: {{ getFileName(documentToUpdate.plan) }}</span>
@@ -1497,7 +1577,7 @@
     <div v-if="showImportPlanModal" class="import-plan-modal-backdrop">
       <div class="import-plan-modal">
         <div class="import-plan-modal-header">
-          <h3>Importer Plan</h3>
+          <h3>Importer Fichiers Source</h3>
           <button @click="closeImportPlanModal" class="import-plan-close">&times;</button>
         </div>
         <div class="import-plan-modal-body">
@@ -2243,7 +2323,17 @@ const canAddDocuments = computed(() => {
 
 // Computed property to check if user can download files
 const canDownload = computed(() => {
-  return userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false
+  return userStore.canDownloadDocuments.value
+})
+
+// Computed property to check if user can print documents
+const canPrint = computed(() => {
+  return userStore.canPrintDocuments.value
+})
+
+// Computed property to check if user can access plans
+const canAccessPlans = computed(() => {
+  return userStore.canAccessPlans.value
 })
 
 // Computed property to check if user can delete documents
@@ -3074,8 +3164,8 @@ const filteredContextConsulterItems = computed(() => {
 });
 
 // Resizable panels functionality
-const leftPanelWidth = ref(35); // percentage
-const defaultPanelWidth = 35; // default percentage
+const leftPanelWidth = ref(36); // percentage
+const defaultPanelWidth = 36; // default percentage
 const isResizing = ref(false);
 
 function startResize(e: MouseEvent) {
@@ -4655,6 +4745,66 @@ async function viewDocument(document: Document, fileType: 'fichier' | 'video' | 
   }
 }
 
+// Function to handle file downloads with permission checks
+async function downloadFile(document: any, fileType: 'plan' | 'fichier' | 'video' | 'photos') {
+  if (fileType === 'plan') {
+    // Use the specific plan download function
+    await downloadPlan(document)
+    return
+  }
+  
+  if ((fileType === 'fichier' || fileType === 'video' || fileType === 'photos') && !canDownload.value) {
+    showToast('Vous n\'avez pas l\'autorisation de télécharger des fichiers', 'error')
+    return
+  }
+  
+  try {
+    await logUserAction(document.idDocument, LOG_ACTIONS.DOWNLOAD_FILE)
+    const a = document.createElement('a')
+    a.href = `http://10.10.150.75:8000/api/documents/download-${fileType}/${document.idDocument}/`
+    a.download = `${fileType}_${document.idDocument}`
+    a.click()
+    showToast('Téléchargement démarré', 'success')
+  } catch (error) {
+    showToast('Erreur lors du téléchargement', 'error')
+  }
+}
+
+// Download plan function (same as Documents.vue)
+async function downloadPlan(doc: any) {
+  if (!doc.plan || !canAccessPlans.value) {
+    console.warn('Plan download not allowed: missing plan or insufficient permissions')
+    showToast('Vous n\'avez pas l\'autorisation d\'accéder aux plans', 'error')
+    return
+  }
+  
+  try {
+    // Log the download action
+    await logUserAction(doc.idDocument, LOG_ACTIONS.DOWNLOAD_FILE)
+    
+    const response = await fetch(doc.plan)
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `plan-${doc.idDocument}.zip`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    
+    URL.revokeObjectURL(url)
+    showToast('Téléchargement du plan démarré', 'success')
+  } catch (error) {
+    console.error('Plan download failed:', error)
+    showToast('Erreur lors du téléchargement du plan', 'error')
+  }
+}
+
+
+
+
+
 function cancelDocumentView(documentId: number) {
   const controller = documentAbortControllers.value[documentId]
   if (controller) {
@@ -5173,51 +5323,18 @@ function getDocumentType(document: any): string {
 
 
 
-async function downloadFile(doc: any, fileType: 'fichier' | 'video' | 'plan' = 'fichier') {
-  if (!canDownload.value) {
-    showToast('Vous n\'avez pas les permissions pour télécharger', 'error')
-    return
-  }
-  
-  const fileUrl = doc[fileType]
-  if (!fileUrl) return
-  
-  try {
-    // Log the download action
-    await logUserAction(doc.idDocument, LOG_ACTIONS.DOWNLOAD)
-    
-    showToast('Téléchargement en cours...', 'success')
-    // Use the full URL directly since it already contains the base URL
-    const response = await fetch(fileUrl)
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
-    
-    const a = document.createElement('a')
-    a.href = url
-    const extension = fileType === 'plan' ? '.zip' : fileType === 'video' ? '.mp4' : '.pdf'
-    a.download = `${doc.designation || 'document'}-${doc.idDocument}${extension}`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    
-    URL.revokeObjectURL(url)
-    showToast('Téléchargement terminé', 'success')
-  } catch (error) {
-    console.error('Download failed:', error)
-    showToast('Erreur lors du téléchargement', 'error')
-  }
-}
+
 
 
 
 // Handle download action from viewer components
 async function handleDownloadAction(documentId: number) {
-  await logUserAction(documentId, LOG_ACTIONS.DOWNLOAD)
+  await logUserAction(documentId, LOG_ACTIONS.DOWNLOAD_FILE)
 }
 
 // Handle print action from viewer components
 async function handlePrintAction(documentId: number) {
-  await logUserAction(documentId, LOG_ACTIONS.PRINT)
+  await logUserAction(documentId, LOG_ACTIONS.PRINT_FILE)
 }
 
 function closeDocumentViewer() {
@@ -5640,6 +5757,8 @@ async function submitImportForm() {
     creationProgress.value = '';
   }
 }
+
+
 
 </script>
 

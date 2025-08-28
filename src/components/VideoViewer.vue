@@ -3,9 +3,9 @@
     <!-- Fixed action bar at the top, centered and same width as viewer -->
     <div class="action-buttons">
       <button 
+        v-if="canDownload"
         @click="downloadVideo" 
-        :class="['btn', { 'btn-disabled': !props.canDownload }]" 
-        :disabled="!props.canDownload"
+        class="btn"
         title="Télécharger"
       >
         ⬇
@@ -32,12 +32,19 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useUserStore } from '../store/userStore'
 
 const props = defineProps<{
   videoUrl: string
-  canDownload?: boolean
   documentId?: number
 }>()
+
+const userStore = useUserStore()
+
+// Check permissions directly from user store
+const canDownload = computed(() => {
+  return userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false
+})
 
 const emit = defineEmits<{
   download: [documentId: number]
@@ -64,7 +71,10 @@ function resetZoom() {
 }
 
 function downloadVideo() {
-  if (!props.canDownload) return
+  if (!canDownload.value) {
+    console.warn('Download not allowed: insufficient permissions')
+    return
+  }
 
   // Emit download event for logging
   if (props.documentId) {

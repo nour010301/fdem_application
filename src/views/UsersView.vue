@@ -60,6 +60,7 @@
               <th>Téléchargement</th>
               <th>Plan</th>
               <th>Supprimer documents</th>
+              <th>Valider documents</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -110,6 +111,7 @@
               <td>{{ user.telechargement ? 'Oui' : 'Non' }}</td>
               <td>{{ user.plan ? 'Oui' : 'Non' }}</td>
               <td>{{ user.suppression ? 'Oui' : 'Non' }}</td>
+              <td>{{ user.valide ? 'Oui' : 'Non' }}</td>
               <td class="actions-cell">
                 <button @click="editUser(user)" class="btn-icon btn-edit">
                   <i class="fas fa-edit"></i>
@@ -402,6 +404,14 @@
                   >
                   <label for="suppression">Autoriser la suppression des documents</label>
                 </div>
+                <div class="checkbox-item">
+                  <input 
+                    type="checkbox" 
+                    id="valide" 
+                    v-model="userPermissions.valide"
+                  >
+                  <label for="valide">Autoriser la validation des documents</label>
+                </div>
               </div>
             </div>
           </div>
@@ -534,6 +544,7 @@ interface User {
   is_active?: boolean;
   plan?: boolean;
   suppression?: boolean;
+  valide?: boolean;
 }
 
 // User management
@@ -596,7 +607,8 @@ const userPermissions = ref({
   impression: false,
   telechargement: false,
   plan: false,
-  suppression: false
+  suppression: false,
+  valide: false
 });
 
 // Validation errors
@@ -751,7 +763,8 @@ const editUser = (user: User) => {
     impression: user.impression || false,
     telechargement: user.telechargement || false,
     plan: user.plan || false,
-    suppression: user.suppression || false
+    suppression: user.suppression || false,
+    valide: user.valide || false
   };
   
   // For restricted users, start at step 0 which corresponds to step 2 (Types de produit)
@@ -818,7 +831,8 @@ const resetUserData = () => {
     impression: false,
     telechargement: false,
     plan: false,
-    suppression: false
+    suppression: false,
+    valide: false
   };
   validationErrors.value = {
     username: '',
@@ -1129,7 +1143,8 @@ const updateUserProductsAndTypes = async (userId: number) => {
       impression: userPermissions.value.impression,
       telechargement: userPermissions.value.telechargement,
       plan: userPermissions.value.plan,
-      suppression: userPermissions.value.suppression
+      suppression: userPermissions.value.suppression,
+      valide: userPermissions.value.valide
     });
     
     if (response.status === 200 || response.status === 201) {

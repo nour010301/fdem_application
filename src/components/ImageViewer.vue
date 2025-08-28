@@ -3,17 +3,17 @@
     <!-- Fixed action bar at the top, centered and same width as viewer -->
     <div class="action-buttons">
       <button 
+        v-if="canDownload"
         @click="downloadImage" 
-        :class="['btn', { 'btn-disabled': !props.canDownload }]" 
-        :disabled="!props.canDownload"
+        class="btn"
         title="Télécharger"
       >
         ⬇
       </button>
       <button 
+        v-if="canPrint"
         @click="printImage" 
-        :class="['btn', { 'btn-disabled': !props.canPrint }]" 
-        :disabled="!props.canPrint"
+        class="btn"
         title="Imprimer"
       >
         🖨
@@ -40,13 +40,23 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useUserStore } from '../store/userStore'
 
 const props = defineProps<{
   imageUrl: string
-  canDownload?: boolean
-  canPrint?: boolean
   documentId?: number
 }>()
+
+const userStore = useUserStore()
+
+// Check permissions directly from user store
+const canDownload = computed(() => {
+  return userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false
+})
+
+const canPrint = computed(() => {
+  return userStore.user.value?.profil === 2 || userStore.user.value?.impression || false
+})
 
 const emit = defineEmits<{
   download: [documentId: number]
@@ -84,7 +94,10 @@ function rotateRight() {
 }
 
 function downloadImage() {
-  if (!props.canDownload) return
+  if (!canDownload.value) {
+    console.warn('Download not allowed: insufficient permissions')
+    return
+  }
 
   // Emit download event for logging
   if (props.documentId) {
@@ -98,7 +111,10 @@ function downloadImage() {
 }
 
 function printImage() {
-  if (!props.canPrint) return
+  if (!canPrint.value) {
+    console.warn('Print not allowed: insufficient permissions')
+    return
+  }
 
   // Emit print event for logging
   if (props.documentId) {

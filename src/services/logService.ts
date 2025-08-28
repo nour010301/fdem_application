@@ -15,7 +15,7 @@ export const logUserAction = async (idDocument: number, action: string): Promise
 
 export const LOG_ACTIONS = {
   CONSULT_FILE: 'Consult_FILE',
-  DOWNLOAD: 'Telecharger',
+  DOWNLOAD_FILE: 'Telecharger',
   DELETE: 'Supprimer',
-  PRINT: 'Imprimer'
+  PRINT_FILE: 'Imprimer'
 } as const

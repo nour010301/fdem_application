@@ -3,17 +3,17 @@
     <!-- Fixed action bar at the top, centered and same width as viewer -->
     <div class="action-buttons">
       <button 
+        v-if="canDownload"
         @click="downloadPdf" 
-        :class="['btn', { 'btn-disabled': !props.canDownload }]" 
-        :disabled="!props.canDownload"
+        class="btn"
         title="Télécharger"
       >
         ⬇
       </button>
       <button 
+        v-if="canPrint"
         @click="printPdf" 
-        :class="['btn', { 'btn-disabled': !props.canPrint }]" 
-        :disabled="!props.canPrint"
+        class="btn"
         title="Imprimer"
       >
         🖨
@@ -39,10 +39,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, onBeforeUnmount } from 'vue'
+import { onMounted, ref, onBeforeUnmount, computed } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import type { ComponentPublicInstance } from 'vue'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
+import { useUserStore } from '../store/userStore'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
@@ -56,10 +57,19 @@ function setCanvasRef(el: Element | ComponentPublicInstance | null, index: numbe
 
 const props = defineProps<{
   pdfUrl: string
-  canDownload?: boolean
-  canPrint?: boolean
   documentId?: number
 }>()
+
+const userStore = useUserStore()
+
+// Check permissions directly from user store
+const canDownload = computed(() => {
+  return userStore.user.value?.profil === 2 || userStore.user.value?.telechargement || false
+})
+
+const canPrint = computed(() => {
+  return userStore.user.value?.profil === 2 || userStore.user.value?.impression || false
+})
 
 const emit = defineEmits<{
   download: [documentId: number]
@@ -155,7 +165,10 @@ onBeforeUnmount(() => {
 })
 
 function downloadPdf() {
-  if (!pdfData.value || !props.canDownload) return
+  if (!pdfData.value || !canDownload.value) {
+    console.warn('Download not allowed: missing data or insufficient permissions')
+    return
+  }
 
   // Emit download event for logging
   if (props.documentId) {
@@ -174,7 +187,10 @@ function downloadPdf() {
 }
 
 function printPdf() {
-  if (!pdfData.value || !props.canPrint) return
+  if (!pdfData.value || !canPrint.value) {
+    console.warn('Print not allowed: missing data or insufficient permissions')
+    return
+  }
 
   // Emit print event for logging
   if (props.documentId) {

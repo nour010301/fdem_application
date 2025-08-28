@@ -3,18 +3,17 @@
     <!-- Fixed action bar at the top -->
     <div class="action-buttons">
       <button 
+        v-if="canDownload"
         @click="downloadFile" 
-        :class="['btn', { 'btn-disabled': !canDownload }]" 
-        :disabled="!canDownload"
+        class="btn"
         title="Télécharger"
       >
         ⬇
       </button>
       <button 
-        v-if="fileType === 'pdf' || fileType === 'image'"
+        v-if="(fileType === 'pdf' || fileType === 'image') && canPrint"
         @click="printFile" 
-        :class="['btn', { 'btn-disabled': !canPrint }]" 
-        :disabled="!canPrint"
+        class="btn"
         title="Imprimer"
       >
         🖨
@@ -108,18 +107,21 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, withDefaults } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import type { ComponentPublicInstance } from 'vue'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   fileUrl: string
   canDownload?: boolean
   canPrint?: boolean
-}>()
+}>(), {
+  canDownload: false,
+  canPrint: false
+})
 
 const canvasRefs = ref<(HTMLCanvasElement | null)[]>([])
 const numPages = ref(0)
