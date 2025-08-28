@@ -95,10 +95,10 @@
           <th>Subdivision 3</th>
           <th v-if="canSeeCreatedBy">Créé par</th>
           <th>Fichier</th>
-          <th>Vidéo</th>
           <th>Plan</th>
+          <th>Vidéo</th>
           <th>Photos</th>
-          <th>Actions</th>
+          <!-- <th>Actions</th> -->
         </tr>
         </thead>
         <tbody>
@@ -125,6 +125,12 @@
               </div>
               <span v-else class="no-file">—</span>
             </td>
+             <td>
+              <button v-if="document.plan" @click="downloadPlan(document)" class="file-btn" :disabled="!canDownloadPlan" title="Télécharger plan">
+                Télécharger
+              </button>
+              <span v-else class="no-file">—</span>
+            </td>
             <td>
               <div v-if="document.video" class="document-actions">
                 <button @click="viewDocument(document, 'video')" class="file-btn" :disabled="loadingConsulter" title="Voir vidéo">
@@ -135,12 +141,6 @@
                   ✕
                 </button>
               </div>
-              <span v-else class="no-file">—</span>
-            </td>
-            <td>
-              <button v-if="document.plan" @click="downloadPlan(document)" class="file-btn" :disabled="!canDownloadPlan" title="Télécharger plan">
-                Télécharger
-              </button>
               <span v-else class="no-file">—</span>
             </td>
             <td>
@@ -155,7 +155,7 @@
               </div>
               <span v-else class="no-file">—</span>
             </td>
-            <td class="action-buttons">
+            <!-- <td class="action-buttons">
               <button 
                 v-if="canDeleteDocuments" 
                 class="action-btn delete-btn" 
@@ -170,7 +170,7 @@
               <button class="action-btn move-btn" @click="confirmMove(document)" :disabled="!canAddDocuments" title="Déplacer">
                 ↗
               </button>
-            </td>
+            </td> -->
           </tr>
         </tbody>
       </table>
@@ -472,9 +472,9 @@ const userStore = useUserStore()
 
 // Computed property to check if user can access "ajouter" buttons
 // Users with CONSULTATION profile (3) can only consult, not add
-const canAddDocuments = computed(() => {
-  return userStore.userRole.value !== userStore.ROLES.CONSULTATION
-})
+// const canAddDocuments = computed(() => {
+//   return userStore.userRole.value !== userStore.ROLES.CONSULTATION
+// })
 
 // Computed property to check if user can see "Créé par" column
 // Only ADMIN_INFORMATIQUE (profile 2) can see this column
@@ -490,9 +490,9 @@ const canDownloadPlan = computed(() => {
 
 // Computed property to check if user can delete documents
 // Only users with suppression permission can delete documents
-const canDeleteDocuments = computed(() => {
-  return userStore.user.value?.suppression || false
-})
+// const canDeleteDocuments = computed(() => {
+//   return userStore.user.value?.suppression || false
+// })
 
 
 
@@ -824,7 +824,7 @@ async function fetchDocuments() {
     loading.value = false
   }
 }
- function confirmDelete(document: Document) { documentToDelete.value = document }
+//  function confirmDelete(document: Document) { documentToDelete.value = document }
 async function deleteDocument() {
   if (!documentToDelete.value) return
   try {
@@ -921,29 +921,29 @@ function cancelDocumentView(documentId: number) {
   }
 }
 
-function confirmUpdate(document: Document) {
-  documentToUpdate.value = { ...document }
-  selectedFile.value = null
-  multipleImages.value = []
-  showImageToPdfOption.value = false
-}
+// function confirmUpdate(document: Document) {
+//   documentToUpdate.value = { ...document }
+//   selectedFile.value = null
+//   multipleImages.value = []
+//   showImageToPdfOption.value = false
+// }
 
 function getFileName(filePath: string): string {
   if (!filePath) return 'Aucun fichier'
   return filePath.split('/').pop() || filePath
 }
 
-function confirmMove(document: Document) {
-  documentToMove.value = { 
-    ...document,
-    // Ensure all subdivision properties exist
-    idSubDivisionNv_1: document.idSubDivisionNv_1 || null,
-    idSubDivisionNv_2: document.idSubDivisionNv_2 || null,
-    idSubDivisionNv_3: document.idSubDivisionNv_3 || null,
-    idSubDivisionNv_4: document.idSubDivisionNv_4 || null
-  }
-  console.log('Initialized documentToMove:', documentToMove.value)
-}
+// function confirmMove(document: Document) {
+//   documentToMove.value = { 
+//     ...document,
+//     // Ensure all subdivision properties exist
+//     idSubDivisionNv_1: document.idSubDivisionNv_1 || null,
+//     idSubDivisionNv_2: document.idSubDivisionNv_2 || null,
+//     idSubDivisionNv_3: document.idSubDivisionNv_3 || null,
+//     idSubDivisionNv_4: document.idSubDivisionNv_4 || null
+//   }
+//   console.log('Initialized documentToMove:', documentToMove.value)
+// }
 
 function onFileSelect(event: Event) {
   const target = event.target as HTMLInputElement

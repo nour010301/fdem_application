@@ -103,7 +103,7 @@
         </p>
 
         <div
-          class="button-group"
+          class="button-group responsive-buttons"
           v-if="isSubDivAllowed && (
             (requiresSubDiv2 && selectedSubDiv2Id && filteredSubDiv3List.length === 0) ||
             (!requiresSubDiv2 && selectedDivisionId) ||
@@ -122,6 +122,10 @@
           <button class="mise-a-jour-btn" type="button" @click="showMiseAJourMessage" :disabled="loadingConsulter">
             <span v-if="loadingConsulter">Chargement en cours...</span>
             <span v-else>Mise à jour</span>
+          </button>
+          <button class="import-dossier-btn" type="button" @click="showImportDossierMessage" :disabled="loadingConsulter">
+            <span v-if="loadingConsulter">Chargement en cours...</span>
+            <span v-else>Importer Dossier Source</span>
           </button>
           <button v-if="canDeleteDocuments" class="delete-btn" type="button" @click="showDeleteMessage" :disabled="loadingConsulter">
             <span v-if="loadingConsulter">Chargement en cours...</span>
@@ -163,7 +167,7 @@
 
     <!-- Resizable divider -->
     <div 
-      v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode"
+      v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode || showImportDossierMode"
       class="resize-divider"
       @mousedown="startResize"
     >
@@ -171,7 +175,7 @@
     </div>
 
     <!-- Right sidebar for context and structure modes -->
-    <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode">
+    <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode || showImportDossierMode">
 
       <!-- Success Message in Sidebar -->
       <!-- <div v-if="showSuccess" class="success-message-sidebar">
@@ -276,6 +280,72 @@
         </div>
       </div>
 
+      <!-- Import Dossier content in sidebar -->
+      <div v-if="showImportDossierMode" class="sidebar-content modal-section">
+        <div class="sidebar-header">
+          <h3>Importer Dossier Source</h3>
+          <button @click="showImportDossierMode = false" class="close-btn">&times;</button>
+        </div>
+        <div class="sidebar-body">
+          <div v-if="loadingDocs" class="loading">Chargement...</div>
+          <div v-else>
+            <div v-if="docModalError" class="error">{{ docModalError }}</div>
+            <div class="section">
+              <h4>Documents existants</h4>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Rechercher un document..." 
+                class="search-input-sidebar"
+              />
+              <div class="table-container">
+                <table v-if="filteredDocList.length" class="sidebar-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Fichier</th>
+                      <th>Plan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="document in filteredDocList" :key="document.idDocument">
+                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td>
+                        <div v-if="document.nomFichier" class="document-actions">
+                          <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>Consulter</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
+                          💾 Télécharger
+                        </button>
+                        <button v-else-if="document.nomFichier && !document.plan" @click="openImportPlanModal(document)" class="action-btn import-btn" :disabled="!canAddDocuments">
+                          📁 Importer
+                        </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else-if="!docList.length" class="no-data">
+                  Aucun document trouvé pour l'arborescence sélectionnée.
+                </div>
+                <div v-else class="no-data">
+                  Aucun document trouvé pour "{{ searchQuery }}".
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Mise à jour content in sidebar -->
       <div v-if="showMiseAJourMode" class="sidebar-content modal-section">
         <div class="sidebar-header">
@@ -325,9 +395,10 @@
                         <button v-if="document.plan" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canDownload">
                           💾 Télécharger
                         </button>
-                        <button v-else @click="openImportPlanModal(document)" class="action-btn import-btn" :disabled="!canAddDocuments">
+                        <button v-else-if="document.nomFichier && !document.plan" @click="openImportPlanModal(document)" class="action-btn import-btn" :disabled="!canAddDocuments">
                           📁 Importer
                         </button>
+                        <span v-else class="no-file">-</span>
                       </td>
                       <td>
                         <div v-if="document.video" class="document-actions">
@@ -1423,34 +1494,36 @@
     </div>
 
     <!-- Import Plan Modal -->
-    <div v-if="showImportPlanModal" class="doc-modal-backdrop">
-      <div class="doc-modal">
-        <div class="doc-modal-header">
-          <h3>Importer Plan en Format Source</h3>
-          <button @click="closeImportPlanModal" class="close-modal">&times;</button>
+    <div v-if="showImportPlanModal" class="import-plan-modal-backdrop">
+      <div class="import-plan-modal">
+        <div class="import-plan-modal-header">
+          <h3>Importer Plan</h3>
+          <button @click="closeImportPlanModal" class="import-plan-close">&times;</button>
         </div>
-        <div class="doc-modal-body">
-          <div class="step">
-            <label>Ajouter des fichiers (plans)</label>
-            <div style="display: flex; gap: 1em; align-items: center; margin-bottom: 1em;">
-              <input ref="planImportInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addPlanImportFile" style="display: none;" />
-              <button @click="planImportInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Ajouter Fichier</button>
-              <span style="color: #bbdefb; font-size: 0.9em;">{{ planImportFiles.length }} fichier(s) sélectionné(s)</span>
+        <div class="import-plan-modal-body">
+          <div class="import-plan-step">
+            <label>Sélectionner un dossier:</label>
+            <div class="import-plan-upload">
+              <input ref="planImportInput" type="file" webkitdirectory @change="addPlanImportFolder" style="display: none;" />
+              <button @click="planImportInput?.click()" class="import-plan-btn">
+                📁 Choisir Dossier
+              </button>
+              <span class="import-plan-count">{{ planImportFiles.length }} fichier(s)</span>
             </div>
-            <div v-if="planImportFiles.length > 0" class="files-preview">
-              <h4>Fichiers sélectionnés ({{ planImportFiles.length }}):</h4>
-              <div class="file-list">
-                <div v-for="(file, index) in planImportFiles" :key="index" class="file-item">
-                  <span>{{ file.name }}</span>
-                  <button @click="removePlanImportFile(index)" type="button" class="remove-file" title="Retirer ce fichier">Retirer</button>
-                </div>
+            <div v-if="planImportFiles.length > 0" class="import-plan-files">
+              <div class="import-plan-file" v-for="(file, index) in planImportFiles.slice(0, 3)" :key="index">
+                {{ file.name }}
+              </div>
+              <div v-if="planImportFiles.length > 3" class="import-plan-more">
+                +{{ planImportFiles.length - 3 }} autres fichiers
               </div>
             </div>
           </div>
-          <div class="doc-modal-footer" style="text-align:right; margin-top:1em;">
-            <button class="save-btn" @click="submitPlanImport" :disabled="!planImportFiles.length || isUploadingPlan" style="font-size:1em;">
-              <span v-if="isUploadingPlan">Importation en cours...</span>
-              <span v-else>Importer Plan</span>
+          <div class="import-plan-footer">
+            <button @click="closeImportPlanModal" class="import-plan-cancel">Annuler</button>
+            <button @click="submitPlanImport" :disabled="!planImportFiles.length || isUploadingPlan" class="import-plan-submit">
+              <span v-if="isUploadingPlan">Importation...</span>
+              <span v-else>Importer</span>
             </button>
           </div>
         </div>
@@ -1868,6 +1941,235 @@
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* Import Plan Modal Styles */
+.import-plan-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.import-plan-modal {
+  background: white;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  color: #333;
+}
+
+.import-plan-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.import-plan-modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.import-plan-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.import-plan-close:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.import-plan-modal-body {
+  padding: 20px;
+}
+
+.import-plan-step label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 500;
+}
+
+.import-plan-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.import-plan-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.import-plan-btn:hover {
+  background: #0056b3;
+}
+
+.import-plan-count {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.import-plan-files {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 12px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.import-plan-file {
+  color: #333;
+  font-size: 0.85rem;
+  padding: 2px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.import-plan-file:last-child {
+  border-bottom: none;
+}
+
+.import-plan-more {
+  color: #666;
+  font-size: 0.8rem;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.import-plan-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.import-plan-cancel {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.import-plan-cancel:hover {
+  background: #545b62;
+}
+
+.import-plan-submit {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.import-plan-submit:hover:not(:disabled) {
+  background: #218838;
+}
+
+.import-plan-submit:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Import Dossier Source Button */
+.import-dossier-btn {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.import-dossier-btn:hover {
+  background: linear-gradient(135deg, #f7931e 0%, #ff6b35 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+}
+
+.import-dossier-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Responsive Button Group */
+.responsive-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.responsive-buttons button {
+  padding: 8px 16px !important;
+  font-size: 0.85rem !important;
+  min-width: 120px;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  max-width: 200px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .responsive-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .responsive-buttons button {
+    width: 100%;
+    max-width: none;
+    min-width: auto;
+    padding: 10px 12px !important;
+    font-size: 0.8rem !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .responsive-buttons button {
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+    min-width: 100px;
+  }
 }
 </style>
 
@@ -2702,6 +3004,7 @@ const showStructureConsulterContent = ref(false);
 const showSuccess = ref(false);
 const showDeleteMode = ref(false);
 const showMiseAJourMode = ref(false);
+const showImportDossierMode = ref(false);
 const loadingConsulter = ref(false);
 const consulterAbortController = ref<AbortController | null>(null);
 
@@ -3731,6 +4034,7 @@ async function showSuccessMessage() {
   showStructureDocContent.value = false; // Close ajouter content
   showDeleteMode.value = false; // Close delete mode
   showMiseAJourMode.value = false; // Close mise à jour mode
+  showImportDossierMode.value = false; // Close import dossier mode
   showSuccess.value = true;
   
   // Create abort controller for this request
@@ -3759,6 +4063,7 @@ async function showMiseAJourMessage() {
   showStructureDocContent.value = false; // Close ajouter content
   showSuccess.value = false; // Close consulter mode
   showDeleteMode.value = false; // Close delete mode
+  showImportDossierMode.value = false; // Close import dossier mode
   showMiseAJourMode.value = true;
   
   // Create abort controller for this request
@@ -3779,6 +4084,35 @@ async function showMiseAJourMessage() {
   }
 }
 
+// IMPORT DOSSIER MESSAGE FUNCTION
+async function showImportDossierMessage() {
+  if (loadingConsulter.value) return; // Prevent multiple clicks
+  
+  loadingConsulter.value = true;
+  showStructureDocContent.value = false; // Close ajouter content
+  showSuccess.value = false; // Close consulter mode
+  showDeleteMode.value = false; // Close delete mode
+  showMiseAJourMode.value = false; // Close mise à jour mode
+  showImportDossierMode.value = true;
+  
+  // Create abort controller for this request
+  consulterAbortController.value = new AbortController();
+  
+  try {
+    await fetchDocListForCurrentSelection();
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      showToast('Chargement annulé', 'error');
+      showImportDossierMode.value = false;
+    } else {
+      console.error('Error in showImportDossierMessage:', error);
+    }
+  } finally {
+    loadingConsulter.value = false;
+    consulterAbortController.value = null;
+  }
+}
+
 // DELETE MESSAGE FUNCTION
 async function showDeleteMessage() {
   if (loadingConsulter.value) return; // Prevent multiple clicks
@@ -3787,6 +4121,7 @@ async function showDeleteMessage() {
   showStructureDocContent.value = false; // Close ajouter content
   showSuccess.value = false; // Close consulter mode
   showMiseAJourMode.value = false; // Close mise à jour mode
+  showImportDossierMode.value = false; // Close import dossier mode
   showDeleteMode.value = true;
   
   // Create abort controller for this request
@@ -3895,11 +4230,7 @@ const filesToDelete = ref({
   photos: false
 });
 
-// Computed properties for delete modal
-const hasSelectableFiles = computed(() => {
-  if (!documentToDelete.value) return false;
-  return !!(documentToDelete.value.fichier || documentToDelete.value.plan || documentToDelete.value.video || documentToDelete.value.nomPhotos);
-});
+
 
 const hasSelectedFiles = computed(() => {
   return filesToDelete.value.fichier || filesToDelete.value.plan || filesToDelete.value.video || filesToDelete.value.photos;
@@ -4171,20 +4502,6 @@ async function viewFicheTechnique(entityKey: string, item: any) {
 // Open delete modal function
 function openDeleteModal(document: any) {
   documentToDelete.value = document;
-  showDeleteConfirmModal.value = true;
-}
-
-// Confirm delete document function for the new delete mode
-function confirmDeleteDocument(document: any) {
-  documentToDelete.value = document;
-  deleteMode.value = 'full';
-  // Reset file selection
-  filesToDelete.value = {
-    fichier: false,
-    plan: false,
-    video: false,
-    photos: false
-  };
   showDeleteConfirmModal.value = true;
 }
 
@@ -4917,6 +5234,7 @@ function clearAllSidebarContent() {
   showSuccess.value = false
   showDeleteMode.value = false
   showMiseAJourMode.value = false
+  showImportDossierMode.value = false
   showConsulterPanel.value = false
   showStructureConsulterContent.value = false
   showDocModal.value = false
@@ -5015,17 +5333,11 @@ function closeImportPlanModal() {
   isUploadingPlan.value = false
 }
 
-function addPlanImportFile(e: Event) {
+function addPlanImportFolder(e: Event) {
   const files = (e.target as HTMLInputElement).files
   if (files && files.length > 0) {
-    const newFile = files[0]
-    planImportFiles.value = [...planImportFiles.value, newFile]
-    ;(e.target as HTMLInputElement).value = ''
+    planImportFiles.value = Array.from(files)
   }
-}
-
-function removePlanImportFile(index: number) {
-  planImportFiles.value.splice(index, 1)
 }
 
 async function submitPlanImport() {
