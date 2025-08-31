@@ -98,6 +98,7 @@
           <th>Plan</th>
           <th>Vidéo</th>
           <th>Photos</th>
+          <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
           <!-- <th>Actions</th> -->
         </tr>
         </thead>
@@ -154,6 +155,10 @@
                 </button>
               </div>
               <span v-else class="no-file">—</span>
+            </td>
+            <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
+              <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
+              <span v-else class="valide-status invalid">Non valide</span>
             </td>
             <!-- <td class="action-buttons">
               <button 
@@ -2218,6 +2223,29 @@ h1 {
 .cancel-doc-btn:hover {
   background: #d32f2f !important;
   transform: scale(1.1);
+}
+
+/* Validation Status Styles */
+.valide-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  display: inline-block;
+  min-width: 80px;
+}
+
+.valide-status.valid {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.valide-status.invalid {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
 }
 
 /* Responsive design */

@@ -131,6 +131,10 @@
             <span v-if="loadingConsulter">Chargement en cours...</span>
             <span v-else>Supprimer</span>
           </button>
+          <button v-if="canValidateDocuments" class="validate-documents-btn" type="button" @click="showValidationMessage" :disabled="loadingConsulter">
+            <span v-if="loadingConsulter">Chargement en cours...</span>
+            <span v-else>Valider Document</span>
+          </button>
           <button v-if="loadingConsulter" class="cancel-btn" type="button" @click="cancelConsulter">
             Annuler
           </button>
@@ -167,7 +171,7 @@
 
     <!-- Resizable divider -->
     <div 
-      v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode || showImportDossierMode"
+      v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode || showImportDossierMode || showValidationMode"
       class="resize-divider"
       @mousedown="startResize"
     >
@@ -175,7 +179,7 @@
     </div>
 
     <!-- Right sidebar for context and structure modes -->
-    <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode || showImportDossierMode">
+    <aside class="doc-sidebar" v-show="mode === 'contexte' || showStructureDocContent || showStructureConsulterContent || showConsulterPanel || showSuccess || showDeleteMode || showMiseAJourMode || showImportDossierMode || showValidationMode">
 
       <!-- Success Message in Sidebar -->
       <!-- <div v-if="showSuccess" class="success-message-sidebar">
@@ -209,6 +213,7 @@
                       <th v-if="isPiecesGraphiques">Fichiers source</th>
                       <th>Vidéo</th>
                       <th>Images</th>
+                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -256,6 +261,10 @@
                         </div>
                         <span v-else class="no-file">-</span>
                       </td>
+                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
+                        <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
+                        <span v-else class="valide-status invalid">Non valide</span>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -296,6 +305,7 @@
                       <th>Description</th>
                       <th>Fichier PDF</th>
                       <th>Fichiers source</th>
+                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -321,6 +331,10 @@
                           📁 Importer
                         </button>
                         <span v-else class="no-file">-</span>
+                      </td>
+                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
+                        <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
+                        <span v-else class="valide-status invalid">Non valide</span>
                       </td>
                     </tr>
                   </tbody>
@@ -364,6 +378,7 @@
                       <th v-if="isPiecesGraphiques">Fichiers source</th>
                       <th>Vidéo</th>
                       <th>Images</th>
+                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -415,6 +430,10 @@
                         </div>
                         <span v-else class="no-file">-</span>
                       </td>
+                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
+                        <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
+                        <span v-else class="valide-status invalid">Non valide</span>
+                      </td>
                       <td class="action-buttons">
                         <button class="action-btn update-btn" @click="confirmUpdate(document)" :disabled="!canAddDocuments" title="Modifier">
                           ✎
@@ -431,6 +450,102 @@
                 </div>
                 <div v-else class="no-data">
                   Aucun document trouvé pour "{{ searchQuery }}".
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Validation content in sidebar -->
+      <div v-if="showValidationMode" class="sidebar-content modal-section">
+        <div class="sidebar-header">
+          <h3>Valider Documents</h3>
+          <button @click="showValidationMode = false" class="close-btn">&times;</button>
+        </div>
+        <div class="sidebar-body">
+          <div v-if="loadingDocs" class="loading">Chargement...</div>
+          <div v-else>
+            <div v-if="docModalError" class="error">{{ docModalError }}</div>
+            <div class="section">
+              <h4>Documents à valider</h4>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Rechercher un document..." 
+                class="search-input-sidebar"
+              />
+              <div class="table-container">
+                <table v-if="filteredValidationDocList.length" class="sidebar-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Fichier PDF</th>
+                      <th v-if="isPiecesGraphiques">Fichiers source</th>
+                      <th>Vidéo</th>
+                      <th>Images</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="document in filteredValidationDocList" :key="document.idDocument">
+                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td>
+                        <div v-if="document.nomFichier" class="document-actions">
+                          <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>Consulter</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td v-if="isPiecesGraphiques">
+                        <button v-if="document.plan && isPiecesGraphiques" @click="downloadFile(document, 'plan')" class="action-btn download-btn" :disabled="!canAccessPlans">
+                          💾 Télécharger
+                        </button>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <div v-if="document.video" class="document-actions">
+                          <button @click="viewDocument(document, 'video')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>▶️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <div v-if="document.nomPhotos" class="document-actions">
+                          <button @click="viewDocument(document, 'photos')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
+                            <span v-if="loadingViewDocument[document.idDocument]">...</span>
+                            <span v-else>🖼️ Voir</span>
+                          </button>
+                          <button v-if="loadingViewDocument[document.idDocument]" @click="cancelDocumentView(document.idDocument)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </td>
+                      <td>
+                        <button @click="openValidationModal(document)" class="action-btn validate-btn-small" title="Valider" :disabled="validatingDocuments[document.idDocument]">
+                          <span v-if="validatingDocuments[document.idDocument]">...</span>
+                          <span v-else>✓ Valider</span>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else-if="!docList.length" class="no-data">
+                  Aucun document trouvé pour l'arborescence sélectionnée.
+                </div>
+                <div v-else class="no-data">
+                  Aucun document à valider trouvé pour "{{ searchQuery }}".
                 </div>
               </div>
             </div>
@@ -465,6 +580,7 @@
                        <th v-if="isPiecesGraphiques">Fichiers source</th>
                       <th>Vidéo</th>
                       <th>Images</th>
+                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -512,6 +628,10 @@
                           </button>
                         </div>
                         <span v-else class="no-file">-</span>
+                      </td>
+                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
+                        <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
+                        <span v-else class="valide-status invalid">Non valide</span>
                       </td>
                       <td>
                         <button @click="openDeleteModal(document)" class="action-btn delete-btn-small" title="Supprimer">
@@ -1699,6 +1819,29 @@
       </div>
     </div>
 
+    <!-- Validation Confirmation Modal -->
+    <div v-if="showValidationConfirmModal" class="doc-modal-backdrop">
+      <div class="doc-modal" style="min-width:380px;">
+        <div class="doc-modal-header">
+          <h3>Confirmation de validation</h3>
+          <button @click="closeValidationModal" class="close-modal">&times;</button>
+        </div>
+        <div class="doc-modal-body">
+          <p>Êtes-vous sûr de vouloir valider ce document ?</p>
+          <div class="document-info">
+            <strong>{{ documentToValidate?.designation || documentToValidate?.nomFichier || 'Document sans nom' }}</strong>
+          </div>
+        </div>
+        <div class="doc-modal-footer" style="text-align:right">
+          <button @click="closeValidationModal" class="view-button">Annuler</button>
+          <button @click="confirmValidation" class="save-btn" style="margin-left:0.7em;" :disabled="validatingDocument">
+            <span v-if="validatingDocument">Validation en cours...</span>
+            <span v-else>Valider</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -2210,6 +2353,82 @@
   box-shadow: none;
 }
 
+/* Validation Button Styles */
+.validate-documents-btn {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.validate-documents-btn:hover {
+  background: linear-gradient(135deg, #45a049 0%, #4caf50 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.validate-documents-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.validate-btn-small {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.validate-btn-small:hover {
+  background: linear-gradient(135deg, #45a049 0%, #4caf50 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.4);
+}
+
+.validate-btn-small:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Validation Status Styles */
+.valide-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  display: inline-block;
+  min-width: 80px;
+}
+
+.valide-status.valid {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.valide-status.invalid {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+}
+
 /* Responsive Button Group */
 .responsive-buttons {
   display: flex;
@@ -2339,6 +2558,11 @@ const canAccessPlans = computed(() => {
 // Computed property to check if user can delete documents
 const canDeleteDocuments = computed(() => {
   return userStore.user.value?.suppression || false
+})
+
+// Computed property to check if user can validate documents
+const canValidateDocuments = computed(() => {
+  return userStore.user.value?.valide || false
 })
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -2565,6 +2789,7 @@ watch([selectedSectionId, selectedDivisionId, selectedSubDiv2Id, selectedSubDiv3
   showDeleteMode.value = false
   showSuccess.value = false
   showStructureDocContent.value = false
+  showValidationMode.value = false
 })
 
 const requiresSubDiv2 = computed(() => {
@@ -3095,8 +3320,15 @@ const showSuccess = ref(false);
 const showDeleteMode = ref(false);
 const showMiseAJourMode = ref(false);
 const showImportDossierMode = ref(false);
+const showValidationMode = ref(false);
 const loadingConsulter = ref(false);
 const consulterAbortController = ref<AbortController | null>(null);
+
+// Validation modal states
+const showValidationConfirmModal = ref(false);
+const documentToValidate = ref<any>(null);
+const validatingDocument = ref(false);
+const validatingDocuments = ref<Record<number, boolean>>({});
 
 // Document to update and move states
 const documentToUpdate = ref<any>(null);
@@ -3120,14 +3352,40 @@ const searchQuery = ref('');
 const contextAjouterSearchQuery = ref('');
 const contextConsulterSearchQuery = ref('');
 
-// Computed property to filter documents based on search query
+// Computed property to filter documents based on search query and user permissions
 const filteredDocList = computed(() => {
+  let filteredDocs = docList.value;
+  
+  // Filter out documents with valide null or false for users with profile ID 3 (CONSULTATION)
+  if (userStore.userRole.value === userStore.ROLES.CONSULTATION) {
+    filteredDocs = filteredDocs.filter(doc => doc.valide === true);
+  }
+  
+  // Apply search filter if search query exists
   if (!searchQuery.value.trim()) {
-    return docList.value;
+    return filteredDocs;
   }
   
   const query = searchQuery.value.toLowerCase().trim();
-  return docList.value.filter(doc => 
+  return filteredDocs.filter(doc => 
+    (doc.designation || '').toLowerCase().includes(query) ||
+    (doc.nomFichier || '').toLowerCase().includes(query) ||
+    getDocumentType(doc).toLowerCase().includes(query) ||
+    (doc.idDocument?.toString() || '').includes(query)
+  );
+});
+
+// Computed property to filter documents for validation (only documents with valide: false)
+const filteredValidationDocList = computed(() => {
+  let filteredDocs = docList.value.filter(doc => doc.valide === false);
+  
+  // Apply search filter if search query exists
+  if (!searchQuery.value.trim()) {
+    return filteredDocs;
+  }
+  
+  const query = searchQuery.value.toLowerCase().trim();
+  return filteredDocs.filter(doc => 
     (doc.designation || '').toLowerCase().includes(query) ||
     (doc.nomFichier || '').toLowerCase().includes(query) ||
     getDocumentType(doc).toLowerCase().includes(query) ||
@@ -3590,6 +3848,9 @@ function getSelectedApiParam(entityKey: string): { produit?: number; projet?: st
 
 // Modify the onAjouter function
 async function onAjouter(entityKey: string) {
+  // Clear all sidebar content when opening ajouter
+ // clearAllSidebarContent();
+  
   // Close consulter modal if open
   contextConsulter.value.visible = false;
   
@@ -4105,6 +4366,8 @@ function openStructureDocContent() {
   showSuccess.value = false; // Close success message if open
   showDeleteMode.value = false; // Close delete mode if open
   showMiseAJourMode.value = false; // Close mise à jour mode if open
+  showImportDossierMode.value = false; // Close import dossier mode if open
+  showValidationMode.value = false; // Close validation mode if open
   showConsulterPanel.value = false; // Close NEW consulter if open
   showStructureDocContent.value = true;
   showStructureConsulterContent.value = false; // Close consulter if open
@@ -4113,6 +4376,11 @@ function openStructureDocContent() {
 
 function closeStructureDocContent() {
   showStructureDocContent.value = false;
+  docModalError.value = '';
+}
+
+function closeStructureConsulterContent() {
+  showStructureConsulterContent.value = false;
   docModalError.value = '';
 }
 
@@ -4154,6 +4422,7 @@ async function showMiseAJourMessage() {
   showSuccess.value = false; // Close consulter mode
   showDeleteMode.value = false; // Close delete mode
   showImportDossierMode.value = false; // Close import dossier mode
+  showValidationMode.value = false; // Close validation mode
   showMiseAJourMode.value = true;
   
   // Create abort controller for this request
@@ -4183,6 +4452,7 @@ async function showImportDossierMessage() {
   showSuccess.value = false; // Close consulter mode
   showDeleteMode.value = false; // Close delete mode
   showMiseAJourMode.value = false; // Close mise à jour mode
+  showValidationMode.value = false; // Close validation mode
   showImportDossierMode.value = true;
   
   // Create abort controller for this request
@@ -4212,6 +4482,7 @@ async function showDeleteMessage() {
   showSuccess.value = false; // Close consulter mode
   showMiseAJourMode.value = false; // Close mise à jour mode
   showImportDossierMode.value = false; // Close import dossier mode
+  showValidationMode.value = false; // Close validation mode
   showDeleteMode.value = true;
   
   // Create abort controller for this request
@@ -4229,6 +4500,78 @@ async function showDeleteMessage() {
   } finally {
     loadingConsulter.value = false;
     consulterAbortController.value = null;
+  }
+}
+
+// VALIDATION MESSAGE FUNCTION
+async function showValidationMessage() {
+  if (loadingConsulter.value) return; // Prevent multiple clicks
+  
+  loadingConsulter.value = true;
+  showStructureDocContent.value = false; // Close ajouter content
+  showSuccess.value = false; // Close consulter mode
+  showDeleteMode.value = false; // Close delete mode
+  showMiseAJourMode.value = false; // Close mise à jour mode
+  showImportDossierMode.value = false; // Close import dossier mode
+  showValidationMode.value = true;
+  
+  // Create abort controller for this request
+  consulterAbortController.value = new AbortController();
+  
+  try {
+    await fetchDocListForCurrentSelection();
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      showToast('Chargement annulé', 'error');
+      showValidationMode.value = false;
+    } else {
+      console.error('Error in showValidationMessage:', error);
+    }
+  } finally {
+    loadingConsulter.value = false;
+    consulterAbortController.value = null;
+  }
+}
+
+// Function to open validation confirmation modal
+function openValidationModal(document: any) {
+  documentToValidate.value = document;
+  showValidationConfirmModal.value = true;
+}
+
+// Function to close validation modal
+function closeValidationModal() {
+  showValidationConfirmModal.value = false;
+  documentToValidate.value = null;
+  validatingDocument.value = false;
+}
+
+// Function to confirm validation
+async function confirmValidation() {
+  if (!documentToValidate.value || validatingDocument.value) return;
+  
+  validatingDocument.value = true;
+  validatingDocuments.value[documentToValidate.value.idDocument] = true;
+  
+  try {
+    await axios.put(`http://10.10.150.75:8000/api/documents/create-two-file/${documentToValidate.value.idDocument}/`, {
+      valide: true
+    });
+    
+    showToast('Document validé avec succès!', 'success');
+    
+    // Refresh the document list
+    await fetchDocListForCurrentSelection();
+    
+    closeValidationModal();
+  } catch (error: any) {
+    console.error('Error validating document:', error);
+    showToast('Erreur lors de la validation du document', 'error');
+  } finally {
+    validatingDocument.value = false;
+    if (documentToValidate.value) {
+      delete validatingDocuments.value[documentToValidate.value.idDocument];
+    }
   }
 }
 
@@ -4815,6 +5158,9 @@ function cancelDocumentView(documentId: number) {
   showToast('Chargement du document annulé', 'error')
 }
 
+// Function to close document viewer
+// Duplicate functions removed - keeping the ones at the end of the file
+
 // ==== Context directors logic: string keys for TS safety ====
 // Context mode variables
 const mode = ref<'structure' | 'contexte' | ''>('')
@@ -5352,6 +5698,7 @@ function clearAllSidebarContent() {
   showDeleteMode.value = false
   showMiseAJourMode.value = false
   showImportDossierMode.value = false
+  showValidationMode.value = false
   showConsulterPanel.value = false
   showStructureConsulterContent.value = false
   showDocModal.value = false

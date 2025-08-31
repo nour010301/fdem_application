@@ -17,6 +17,7 @@ interface UserProfile {
   telechargement?: boolean
   plan?: boolean
   suppression?: boolean
+  valide?: boolean
 }
 
 const currentUser = ref<UserProfile | null>(null)
