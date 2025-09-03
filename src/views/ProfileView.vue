@@ -10,20 +10,20 @@
           <h2>Informations sur l'utilisateur</h2>
           <div class="info-grid">
             <div class="info-item">
+              <span class="info-label">Nom :</span>
+              <span class="info-value">{{ profile.nom || 'N/A' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Prénom :</span>
+              <span class="info-value">{{ profile.prenom || 'N/A' }}</span>
+            </div>
+            <div class="info-item">
               <span class="info-label">Nom d'utilisateur :</span>
               <span class="info-value">{{ profile.username }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Email :</span>
               <span class="info-value">{{ profile.email || 'N/A' }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Rôle :</span>
-              <span class="info-value">{{ profile.role }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Poste :</span>
-              <span class="info-value">{{ profile.poste }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Téléphone :</span>
@@ -34,12 +34,8 @@
               <span class="info-value">{{ profile.departement || 'N/A' }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Nom :</span>
-              <span class="info-value">{{ profile.nom || 'N/A' }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Prénom :</span>
-              <span class="info-value">{{ profile.prenom || 'N/A' }}</span>
+              <span class="info-label">Rôle :</span>
+              <span class="info-value">{{ getRoleName }}</span>
             </div>
           </div>
         </div>
@@ -65,14 +61,14 @@
 
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from '../axios';
 
 const profile = ref({
   username: '',
   email: '',
   role: '',
-  poste: '',
+  profil: null,
   telephone: null,
   departement: null,
   nom: null,
@@ -90,6 +86,21 @@ const fetchProfile = async () => {
     console.error('Error fetching profile:', error);
   }
 };
+
+const getRoleName = computed(() => {
+  switch (profile.value.profil) {
+    case 1:
+      return 'Administrateur fonctionnel';
+    case 2:
+      return 'Administrateur informatique';
+    case 3:
+      return 'Consultation';
+    case 4:
+      return 'Mise à jour';
+    default:
+      return 'N/A';
+  }
+});
 
 const changePassword = async () => {
   try {

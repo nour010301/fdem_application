@@ -13,7 +13,7 @@
       <router-link to="/profile" class="profile-link">
         <div class="profile">
           <img src="https://i.pravatar.cc/32?img=1" alt="User" class="profile-img" />
-          <span class="profile-name">User</span>
+          <span class="profile-name">{{ displayName }}</span>
         </div>
       </router-link>
     </div>
@@ -21,8 +21,9 @@
 </template>
 
 <script lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { useUserStore } from '../store/userStore';
 
 // Define an interface for the route meta object
 interface RouteMeta {
@@ -35,6 +36,14 @@ export default {
   setup() {
     const route = useRoute();
     const title = ref<string>('Dashboard');
+    const { currentUser, fetchUserProfile } = useUserStore();
+
+    const displayName = computed(() => {
+      if (currentUser.value?.nom && currentUser.value?.prenom) {
+        return `${currentUser.value.prenom} ${currentUser.value.nom}`;
+      }
+      return 'User';
+    });
 
     watch(() => (route.meta as RouteMeta).title, (newTitle) => {
       if (newTitle) {
@@ -42,8 +51,15 @@ export default {
       }
     }, { immediate: true });
 
+    onMounted(() => {
+      if (!currentUser.value) {
+        fetchUserProfile();
+      }
+    });
+
     return {
-      title
+      title,
+      displayName
     };
   }
 };

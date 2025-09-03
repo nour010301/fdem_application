@@ -953,22 +953,12 @@ const handleConfirmClick = () => {
   }
 };
 
-// Email computed property
-const emailComputed = computed({
-  get: () => emailUsername.value ? `${emailUsername.value}@cosidertp.dz` : '',
-  set: (value: string) => {
-    if (value.includes('@cosidertp.dz')) {
-      emailUsername.value = value.replace('@cosidertp.dz', '');
-    } else {
-      emailUsername.value = value;
-    }
-  }
-});
+
 
 // Watch for changes in prenom and nom to auto-generate email and username
 watch([() => userData.value.prenom, () => userData.value.nom], ([prenom, nom]) => {
   if (prenom && nom) {
-    const firstLetter = prenom.charAt(0).toUpperCase();
+    const firstLetter = prenom.charAt(0).toLowerCase();
     const lastName = nom.toLowerCase();
     const generatedUsername = `${firstLetter}.${lastName}`;
     

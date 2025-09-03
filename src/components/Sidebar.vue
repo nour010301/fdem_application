@@ -7,7 +7,7 @@
     aria-label="Main navigation"
   >
     <div class="sidebar-header">
-      <span class="sidebar-title">MyApp</span>
+      <span class="sidebar-title">FDEM APP</span>
     </div>
     <nav class="sidebar-nav">
       <router-link to="/Accueil" class="nav-link" active-class="active">
