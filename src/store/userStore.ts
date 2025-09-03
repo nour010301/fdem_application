@@ -55,7 +55,8 @@ export const useUserStore = () => {
   const isMiseAJour = computed(() => userRole.value === ROLES.MISE_A_JOUR)
   
   // Permission checks
-  const canManageUsers = computed(() => isAdminFonctionnel.value || isAdminInformatique.value)
+  // const canManageUsers = computed(() => isAdminFonctionnel.value || isAdminInformatique.value)
+  const canManageUsers = computed(() => isAdminInformatique.value)
   const canAddDocuments = computed(() => isAdminFonctionnel.value || isAdminInformatique.value || isMiseAJour.value)
   const canDeleteItems = computed(() => isAdminFonctionnel.value || isAdminInformatique.value)
   const canExportCSV = computed(() => isAdminFonctionnel.value || isAdminInformatique.value)

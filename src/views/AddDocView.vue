@@ -213,7 +213,7 @@
                       <th v-if="isPiecesGraphiques">Fichiers source</th>
                       <th>Vidéo</th>
                       <th>Images</th>
-                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
+                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">Validation</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -261,9 +261,9 @@
                         </div>
                         <span v-else class="no-file">-</span>
                       </td>
-                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
-                        <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
-                        <span v-else class="valide-status invalid">Non valide</span>
+                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">
+                        <span v-if="document.valide === true" class="valide-status valid">Oui</span>
+                        <span v-else class="valide-status invalid">Non</span>
                       </td>
                     </tr>
                   </tbody>
@@ -305,7 +305,7 @@
                       <th>Description</th>
                       <th>Fichier PDF</th>
                       <th>Fichiers source</th>
-                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
+                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">Validation</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -332,9 +332,9 @@
                         </button>
                         <span v-else class="no-file">-</span>
                       </td>
-                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
-                        <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
-                        <span v-else class="valide-status invalid">Non valide</span>
+                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">
+                        <span v-if="document.valide === true" class="valide-status valid">Oui</span>
+                        <span v-else class="valide-status invalid">Non</span>
                       </td>
                     </tr>
                   </tbody>
@@ -378,7 +378,7 @@
                       <th v-if="isPiecesGraphiques">Fichiers source</th>
                       <th>Vidéo</th>
                       <th>Images</th>
-                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
+                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">Validation</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -430,9 +430,9 @@
                         </div>
                         <span v-else class="no-file">-</span>
                       </td>
-                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
-                        <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
-                        <span v-else class="valide-status invalid">Non valide</span>
+                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">
+                        <span v-if="document.valide === true" class="valide-status valid">Oui</span>
+                        <span v-else class="valide-status invalid">Non</span>
                       </td>
                       <td class="action-buttons">
                         <button class="action-btn update-btn" @click="confirmUpdate(document)" :disabled="!canAddDocuments" title="Modifier">
@@ -580,7 +580,7 @@
                        <th v-if="isPiecesGraphiques">Fichiers source</th>
                       <th>Vidéo</th>
                       <th>Images</th>
-                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
+                      <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">Validation</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -629,9 +629,9 @@
                         </div>
                         <span v-else class="no-file">-</span>
                       </td>
-                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
-                        <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
-                        <span v-else class="valide-status invalid">Non valide</span>
+                      <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">
+                        <span v-if="document.valide === true" class="valide-status valid">Oui</span>
+                        <span v-else class="valide-status invalid">Non</span>
                       </td>
                       <td>
                         <button @click="openDeleteModal(document)" class="action-btn delete-btn-small" title="Supprimer">
@@ -1624,31 +1624,31 @@
               <input v-model="documentToUpdate.designation" placeholder="Désignation du document" />
             </div>
             
-            <div class="form-group">
+            <div class="form-group" v-if="false">
               <label>Fichier PDF</label>
               <div class="current-file-info" v-if="documentToUpdate?.fichier">
                 <span>Actuel: {{ getFileName(documentToUpdate.fichier) }}</span>
               </div>
               <input type="file" @change="onPdfFileSelect" accept=".pdf" />
               <div v-if="selectedPdfFile" class="file-info">
-                <span>Nouveau: {{ selectedPdfFile.name }}</span>
+                <span>Nouveau: {{ selectedPdfFile?.name }}</span>
                 <button @click="selectedPdfFile = null" type="button" class="remove-file">Retirer</button>
               </div>
             </div>
             
-            <div class="form-group">
+            <div class="form-group" v-if="false">
               <label>Vidéo</label>
               <div class="current-file-info" v-if="documentToUpdate?.video">
                 <span>Actuel: {{ getFileName(documentToUpdate.video) }}</span>
               </div>
               <input type="file" @change="onVideoFileSelect" accept=".mp4,.mov,.avi,.mkv,.webm" />
               <div v-if="selectedVideoFile" class="file-info">
-                <span>Nouveau: {{ selectedVideoFile.name }}</span>
+                <span>Nouveau: {{ selectedVideoFile?.name }}</span>
                 <button @click="selectedVideoFile = null" type="button" class="remove-file">Retirer</button>
               </div>
             </div>
             
-            <div class="form-group" v-if="isPiecesGraphiques">
+            <div class="form-group" v-if="false && isPiecesGraphiques" >
               <label>Plan (Fichiers ZIP)</label>
               <div class="current-file-info" v-if="documentToUpdate?.plan">
                 <span>Actuel: {{ getFileName(documentToUpdate.plan) }}</span>
@@ -1666,7 +1666,7 @@
               </div>
             </div>
             
-            <div class="form-group">
+            <div class="form-group"  v-if="false">
               <label>Photos (Images)</label>
               <div class="current-file-info" v-if="documentToUpdate?.photos">
                 <span>Actuel: {{ getFileName(documentToUpdate.photos) }}</span>
@@ -2429,6 +2429,130 @@
   box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
 }
 
+/* Update Modal Styles */
+.update-modal {
+  min-height: auto !important;
+  height: auto !important;
+  max-height: 90vh;
+  width: 90%;
+  max-width: 500px;
+}
+
+.update-modal .modal-body {
+  padding: 20px;
+  min-height: auto;
+}
+
+.update-modal .form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.update-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.update-modal .form-group label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.update-modal .form-group input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.update-modal .form-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.update-modal .modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.update-modal .modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-modal .modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.update-modal .btn-cancel {
+  padding: 8px 16px;
+  background: #6b7280;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.update-modal .btn-cancel:hover {
+  background: #4b5563;
+}
+
+.update-modal .btn-update {
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+}
+
+.update-modal .btn-update:hover {
+  background: #2563eb;
+}
+
+.update-modal .close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.update-modal .close-btn:hover {
+  color: #374151;
+}
+
+/* White modal background */
+.white-modal {
+  background: white;
+  color: #374151;
+}
+
 /* Responsive Button Group */
 .responsive-buttons {
   display: flex;
@@ -2460,6 +2584,11 @@
     min-width: auto;
     padding: 10px 12px !important;
     font-size: 0.8rem !important;
+  }
+  
+  .update-modal {
+    width: 95%;
+    max-width: none;
   }
 }
 
@@ -3356,8 +3485,8 @@ const contextConsulterSearchQuery = ref('');
 const filteredDocList = computed(() => {
   let filteredDocs = docList.value;
   
-  // Filter out documents with valide null or false for users with profile ID 3 (CONSULTATION)
-  if (userStore.userRole.value === userStore.ROLES.CONSULTATION) {
+  // Filter out documents with valide null or false for users with profile ID 3 (CONSULTATION) who don't have validation permission
+  if (userStore.userRole.value === userStore.ROLES.CONSULTATION && !userStore.user.value?.valide) {
     filteredDocs = filteredDocs.filter(doc => doc.valide === true);
   }
   
@@ -4302,6 +4431,9 @@ let fetchInProgress = false;
 async function fetchDocListForCurrentSelection() {
   if (fetchInProgress) return;
   
+  console.log('User valide permission:', userStore.user.value?.valide);
+  console.log('User role:', userStore.userRole.value);
+  
   // Only fetch if essential IDs are selected
   if (!selectedTypeId.value || !selectedProduitId.value || !selectedStructureId.value || !selectedSectionId.value || !selectedDivisionId.value) {
     docList.value = [];
@@ -4393,6 +4525,7 @@ async function showSuccessMessage() {
   showDeleteMode.value = false; // Close delete mode
   showMiseAJourMode.value = false; // Close mise à jour mode
   showImportDossierMode.value = false; // Close import dossier mode
+  showValidationMode.value = false; // Close validation mode
   showSuccess.value = true;
   
   // Create abort controller for this request

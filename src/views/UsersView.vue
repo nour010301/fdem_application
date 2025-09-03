@@ -49,7 +49,7 @@
               <th v-if="!isRestrictedUser">Email</th>
               <th>Nom</th>
               <th>Prénom</th>
-              <th v-if="!isRestrictedUser">Poste</th>
+
               <th v-if="!isRestrictedUser">Téléphone</th>
               <th v-if="!isRestrictedUser">Département</th>
               <th v-if="!isRestrictedUser">Profil</th>
@@ -70,7 +70,7 @@
               <td v-if="!isRestrictedUser">{{ user.email || '-' }}</td>
               <td>{{ user.nom || '-' }}</td>
               <td>{{ user.prenom || '-' }}</td>
-              <td v-if="!isRestrictedUser">{{ user.poste || '-' }}</td>
+
               <td v-if="!isRestrictedUser">{{ user.telephone || '-' }}</td>
               <td v-if="!isRestrictedUser">{{ user.departement || '-' }}</td>
               <td v-if="!isRestrictedUser">{{ user.profil?.nom || '-' }}</td>
@@ -216,12 +216,34 @@
             <div v-if="currentStep === 0 && !(isRestrictedUser && isEditMode)">
               <h2>Informations utilisateur</h2>
               <div class="form-group">
+                <label for="nom">Nom *</label>
+                <input 
+                  type="text" 
+                  id="nom" 
+                  v-model="userData.nom" 
+                  :class="{ 'error': validationErrors.nom }"
+                />
+                <div v-if="validationErrors.nom" class="error-message">{{ validationErrors.nom }}</div>
+              </div>
+              <div class="form-group">
+                <label for="prenom">Prénom *</label>
+                <input 
+                  type="text" 
+                  id="prenom" 
+                  v-model="userData.prenom" 
+                  :class="{ 'error': validationErrors.prenom }"
+                />
+                <div v-if="validationErrors.prenom" class="error-message">{{ validationErrors.prenom }}</div>
+              </div>
+              <div class="form-group">
                 <label for="username">Nom d'utilisateur *</label>
                 <input 
                   type="text" 
                   id="username" 
                   v-model="userData.username" 
                   :class="{ 'error': validationErrors.username }"
+                  placeholder="Généré automatiquement"
+                  readonly
                 />
                 <div v-if="validationErrors.username" class="error-message">{{ validationErrors.username }}</div>
               </div>
@@ -250,47 +272,21 @@
                 <div v-if="validationErrors.profil" class="error-message">{{ validationErrors.profil }}</div>
               </div>
               <div class="form-group">
-                <label for="poste">Poste *</label>
-                <input 
-                  type="text" 
-                  id="poste" 
-                  v-model="userData.poste" 
-                  :class="{ 'error': validationErrors.poste }"
-                />
-                <div v-if="validationErrors.poste" class="error-message">{{ validationErrors.poste }}</div>
-              </div>
-              <div class="form-group">
                 <label for="email">Email *</label>
-                <input 
-                  type="email" 
-                  id="email" 
-                  v-model="userData.email" 
-                  :class="{ 'error': validationErrors.email }"
-                />
+                <div class="email-input-container" :class="{ 'error': validationErrors.email }">
+                  <input 
+                    type="text" 
+                    id="email" 
+                    v-model="emailUsername" 
+                    placeholder="Généré automatiquement"
+                    readonly
+                  />
+                  <span class="email-domain">@cosidertp.dz</span>
+                </div>
                 <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div>
               </div>
               <div class="form-group">
-                <label for="nom">Nom *</label>
-                <input 
-                  type="text" 
-                  id="nom" 
-                  v-model="userData.nom" 
-                  :class="{ 'error': validationErrors.nom }"
-                />
-                <div v-if="validationErrors.nom" class="error-message">{{ validationErrors.nom }}</div>
-              </div>
-              <div class="form-group">
-                <label for="prenom">Prénom *</label>
-                <input 
-                  type="text" 
-                  id="prenom" 
-                  v-model="userData.prenom" 
-                  :class="{ 'error': validationErrors.prenom }"
-                />
-                <div v-if="validationErrors.prenom" class="error-message">{{ validationErrors.prenom }}</div>
-              </div>
-              <div class="form-group">
-                <label for="telephone">Téléphone *</label>
+                <label for="telephone">Téléphone</label>
                 <input 
                   type="text" 
                   id="telephone" 
@@ -300,7 +296,7 @@
                 <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div>
               </div>
               <div class="form-group">
-                <label for="departement">Département *</label>
+                <label for="departement">Département</label>
                 <input 
                   type="text" 
                   id="departement" 
@@ -498,7 +494,7 @@
             <p><strong>Nom:</strong> {{ userToChangeStatus?.nom || '-' }}</p>
             <p><strong>Prénom:</strong> {{ userToChangeStatus?.prenom || '-' }}</p>
             <p><strong>Email:</strong> {{ userToChangeStatus?.email || '-' }}</p>
-            <p><strong>Poste:</strong> {{ userToChangeStatus?.poste || '-' }}</p>
+
             <p><strong>Profil:</strong> {{ userToChangeStatus?.profil?.nom || '-' }}</p>
             <p><strong>Statut actuel:</strong> 
               <span :class="userToChangeStatus?.is_active ? 'status-active' : 'status-inactive'">
@@ -519,7 +515,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import axiosInstance from '../axios';
 import { useUserStore } from '../store/userStore';
 
@@ -554,6 +550,9 @@ const statusFilter = ref('all');
 const loading = ref(false);
 const error = ref('');
 
+// Email handling
+const emailUsername = ref('');
+
 // Profile management
 interface Profile {
   id: number;
@@ -575,7 +574,6 @@ const userData = ref({
   username: '',
   password: '',
   profil: '',
-  poste: '',
   email: '',
   nom: '',
   prenom: '',
@@ -616,7 +614,6 @@ const validationErrors = ref({
   username: '',
   password: '',
   profil: '',
-  poste: '',
   email: '',
   nom: '',
   prenom: '',
@@ -746,13 +743,19 @@ const editUser = (user: User) => {
     username: user.username,
     password: '',
     profil: user.profil?.id ? String(user.profil.id) : '',
-    poste: user.poste || '',
     email: user.email || '',
     nom: user.nom || '',
     prenom: user.prenom || '',
     telephone: user.telephone || '',
     departement: user.departement || ''
   };
+  
+  // Extract username part from email for editing
+  if (user.email && user.email.includes('@cosidertp.dz')) {
+    emailUsername.value = user.email.replace('@cosidertp.dz', '');
+  } else {
+    emailUsername.value = user.email || '';
+  }
   
   // Load user's types_produits and produits
   selectedTypesProduit.value = user.types_produits || [];
@@ -818,13 +821,13 @@ const resetUserData = () => {
     username: '',
     password: '',
     profil: '',
-    poste: '',
     email: '',
     nom: '',
     prenom: '',
     telephone: '',
     departement: ''
   };
+  emailUsername.value = '';
   selectedTypesProduit.value = [];
   selectedProduits.value = [];
   userPermissions.value = {
@@ -838,7 +841,6 @@ const resetUserData = () => {
     username: '',
     password: '',
     profil: '',
-    poste: '',
     email: '',
     nom: '',
     prenom: '',
@@ -857,7 +859,6 @@ const validateRequiredFields = () => {
     username: '',
     password: '',
     profil: '',
-    poste: '',
     email: '',
     nom: '',
     prenom: '',
@@ -882,10 +883,7 @@ const validateRequiredFields = () => {
     isValid = false;
   }
   
-  if (!userData.value.poste.trim()) {
-    errors.poste = 'Le poste est requis';
-    isValid = false;
-  }
+
   
   if (!userData.value.email.trim()) {
     errors.email = 'L\'email est requis';
@@ -902,15 +900,9 @@ const validateRequiredFields = () => {
     isValid = false;
   }
   
-  if (!userData.value.telephone.trim()) {
-    errors.telephone = 'Le téléphone est requis';
-    isValid = false;
-  }
+
   
-  if (!userData.value.departement.trim()) {
-    errors.departement = 'Le département est requis';
-    isValid = false;
-  }
+
   
   validationErrors.value = errors;
   return isValid;
@@ -961,6 +953,36 @@ const handleConfirmClick = () => {
   }
 };
 
+// Email computed property
+const emailComputed = computed({
+  get: () => emailUsername.value ? `${emailUsername.value}@cosidertp.dz` : '',
+  set: (value: string) => {
+    if (value.includes('@cosidertp.dz')) {
+      emailUsername.value = value.replace('@cosidertp.dz', '');
+    } else {
+      emailUsername.value = value;
+    }
+  }
+});
+
+// Watch for changes in prenom and nom to auto-generate email and username
+watch([() => userData.value.prenom, () => userData.value.nom], ([prenom, nom]) => {
+  if (prenom && nom) {
+    const firstLetter = prenom.charAt(0).toUpperCase();
+    const lastName = nom.toLowerCase();
+    const generatedUsername = `${firstLetter}.${lastName}`;
+    
+    emailUsername.value = generatedUsername;
+    userData.value.email = `${generatedUsername}@cosidertp.dz`;
+    userData.value.username = generatedUsername;
+  }
+});
+
+// Watch for changes in emailUsername to update userData.email
+watch(emailUsername, (newValue) => {
+  userData.value.email = newValue ? `${newValue}@cosidertp.dz` : '';
+});
+
 // Computed properties
 const filteredUsers = computed(() => {
   let filtered = users.value;
@@ -973,7 +995,7 @@ const filteredUsers = computed(() => {
       (user.nom && user.nom.toLowerCase().includes(query)) ||
       (user.prenom && user.prenom.toLowerCase().includes(query)) ||
       (user.email && user.email.toLowerCase().includes(query)) ||
-      (user.poste && user.poste.toLowerCase().includes(query)) ||
+
       (user.profil && user.profil.nom && user.profil.nom.toLowerCase().includes(query))
     );
   }
@@ -1006,8 +1028,7 @@ const canProceed = computed(() => {
     if (currentStep.value === 0) {
       return userData.value.username && 
              userData.value.password && 
-             userData.value.profil && 
-             userData.value.poste;
+             userData.value.profil;
     } else if (currentStep.value === 1) {
       return selectedTypesProduit.value.length > 0;
     }
@@ -1863,5 +1884,60 @@ onMounted(async () => {
 .user-info strong {
   font-weight: 600;
   margin-right: 0.5rem;
+}
+
+/* Email input with fixed domain */
+.email-input-container {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 0.5em;
+  background: #fff;
+  transition: border-color 0.2s;
+}
+
+.email-input-container:focus-within {
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.email-input-container.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.email-input-container input {
+  border: none;
+  outline: none;
+  padding: 0.8em;
+  flex: 1;
+  background: transparent;
+  border-radius: 0;
+}
+
+.email-input-container input:focus {
+  border: none;
+  box-shadow: none;
+}
+
+.email-domain {
+  padding: 0.8em;
+  background: #f8f9fa;
+  color: #6c757d;
+  font-weight: 500;
+  border-left: 1px solid #e9ecef;
+  white-space: nowrap;
+}
+
+.email-input-container input[readonly] {
+  background: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.form-group input[readonly] {
+  background: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
 }
 </style>

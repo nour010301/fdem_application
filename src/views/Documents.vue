@@ -2,59 +2,102 @@
   <div class="page-wrapper">
     <h1>Documents</h1>
 
-    <!-- Filter Box -->
-    <div class="filter-box">
-      <select v-model="selectedTypeProduit" @change="onTypeProduitChange" :disabled="loadingFilters">
-        <option value="">Type Produit</option>
-        <option v-for="type in typesProduit" :key="type.idTypeProduit" :value="type.idTypeProduit">
-          {{ type.designation }}
-        </option>
-      </select>
-      <select v-model="selectedProduit" @change="onProduitChange" :disabled="loadingFilters || !selectedTypeProduit || !filteredProduits.length">
-        <option value="">Produit</option>
-        <option v-for="prod in filteredProduits" :key="prod.idProduit" :value="prod.idProduit">
-          {{ prod.designation }}
-        </option>
-      </select>
-      <select v-model="selectedStructure" @change="onStructureChange" :disabled="loadingFilters || !selectedProduit">
-        <option value="">Structure</option>
-        <option v-for="str in structures" :key="str.idStructure" :value="str.idStructure">
-          {{ str.designation || str.nom }}
-        </option>
-      </select>
-      <select v-model="selectedSection" @change="onSectionChange" :disabled="loadingFilters || !selectedStructure">
-        <option value="">Section</option>
-        <option v-for="s in sections" :key="s.idSectionProduit" :value="s.idSectionProduit">
-          {{ s.designation }}
-        </option>
-      </select>
-      <select v-model="selectedSubdivision1" @change="onSubdivision1Change" :disabled="loadingFilters || !selectedSection">
-        <option value="">Subdivision 1</option>
-        <option v-for="sub1 in subdivisions1" :key="sub1.idSubDivisionNv_1" :value="sub1.idSubDivisionNv_1">
-          {{ sub1.nom }}
-        </option>
-      </select>
-      <select v-model="selectedSubdivision2" @change="onSubdivision2Change" :disabled="loadingFilters || !selectedSubdivision1 || !filteredSubdivisions2.length">
-        <option value="">Subdivision 2</option>
-        <option v-for="sub2 in filteredSubdivisions2" :key="sub2.idSubDivisionNv_2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2.idSubDivisionNv_2">
-          {{ sub2.idSubDivisionNv_2.nom }}
-        </option>
-      </select>
-      <select v-model="selectedSubdivision3" @change="onSubdivision3Change" :disabled="loadingFilters || !selectedSubdivision2 || !filteredSubdivisions3.length">
-        <option value="">Subdivision 3</option>
-        <option v-for="sub3 in filteredSubdivisions3" :key="sub3.idSubDivisionNv_3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3.idSubDivisionNv_3">
-          {{ sub3.idSubDivisionNv_3.nom }}
-        </option>
-      </select>
-      <select v-model="selectedTypeDoc" @change="onTypeDocChange" :disabled="loadingFilters">
-        <option value="">Type Doc</option>
-        <option value="Tous">Tous</option>
-        <option value="PDF">PDF</option>
-        <option value="Image">Image</option>
-        <option value="Multimédia">Multimédia</option>
-      </select>
-      <button class="primary" @click="applyFilters" :disabled="loading || loadingConsulter">{{ loading ? "Filtrage..." : "Filtrer" }}</button>
-      <button class="outline" @click="resetFilters" :disabled="loading || loadingConsulter">Annuler le filtre</button>
+    <!-- Main Layout: Filters Left, Statistics Right -->
+    <div class="main-layout">
+      <!-- Left Side: Filters -->
+      <div class="filters-section">
+        <h2>Filtres</h2>
+        <div class="filter-box">
+          <select v-model="selectedTypeProduit" @change="onTypeProduitChange" :disabled="loadingFilters">
+            <option value="">Type Produit</option>
+            <option v-for="type in typesProduit" :key="type.idTypeProduit" :value="type.idTypeProduit">
+              {{ type.designation }}
+            </option>
+          </select>
+          <select v-model="selectedProduit" @change="onProduitChange" :disabled="loadingFilters || !selectedTypeProduit || !filteredProduits.length">
+            <option value="">Produit</option>
+            <option v-for="prod in filteredProduits" :key="prod.idProduit" :value="prod.idProduit">
+              {{ prod.designation }}
+            </option>
+          </select>
+          <select v-model="selectedStructure" @change="onStructureChange" :disabled="loadingFilters || !selectedProduit">
+            <option value="">Structure</option>
+            <option v-for="str in structures" :key="str.idStructure" :value="str.idStructure">
+              {{ str.designation || str.nom }}
+            </option>
+          </select>
+          <select v-model="selectedSection" @change="onSectionChange" :disabled="loadingFilters || !selectedStructure">
+            <option value="">Section</option>
+            <option v-for="s in sections" :key="s.idSectionProduit" :value="s.idSectionProduit">
+              {{ s.designation }}
+            </option>
+          </select>
+          <select v-model="selectedSubdivision1" @change="onSubdivision1Change" :disabled="loadingFilters || !selectedSection">
+            <option value="">Subdivision 1</option>
+            <option v-for="sub1 in subdivisions1" :key="sub1.idSubDivisionNv_1" :value="sub1.idSubDivisionNv_1">
+              {{ sub1.nom }}
+            </option>
+          </select>
+          <select v-model="selectedSubdivision2" @change="onSubdivision2Change" :disabled="loadingFilters || !selectedSubdivision1 || !filteredSubdivisions2.length">
+            <option value="">Subdivision 2</option>
+            <option v-for="sub2 in filteredSubdivisions2" :key="sub2.idSubDivisionNv_2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2.idSubDivisionNv_2">
+              {{ sub2.idSubDivisionNv_2.nom }}
+            </option>
+          </select>
+          <select v-model="selectedSubdivision3" @change="onSubdivision3Change" :disabled="loadingFilters || !selectedSubdivision2 || !filteredSubdivisions3.length">
+            <option value="">Subdivision 3</option>
+            <option v-for="sub3 in filteredSubdivisions3" :key="sub3.idSubDivisionNv_3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3.idSubDivisionNv_3">
+              {{ sub3.idSubDivisionNv_3.nom }}
+            </option>
+          </select>
+          
+          <select v-if="canSeeValidationStats" v-model="selectedValidation" :disabled="loadingFilters">
+            <option value="">Validation</option>
+            <option value="true">Oui</option>
+            <option value="false">Non</option>
+          </select>
+
+          <div class="filter-buttons">
+            <button class="primary" @click="applyFilters" :disabled="loading || loadingConsulter">{{ loading ? "Filtrage..." : "Filtrer" }}</button>
+            <button class="outline" @click="resetFilters" :disabled="loading || loadingConsulter">Annuler le filtre</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Side: Statistics -->
+      <div class="statistics-section">
+        <h2>Statistiques</h2>
+        <div v-if="loadingStats" class="stats-loading">
+          <div class="loading-spinner"></div>
+          <p>Chargement des statistiques...</p>
+        </div>
+        <div v-else-if="statsError" class="stats-error">
+          <p>Erreur lors du chargement des statistiques</p>
+        </div>
+        <div v-else class="stats-grid">
+          <div class="stat-card total">
+            <div class="stat-icon">📄</div>
+            <div class="stat-content">
+              <h3>Total Documents</h3>
+              <p class="stat-number">{{ statistics?.documents || 0 }}</p>
+            </div>
+          </div>
+          <div v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide" class="stat-card valid">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+              <h3>Documents Valides</h3>
+              <p class="stat-number">{{ statistics?.['Documents valides'] || 0 }}</p>
+            </div>
+          </div>
+          <div v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide" class="stat-card invalid">
+            <div class="stat-icon">❌</div>
+            <div class="stat-content">
+              <h3>Documents Non Valides</h3>
+              <p class="stat-number">{{ statistics?.['Documents non valides'] || 0 }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="controls">
@@ -98,7 +141,7 @@
           <th>Plan</th>
           <th>Vidéo</th>
           <th>Photos</th>
-          <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">Valide</th>
+          <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">Validation</th>
           <!-- <th>Actions</th> -->
         </tr>
         </thead>
@@ -156,9 +199,19 @@
               </div>
               <span v-else class="no-file">—</span>
             </td>
-            <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION">
-              <span v-if="document.valide === true" class="valide-status valid">Document valide</span>
-              <span v-else class="valide-status invalid">Non valide</span>
+            <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">
+              <span v-if="document.valide === true" class="valide-status valid">Oui</span>
+              <div v-else-if="userStore.user.value?.valide" class="validation-actions">
+                <span class="valide-status invalid">Non</span>
+                <button 
+                  @click="confirmValidation(document)" 
+                  class="import-btn"
+                  title="Valider ce document"
+                >
+                  Valider
+                </button>
+              </div>
+              <span v-else class="valide-status invalid">Non</span>
             </td>
             <!-- <td class="action-buttons">
               <button 
@@ -254,6 +307,56 @@
         <div class="modal-footer">
           <button @click="documentToUpdate = null" class="btn-cancel">Annuler</button>
           <button @click="updateDocument" class="btn-update"><i class="fas fa-save"></i> Modifier</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VALIDATION CONFIRMATION MODAL -->
+    <div v-if="documentToValidate" class="modal-overlay">
+      <div class="modal validation-modal">
+        <div class="modal-header">
+          <h2><i class="fas fa-check-circle"></i> Validation du document</h2>
+          <button @click="documentToValidate = null" class="close-btn">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="validation-info">
+            <div class="document-details">
+              <h3>Informations du document</h3>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <span class="label">ID:</span>
+                  <span class="value">{{ documentToValidate.idDocument }}</span>
+                </div>
+                <div class="detail-item" v-if="documentToValidate.designation">
+                  <span class="label">Description:</span>
+                  <span class="value">{{ documentToValidate.designation }}</span>
+                </div>
+                <div class="detail-item" v-if="documentToValidate.typeProduitDesignation">
+                  <span class="label">Type Produit:</span>
+                  <span class="value">{{ documentToValidate.typeProduitDesignation }}</span>
+                </div>
+                <div class="detail-item" v-if="documentToValidate.produitDesignation">
+                  <span class="label">Produit:</span>
+                  <span class="value">{{ documentToValidate.produitDesignation }}</span>
+                </div>
+                <div class="detail-item" v-if="documentToValidate.structureNom">
+                  <span class="label">Structure:</span>
+                  <span class="value">{{ documentToValidate.structureNom }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="confirmation-message">
+              <i class="fas fa-question-circle"></i>
+              <p>Êtes-vous sûr de vouloir valider ce document ?</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button @click="documentToValidate = null" class="btn-cancel">Annuler</button>
+          <button @click="validateDocument" class="btn-validate"><i class="fas fa-check"></i> Valider</button>
         </div>
       </div>
     </div>
@@ -458,6 +561,7 @@ const sortAsc = ref(true)
 const documentToDelete = ref<Document | null>(null)
 const documentToUpdate = ref<Document | null>(null)
 const documentToMove = ref<Document | null>(null)
+const documentToValidate = ref<Document | null>(null)
 const selectedFile = ref<File | null>(null)
 const multipleImages = ref<File[]>([])
 const showImageToPdfOption = ref(false)
@@ -467,6 +571,10 @@ const loadingConsulter = ref(false)
 const loadingDocumentId = ref<number | null>(null)
 const documentAbortControllers = ref<Map<number, AbortController>>(new Map())
 
+// Statistics state
+const statistics = ref<any>(null)
+const loadingStats = ref(false)
+const statsError = ref(false)
 
 // User store for role-based access control
 const userStore = useUserStore()
@@ -487,6 +595,12 @@ const canSeeCreatedBy = computed(() => {
 // Users with plan permission or admin informatique can download plans
 const canDownloadPlan = computed(() => {
   return userStore.user.value?.profil === 2 || userStore.user.value?.plan || false
+})
+
+// Computed property to check if user can see validation statistics
+// Same condition as validation column in table
+const canSeeValidationStats = computed(() => {
+  return userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide
 })
 
 // Computed property to check if user can delete documents
@@ -519,8 +633,8 @@ const selectedSubdivision1 = ref<string | number | "">("")
 const selectedSubdivision2 = ref<string | number | "">("")
 const selectedSubdivision3 = ref<string | number | "">("")
 const selectedSubdivision4 = ref<string | number | "">("")
-const selectedTypeDoc = ref<string | number | "">("")
 const selectedDocumentType = ref<string | number | "">("")
+const selectedValidation = ref<string | "">("")
 
 const loadingFilters = ref(false)
 
@@ -576,7 +690,6 @@ async function onTypeProduitChange() {
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
-  selectedTypeDoc.value = ""
   
   produits.value = []
   sections.value = []
@@ -606,7 +719,6 @@ function onProduitChange() {
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
-  selectedTypeDoc.value = ""
   
   // Clear right-side content and reset states
   clearRightSideContent()
@@ -618,7 +730,6 @@ async function onStructureChange() {
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
-  selectedTypeDoc.value = ""
   
   subdivisions1.value = []
   
@@ -640,7 +751,6 @@ function onSectionChange() {
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
-  selectedTypeDoc.value = ""
   
   // Clear right-side content and reset states
   clearRightSideContent()
@@ -650,7 +760,6 @@ function onSubdivision1Change() {
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
-  selectedTypeDoc.value = ""
   
   // Clear right-side content and reset states
   clearRightSideContent()
@@ -659,7 +768,6 @@ function onSubdivision1Change() {
 function onSubdivision2Change() {
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
-  selectedTypeDoc.value = ""
   
   // Clear right-side content and reset states
   clearRightSideContent()
@@ -667,15 +775,12 @@ function onSubdivision2Change() {
 
 function onSubdivision3Change() {
   selectedSubdivision4.value = ""
-  selectedTypeDoc.value = ""
   
   // Clear right-side content and reset states
   clearRightSideContent()
 }
 
-function onTypeDocChange() {
-  // Frontend-only filter, no backend call needed
-}
+
 
 // --- Filtering Documents ---
 async function applyFilters() {
@@ -692,6 +797,7 @@ async function applyFilters() {
     if (selectedSubdivision2.value) params.idSubDivisionNv_2 = selectedSubdivision2.value;
     if (selectedSubdivision3.value) params.idSubDivisionNv_3 = selectedSubdivision3.value;
     if (selectedSubdivision4.value) params.idSubDivisionNv_4 = selectedSubdivision4.value;
+    if (selectedValidation.value !== "") params.valide = selectedValidation.value;
 
     const response = await axiosInstance.get('documentsFilter/', { params });
     // Handle case where API returns {message: "Aucun document trouvé."} instead of empty array
@@ -714,8 +820,8 @@ async function resetFilters() {
   selectedSubdivision2.value = ""
   selectedSubdivision3.value = ""
   selectedSubdivision4.value = ""
-  selectedTypeDoc.value = ""
   selectedDocumentType.value = ""
+  selectedValidation.value = ""
   filtersApplied.value = false
   documents.value = []
   
@@ -760,23 +866,10 @@ function toggleSort(column: typeof sortColumn.value) {
 const filteredDocuments = computed(() => {
   let filtered = documents.value;
   
-  // Apply validation filter for users with profile ID 3 (CONSULTATION)
-  if (userStore.userRole.value === userStore.ROLES.CONSULTATION) {
+  // Apply validation filter for users with profile ID 3 (CONSULTATION) who don't have validation permission
+  if (userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide) {
     filtered = filtered.filter(doc => doc.valide === true);
   }
-  
-  // Apply Type Doc filter
-  if (selectedTypeDoc.value && selectedTypeDoc.value !== 'Tous') {
-    filtered = filtered.filter(doc => {
-      const docType = getDocumentType(doc);
-      // Treat Photo as Image for Type Doc filter
-      if (selectedTypeDoc.value === 'Image' && (docType === 'Image' || docType === 'Photo')) {
-        return true;
-      }
-      return docType === selectedTypeDoc.value;
-    });
-  }
-  
   // Apply search filter
   const s = search.value.trim().toLowerCase();
   if (s) {
@@ -1224,39 +1317,7 @@ function getFileType(document: any): string {
   return 'pdf'
 }
 
-function getDocumentType(document: any): string {
-  if (!document.nomFichier) return 'PDF'
-  
-  const fileName = document.nomFichier.toLowerCase()
-  const extension = fileName.split('.').pop() || ''
-  
-  // Image extensions
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'ico']
-  if (imageExtensions.includes(extension)) {
-    return 'Image'
-  }
-  
-  // Video extensions
-  const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', '3gp', 'mpg', 'mpeg']
-  if (videoExtensions.includes(extension)) {
-    return 'Multimédia'
-  }
-  
-  // Photo extensions (specific photo formats)
-  const photoExtensions = ['raw', 'cr2', 'nef', 'arw', 'dng', 'orf', 'rw2']
-  if (photoExtensions.includes(extension)) {
-    return 'Photo'
-  }
-  
-  // PDF and document extensions
-  const pdfExtensions = ['pdf']
-  if (pdfExtensions.includes(extension)) {
-    return 'PDF'
-  }
-  
-  // Default to PDF for unknown extensions
-  return 'PDF'
-}
+
 
 
 
@@ -1266,6 +1327,45 @@ function closeDocumentViewer() {
   }
   selectedDocument.value = null
 }
+
+// Validation functions
+function confirmValidation(document: Document) {
+  documentToValidate.value = document
+}
+
+async function validateDocument() {
+  if (!documentToValidate.value) return
+  try {
+    await axiosInstance.put(`documents/create-two-file/${documentToValidate.value.idDocument}/`)
+    
+    // Update the document in the local array
+    const index = documents.value.findIndex(d => d.idDocument === documentToValidate.value!.idDocument)
+    if (index !== -1) {
+      documents.value[index].valide = true
+    }
+    
+    documentToValidate.value = null
+  } catch (e: any) {
+    alert('Erreur lors de la validation : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+// Fetch statistics from API
+
+async function fetchStatistics() {
+  loadingStats.value = true
+  statsError.value = false
+  try {
+    const response = await axiosInstance.get('statistics/')
+    statistics.value = response.data.statistics
+  } catch (error) {
+    console.error('Error fetching statistics:', error)
+    statsError.value = true
+  } finally {
+    loadingStats.value = false
+  }
+}
+
 
 // Helper function to clear all right-side content and reset states
 function clearRightSideContent() {
@@ -1278,6 +1378,7 @@ function clearRightSideContent() {
   documentToDelete.value = null
   documentToUpdate.value = null
   documentToMove.value = null
+  documentToValidate.value = null
   
   // Clear file selections
   selectedFile.value = null
@@ -1332,6 +1433,7 @@ async function downloadPlan(doc: Document) {
 onMounted(async () => {
   await userStore.fetchUserProfile()
   await loadFilterOptions()
+  await fetchStatistics()
   loading.value = false
 })
 </script>
@@ -1342,12 +1444,165 @@ onMounted(async () => {
 /* your previous styling and enhancements for .filter-box and new buttons */
 .page-wrapper {
   padding: 16px;
-  margin-right: 20px; /* Adjust as needed */
+  margin-right: 20px;
 }
 
 h1 {
   font-size: 1.6rem;
   margin-bottom: 1rem;
+}
+
+/* Main Layout */
+.main-layout {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.filters-section {
+  flex: 3;
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.filters-section h2 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.statistics-section {
+  flex: 1;
+  background: white;
+  border-radius: 8px;
+  padding: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e8ed;
+}
+
+.statistics-section h2 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Statistics Cards */
+.stats-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.stat-card {
+  flex: 1;
+  background: white;
+  border-radius: 6px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.2s ease;
+  border: 1px solid #e1e8ed;
+}
+
+.stat-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.stat-content {
+  width: 100%;
+}
+
+.stat-content h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.stat-number {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.stat-card.total {
+  border-left: 3px solid #3b82f6;
+}
+
+.stat-card.valid {
+  border-left: 3px solid #10b981;
+}
+
+.stat-card.invalid {
+  border-left: 3px solid #ef4444;
+}
+
+/* Loading and Error States */
+.stats-loading {
+  text-align: center;
+  padding: 1rem;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e1e8ed;
+  border-top: 2px solid #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 0.5rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.stats-loading p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.stats-error {
+  text-align: center;
+  padding: 0.75rem;
+  background: #fef2f2;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+}
+
+.stats-error p {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.75rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .main-layout {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .filters-section,
+  .statistics-section {
+    flex: none;
+  }
 }
 
 .controls {
@@ -1646,47 +1901,93 @@ h1 {
   background: #2244aa;
 }
 .filter-box {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
-  margin: 18px 0 24px 0;
-  background: #f7fafc;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 0.5rem;
+  background: white;
   border-radius: 8px;
-  padding: 18px 16px;
-  box-shadow: 0 2px 12px rgba(80, 106, 159, 0.09);
+  padding: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  align-items: end;
 }
+
 .filter-box select {
-  padding: 8px 10px;
-  border: 1px solid #b5bfd9;
+  padding: 6px 8px;
+  border: 1px solid #e1e8ed;
   border-radius: 4px;
-  min-width: 160px;
-  background: #fff;
-  font-size: 1rem;
+  background: #f8f9fa;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  width: 100%;
+  height: 32px;
 }
+
+.filter-box select:focus {
+  outline: none;
+  border-color: #3b77fa;
+  background: white;
+  box-shadow: 0 0 0 2px rgba(59, 119, 250, 0.1);
+}
+
+.filter-buttons {
+  display: contents;
+}
+
 .filter-box .primary {
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: none;
-  background-color: #3b77fa;
-  color: #fff;
+  background: linear-gradient(135deg, #3b77fa, #2563eb);
+  color: white;
   border-radius: 4px;
-  font-weight: 500;
-  transition: 0.2s;
-  box-shadow: 0 2px 8px #3b77fa22;
-  margin-left: 1rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  height: 32px;
+  white-space: nowrap;
 }
-.filter-box .primary:disabled { background-color: #a3aed6; cursor: not-allowed; }
+
+.filter-box .primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 119, 250, 0.3);
+}
+
+.filter-box .primary:disabled {
+  background: #a3aed6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .filter-box .outline {
-  padding: 8px 16px;
-  border: 1.2px solid #3b77fa;
-  background: #fff;
+  padding: 6px 8px;
+  border: 1px solid #3b77fa;
+  background: white;
   color: #3b77fa;
   border-radius: 4px;
-  font-weight: 500;
-  margin-left: 0.5rem;
-  box-shadow: 0 2px 8px #f0f4fa;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  height: 32px;
+  white-space: nowrap;
 }
-.filter-box .outline:disabled { color: #aaa; border-color: #eee; }
+
+.filter-box .outline:hover:not(:disabled) {
+  background: #3b77fa;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.filter-box .outline:disabled {
+  color: #aaa;
+  border-color: #eee;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
 
 
 
@@ -2233,6 +2534,9 @@ h1 {
   font-weight: 500;
   text-align: center;
   display: inline-block;
+}
+
+.valide-status.valid {
   min-width: 80px;
 }
 
@@ -2246,16 +2550,153 @@ h1 {
   background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
   color: white;
   box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+  padding: 4px 8px;
+  min-width: 80px;
+}
+
+.validation-actions .valide-status.invalid {
+  padding: 2px 6px;
+  min-width: auto;
+}
+
+.validation-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.import-btn {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.import-btn:hover {
+  background: linear-gradient(135deg, #218838, #1e7e34);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.6);
+}
+
+.validation-modal {
+  max-width: 600px !important;
+  width: 90vw !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+}
+
+.validation-modal .modal-header {
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+}
+
+.validation-info {
+  padding: 20px 0;
+}
+
+.document-details {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-left: 4px solid #2196F3;
+}
+
+.document-details h3 {
+  margin: 0 0 15px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-item .label {
+  font-weight: 600;
+  color: #495057;
+  min-width: 80px;
+}
+
+.detail-item .value {
+  color: #2c3e50;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  flex: 1;
+}
+
+.confirmation-message {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #e3f2fd, #f0f8ff);
+  border-radius: 8px;
+  border: 1px solid #2196F3;
+}
+
+.confirmation-message i {
+  font-size: 2rem;
+  color: #2196F3;
+  margin-bottom: 10px;
+}
+
+.confirmation-message p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.btn-validate {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-validate:hover {
+  background: linear-gradient(135deg, #1976D2, #1565C0);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
-  .update-modal {
+  .update-modal, .validation-modal {
     width: 95vw !important;
     margin: 10px;
   }
   
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-grid {
     grid-template-columns: 1fr;
   }
   
