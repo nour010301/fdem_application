@@ -88,6 +88,8 @@ const fetchProfile = async () => {
 };
 
 const getRoleName = computed(() => {
+  if (!profile.value.profil) return 'N/A';
+  
   switch (profile.value.profil) {
     case 1:
       return 'Administrateur fonctionnel';
