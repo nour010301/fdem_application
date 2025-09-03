@@ -958,8 +958,8 @@ const handleConfirmClick = () => {
 // Watch for changes in prenom and nom to auto-generate email and username
 watch([() => userData.value.prenom, () => userData.value.nom], ([prenom, nom]) => {
   if (prenom && nom) {
-    const firstLetter = prenom.charAt(0).toLowerCase();
-    const lastName = nom.toLowerCase();
+    const firstLetter = prenom.trim().charAt(0).toLowerCase();
+    const lastName = nom.trim().toLowerCase();
     const generatedUsername = `${firstLetter}.${lastName}`;
     
     emailUsername.value = generatedUsername;
