@@ -2604,7 +2604,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
 import "vue-multiselect/dist/vue-multiselect.css";
-import axios from '../axios'
+import axiosInstance from '../axios'
 import PdfViewer from '../components/PdfViewer.vue'
 import ImageViewer from '../components/ImageViewer.vue'
 import VideoViewer from '../components/VideoViewer.vue'
@@ -2764,11 +2764,11 @@ onMounted(async () => {
   try {
     const [typesRes, structuresRes, subDivsRes, subDivs3Res, subDivs4Res] = await Promise.all([
       // axios.get(`${API_BASE}/types/`),
-      axios.get(`types/`),
-      axios.get(`structures/`),
-      axios.get(`subdiv1et2/`),
-      axios.get(`subdiv2et3/`),
-      axios.get(`subdiv3et4/`)
+      axiosInstance.get(`types/`),
+      axiosInstance.get(`structures/`),
+      axiosInstance.get(`subdiv1et2/`),
+      axiosInstance.get(`subdiv2et3/`),
+      axiosInstance.get(`subdiv3et4/`)
     ])
     typeProduits.value = typesRes.data
     structures.value = structuresRes.data
@@ -2792,8 +2792,8 @@ watch(selectedTypeId, async (newTypeId) => {
   if (newTypeId !== null) {
     try {
       const [produitsRes, sectionsRes] = await Promise.all([
-        axios.get(`produits/by-type/${newTypeId}/`),
-        axios.get(`sections/by-type/${newTypeId}/`)
+        axiosInstance.get(`produits/by-type/${newTypeId}/`),
+        axiosInstance.get(`sections/by-type/${newTypeId}/`)
       ])
       produits.value = produitsRes.data
       sections.value = sectionsRes.data
@@ -2904,7 +2904,7 @@ watch(selectedStructureId, async (newStructureId) => {
   
   if (newStructureId !== null) {
     try {
-      const res = await axios.get(`subdivision-nv1/by-structure/${newStructureId}/`)
+      const res = await axiosInstance.get(`subdivision-nv1/by-structure/${newStructureId}/`)
       divisionsNv1.value = res.data
     } catch (error) {
       console.error('Erreur divisions nv1', error)
@@ -3388,7 +3388,7 @@ async function submitForm() {
     }
 
     creationProgress.value = 'Envoi du document au serveur...';
-    const response = await axios.post('documents/create-two-file/', formData, {
+    const response = await axiosInstance.post('documents/create-two-file/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -3710,8 +3710,8 @@ const contextConsulterEntityConfig: Record<string, EntityConfig> = {
   direction_projet: {
     label: "Direction du Projet",
     endpoint: ((projetCode: string) => `directeurs-by-projet/${projetCode}`) as ProjetEndpoint,
-    columns: ["ID", "Nom", "Fonction", "Téléphone"],
-    columnKeys: ["idDirecteur", "nomPrenomDirecteur", "fonction", "telephone"]
+    columns: ["ID", "Nom", "Fonction", "Téléphone", "Date debut", "Date fin"],
+    columnKeys: ["idDirecteur", "nomPrenomDirecteur", "fonction", "telephone", "date_deb", "date_fin"]
   }
 };
 
@@ -3779,7 +3779,7 @@ if (entityKey === 'direction_projet') {
 
   try {
     const code = selectedProjets.value[0].code;
-    const { data } = await axios.get((config.endpoint as ProjetEndpoint)(encodeURIComponent(code)));
+    const { data } = await axiosInstance.get((config.endpoint as ProjetEndpoint)(encodeURIComponent(code)));
     let rows = Array.isArray(data) ? data : [data];
     contextConsulter.value.data = rows;
   } catch (e) {
@@ -3805,7 +3805,7 @@ if (entityKey === 'direction_projet') {
     contextConsulter.value.data = [];
 
     try {
-      const { data } = await axios.get((config.endpoint as ProduitEndpoint)(selectedProduitId.value));
+      const { data } = await axiosInstance.get((config.endpoint as ProduitEndpoint)(selectedProduitId.value));
       let rows = Array.isArray(data) ? data : [data];
       contextConsulter.value.data = rows;
     } catch (e) {
@@ -3937,7 +3937,7 @@ async function addDirectionProjet() {
       date_fin: dateModal.value.date_fin
     };
 
-    await axios.post('/projets-directeurs/', payload);
+    await axiosInstance.post('/projets-directeurs/', payload);
     
     // Add to selected list
     const directeur = dateModal.value.directeur;
@@ -3997,7 +3997,7 @@ async function onAjouter(entityKey: string) {
   // Fetch all possible items for right-table
   if (config.listRef.value.length === 0) {
     try {
-      const { data } = await axios.get(config.api);
+      const { data } = await axiosInstance.get(config.api);
       config.listRef.value = data;
     } catch (e) {
       showToast("Erreur lors du chargement des " + config.label, 'error');
@@ -4018,7 +4018,7 @@ async function onAjouter(entityKey: string) {
       const url = produit !== undefined 
     ? (selectedApi as ProduitEndpoint)(produit) 
     : (selectedApi as ProjetEndpoint)(projet as string);
-      const { data } = await axios.get(url);
+      const { data } = await axiosInstance.get(url);
       selectedList = Array.isArray(data) ? data : [data];
       selectedList = selectedList.filter(x => typeof x === 'object' && x != null);
       console.log('Selected items with hasFichier:', selectedList);
@@ -4111,7 +4111,7 @@ async function addToSelected(entityKey: string, item: any) {
           payload = { idProduit: selectedProduitId.value, [config.idCol]: item[config.idCol] };
       }
 
-      await axios.post(`/${endpoint}/`, payload);
+      await axiosInstance.post(`/${endpoint}/`, payload);
       config.selectedRef.value.push(item);
       contextAjouter.value.selected = [...config.selectedRef.value];
     } catch (e) {
@@ -4171,7 +4171,7 @@ async function removeFromSelected(entityKey: string, item: any) {
         payload = { idProduit: selectedProduitId.value, [config.idCol]: item[config.idCol] };
     }
 
-    await axios.delete(`/${endpoint}/`, { data: payload });
+    await axiosInstance.delete(`/${endpoint}/`, { data: payload });
     config.selectedRef.value = config.selectedRef.value.filter(
       (i: any) => i[config.idCol] !== item[config.idCol]
     );
@@ -4276,7 +4276,7 @@ async function addDirecteur() {
         return;
     }
 
-    await axios.post(`/${endpoint}/`, payload);
+    await axiosInstance.post(`/${endpoint}/`, payload);
     showToast("Directeur ajouté avec succès !", 'success');
     closeDirecteurModal();
   } catch (e) {
@@ -4412,7 +4412,7 @@ async function performEntityDelete(item:any) {
   }
   try {
     contextDelete.value.loading = true;
-    await axios.post(`${entityDeleteDef.endpoint}`, entityDeleteDef.getPayload(item));
+    await axiosInstance.post(`${entityDeleteDef.endpoint}`, entityDeleteDef.getPayload(item));
     contextDelete.value.confirmItem = null;
     // Remove from list in modal UI
     contextDelete.value.data = contextDelete.value.data.filter((row:any) => row[contextDelete.value.idCol] !== item[contextDelete.value.idCol]);
@@ -4467,7 +4467,7 @@ async function fetchDocListForCurrentSelection() {
       requestConfig.signal = consulterAbortController.value.signal;
     }
     
-    const { data } = await axios.get('documentsFilter/', requestConfig);
+    const { data } = await axiosInstance.get('documentsFilter/', requestConfig);
     docList.value = Array.isArray(data) ? data : [];
   } catch(e: any) {
     if (e.name === 'AbortError') {
@@ -4687,7 +4687,7 @@ async function confirmValidation() {
   validatingDocuments.value[documentToValidate.value.idDocument] = true;
   
   try {
-    await axios.put(`http://10.10.150.75:8000/api/documents/create-two-file/${documentToValidate.value.idDocument}/`, {
+    await axiosInstance.put(`documents/create-two-file/${documentToValidate.value.idDocument}/`, {
       valide: true
     });
     
@@ -4777,7 +4777,7 @@ function cancelConsulter() {
 async function handleDeleteDocument(document: any) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) return;
   try {
-    await axios.delete(`documents/${document.idDocument}`);
+    await axiosInstance.delete(`documents/${document.idDocument}`);
     showToast("Document supprimé !", 'success');
     fetchDocListForCurrentSelection();
   } catch (e) {
@@ -4954,28 +4954,28 @@ async function uploadFicheTechnique() {
     let endpoint = '';
     switch (ficheTechniqueModal.value.entityKey) {
       case 'projet':
-        endpoint = 'http://10.10.150.75:8000/api/AddFilePRJ/';
+        endpoint = 'AddFilePRJ/';
         break;
       case 'maitre_ouvrage':
-        endpoint = 'http://10.10.150.75:8000/api/AddFileMOA/';
+        endpoint = 'AddFileMOA/';
         break;
       case 'maitre_oeuvre':
-        endpoint = 'http://10.10.150.75:8000/api/AddFileMOE/';
+        endpoint = 'AddFileMOE/';
         break;
       case 'soustraitants_tvx':
-        endpoint = 'http://10.10.150.75:8000/api/AddFileSOUT/';
+        endpoint = 'AddFileSOUT/';
         break;
       case 'fournisseur':
-        endpoint = 'http://10.10.150.75:8000/api/AddFileFOUR/';
+        endpoint = 'AddFileFOUR/';
         break;
       case 'bet_soustraitants_etudes':
-        endpoint = 'http://10.10.150.75:8000/api/AddFileBET/';
+        endpoint = 'AddFileBET/';
         break;
       default:
         throw new Error('Type d\'entité non supporté');
     }
 
-    await axios.post(endpoint, formData, {
+    await axiosInstance.post(endpoint, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -5011,27 +5011,27 @@ async function viewFicheTechnique(entityKey: string, item: any) {
     
     switch (entityKey) {
       case 'projet':
-        endpoint = 'http://10.10.150.75:8000/api/ViewFilePRJ/';
+        endpoint = 'ViewFilePRJ/';
         params.append('code', String(entityId));
         break;
       case 'maitre_ouvrage':
-        endpoint = 'http://10.10.150.75:8000/api/ViewFileMOA/';
+        endpoint = 'ViewFileMOA/';
         params.append('idMaitreOuvrage', String(entityId));
         break;
       case 'maitre_oeuvre':
-        endpoint = 'http://10.10.150.75:8000/api/ViewFileMOE/';
+        endpoint = 'ViewFileMOE/';
         params.append('idMaitreOeuvre', String(entityId));
         break;
       case 'soustraitants_tvx':
-        endpoint = 'http://10.10.150.75:8000/api/ViewFileSOUT/';
+        endpoint = 'ViewFileSOUT/';
         params.append('idSoustraitant', String(entityId));
         break;
       case 'fournisseur':
-        endpoint = 'http://10.10.150.75:8000/api/ViewFileFOUR/';
+        endpoint = 'ViewFileFOUR/';
         params.append('idFournisseur', String(entityId));
         break;
       case 'bet_soustraitants_etudes':
-        endpoint = 'http://10.10.150.75:8000/api/ViewFileBET/';
+        endpoint = 'ViewFileBET/';
         params.append('idBET', String(entityId));
         break;
       default:
@@ -5101,7 +5101,7 @@ async function executeFullDelete() {
   if (!documentToDelete.value) return;
   
   try {
-    await axios.delete(`documents/${documentToDelete.value.idDocument}/`);
+    await axiosInstance.delete(`documents/${documentToDelete.value.idDocument}/`);
     showToast("Document supprimé avec succès!", 'success');
     await fetchDocListForCurrentSelection();
   } catch (e: any) {
@@ -5134,7 +5134,7 @@ async function executeSelectiveDelete() {
     }
     
     // Use the PUT endpoint to update the document
-    await axios.put(`http://10.10.150.75:8000/api/documents/create-two-file/${documentToDelete.value.idDocument}/`, formData, {
+    await axiosInstance.put(`documents/create-two-file/${documentToDelete.value.idDocument}/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     
@@ -5169,15 +5169,16 @@ async function viewDocument(document: Document, fileType: 'fichier' | 'video' | 
       }
     } else if (fileType === 'photos') {
       // Use the specific API endpoint for photos
-      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-photos/${document.idDocument}/`, {
-        signal: abortController.signal
+      const response = await axiosInstance.get(`documents/view-photos/${document.idDocument}/`, {
+        signal: abortController.signal,
+        responseType: 'blob'
       })
       
       if (abortController.signal.aborted) {
         throw new Error('Request was cancelled')
       }
       
-      const blob = await response.blob()
+      const blob = response.data
       const fileUrl = URL.createObjectURL(blob)
       
       selectedDocument.value = {
@@ -5186,7 +5187,7 @@ async function viewDocument(document: Document, fileType: 'fichier' | 'video' | 
         detectedType: 'pdf'
       }
     } else {
-      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`, {
+      const response = await axiosInstance.get(`documents/view-file/${document.idDocument}/`, {
         signal: abortController.signal
       })
       
@@ -5194,11 +5195,11 @@ async function viewDocument(document: Document, fileType: 'fichier' | 'video' | 
         throw new Error('Request was cancelled')
       }
       
-      const blob = await response.blob()
+      const blob = response.data
       const fileUrl = URL.createObjectURL(blob)
       
       let detectedType = 'pdf'
-      if (blob.type.startsWith('image/')) {
+      if (blob.type && blob.type.startsWith('image/')) {
         detectedType = 'image'
       }
       
@@ -5237,7 +5238,7 @@ async function downloadFile(document: any, fileType: 'plan' | 'fichier' | 'video
   try {
     await logUserAction(document.idDocument, LOG_ACTIONS.DOWNLOAD_FILE)
     const a = document.createElement('a')
-    a.href = `http://10.10.150.75:8000/api/documents/download-${fileType}/${document.idDocument}/`
+    a.href = `documents/download-${fileType}/${document.idDocument}/`
     a.download = `${fileType}_${document.idDocument}`
     a.click()
     showToast('Téléchargement démarré', 'success')
@@ -5428,13 +5429,13 @@ watch(mode, async (val) => {
         projetsRes,
         directionsRes
       ] = await Promise.all([
-        axios.get(`bureaux-etudes/`),
-        axios.get(`fournisseurs/`),
-        axios.get(`maitres-oeuvre/`),
-        axios.get(`maitres-ouvrage/`),
-        axios.get(`Soustraitants/`),
-        axios.get(`projets/`),
-        axios.get(`directions-projets/`)
+        axiosInstance.get(`bureaux-etudes/`),
+        axiosInstance.get(`fournisseurs/`),
+        axiosInstance.get(`maitres-oeuvre/`),
+        axiosInstance.get(`maitres-ouvrage/`),
+        axiosInstance.get(`soustraitants/`),
+        axiosInstance.get(`projets/`),
+        axiosInstance.get(`directions-projets/`)
       ]);
       bureauxEtudesList.value = betRes.data;
       fournisseursList.value = fourRes.data;
@@ -5544,7 +5545,7 @@ async function loadExistingContextData() {
 
 async function loadExistingEntity(entityKey: string, endpoint: string, targetRef: any) {
   try {
-    const { data } = await axios.get(`${endpoint}${selectedProduitId.value}`);
+    const { data } = await axiosInstance.get(`${endpoint}${selectedProduitId.value}`);
     const items = Array.isArray(data) ? data : [data];
     const validItems = items.filter(item => item && typeof item === 'object');
     
@@ -5582,7 +5583,7 @@ async function loadExistingDirectionProjet() {
   
   try {
     const code = selectedProjets.value[0].code;
-    const { data } = await axios.get(`directeurs-by-projet/${encodeURIComponent(code)}`);
+    const { data } = await axiosInstance.get(`directeurs-by-projet/${encodeURIComponent(code)}`);
     const items = Array.isArray(data) ? data : [data];
     const validItems = items.filter(item => item && typeof item === 'object');
     
@@ -5660,8 +5661,8 @@ const contextEntitiesConfig = {
     label: "Direction du Projet",
     api: '/directions-projets/',
     idCol: 'idDirecteur',
-    columns: ['ID', 'Nom', 'Fonction', 'Téléphone'],
-    columnKeys: ['idDirecteur', 'nomPrenomDirecteur', 'fonction', 'telephone'],
+    columns: ['ID', 'Nom', 'Fonction', 'Téléphone', 'Date debut', 'Date fin'],
+    columnKeys: ['idDirecteur', 'nomPrenomDirecteur', 'fonction', 'telephone', 'date_deb', 'date_fin'],
     listRef: directionsProjetsList,
     selectedRef: selectedDirectionsProjets,
     allowMultiple: true,
@@ -5703,7 +5704,7 @@ async function loadDirecteurs(entityKey: string, item: any) {
         throw new Error('Type d\'entité non supporté')
     }
     
-    const { data } = await axios.post(`/${endpoint}/`, params)
+    const { data } = await axiosInstance.post(`/${endpoint}/`, params)
     // Extract directors from the nested structure
     directeursList.value = data.directeurs || []
   } catch (error) {
@@ -5749,7 +5750,7 @@ async function loadDirecteursConsulter(entityKey: string, item: any) {
         throw new Error('Type d\'entité non supporté')
     }
     
-    const { data } = await axios.post(`/${endpoint}/`, params)
+    const { data } = await axiosInstance.post(`/${endpoint}/`, params)
     // Extract directors from the nested structure
     directeursListConsulter.value = data.directeurs || []
   } catch (error) {
@@ -5953,7 +5954,7 @@ async function submitPlanImport() {
     formData.append('plan', zipFile)
     
     // Use the PUT endpoint to update the document with the plan
-    await axios.put(`http://10.10.150.75:8000/api/documents/create-two-file/${documentToImportPlan.value.idDocument}/`, formData, {
+    await axiosInstance.put(`documents/create-two-file/${documentToImportPlan.value.idDocument}/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     
@@ -6103,7 +6104,7 @@ async function updateDocument() {
     }
     
     // Use the new API endpoint
-    await axios.put(`http://10.10.150.75:8000/api/documents/create-two-file/${documentToUpdate.value.idDocument}/`, formData, {
+    await axiosInstance.put(`documents/create-two-file/${documentToUpdate.value.idDocument}/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     
@@ -6137,7 +6138,7 @@ async function moveDocument() {
     formData.append('idSubDivisionNv_3', documentToMove.value.idSubDivisionNv_3?.toString() || '')
     formData.append('idSubDivisionNv_4', documentToMove.value.idSubDivisionNv_4?.toString() || '')
     
-    await axios.post(`documents/${documentToMove.value.idDocument}/move/`, formData, {
+    await axiosInstance.post(`documents/${documentToMove.value.idDocument}/move/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     
@@ -6208,7 +6209,7 @@ async function submitImportForm() {
     
     creationProgress.value = 'Envoi du dossier au serveur...';
 
-    const response = await axios.post('http://10.10.150.75:8000/api/documents/', formData, {
+    const response = await axiosInstance.post('documents/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

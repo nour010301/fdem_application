@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 const PagesLayout = () => import('../layouts/PagesLayout.vue')
 
-import axios from '../axios.ts'
+
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import Documents from '../views/Documents.vue'
@@ -25,6 +25,7 @@ import SubDivisionNv_3View from '../views/SubDivisionNv_3View.vue'
 import SubDivisionNv_4View from '../views/SubDivisionNv_4View.vue'
 import UsersView from '../views/UsersView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import axiosInstance from '../axios.ts'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -47,7 +48,7 @@ const routes: Array<RouteRecordRaw> = [
       try {
         const refresh = localStorage.getItem('refresh_token')
         if (refresh) {
-          await axios.post('http://10.10.150.75:8000/api/api/logout/', { refresh })
+          await axiosInstance.post('api/logout/', { refresh })
         }
       } catch (error) {
         console.warn('Logout failed or token already invalid', error)

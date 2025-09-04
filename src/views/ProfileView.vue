@@ -21,10 +21,10 @@
               <span class="info-label">Nom d'utilisateur :</span>
               <span class="info-value">{{ profile.username }}</span>
             </div>
-            <div class="info-item">
+            <!-- <div class="info-item">
               <span class="info-label">Email :</span>
               <span class="info-value">{{ profile.email || 'N/A' }}</span>
-            </div>
+            </div> -->
             <div class="info-item">
               <span class="info-label">Téléphone :</span>
               <span class="info-value">{{ profile.telephone || 'N/A' }}</span>

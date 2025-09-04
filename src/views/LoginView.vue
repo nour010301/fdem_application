@@ -230,8 +230,9 @@ const handleLogin = async () => {
       password: password.value
     })
 
-    // Show OTP modal
+    // Show OTP modal and auto-fill with 111111
     showOtpModal.value = true
+    otpCode.value = '111111'
     loading.value = false
 
   } catch (err: any) {

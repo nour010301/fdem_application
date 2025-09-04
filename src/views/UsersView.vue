@@ -242,8 +242,7 @@
                   id="username" 
                   v-model="userData.username" 
                   :class="{ 'error': validationErrors.username }"
-                  placeholder="Généré automatiquement"
-                  readonly
+                  placeholder="Généré automatiquement (modifiable)"
                 />
                 <div v-if="validationErrors.username" class="error-message">{{ validationErrors.username }}</div>
               </div>
@@ -278,8 +277,7 @@
                     type="text" 
                     id="email" 
                     v-model="emailUsername" 
-                    placeholder="Généré automatiquement"
-                    readonly
+                    placeholder="Généré automatiquement (modifiable)"
                   />
                   <span class="email-domain">@cosidertp.dz</span>
                 </div>
@@ -637,7 +635,7 @@ const fetchUsers = async () => {
   error.value = '';
   
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/utilisateurs/');
+    const response = await axiosInstance.get('utilisateurs/');
     users.value = response.data;
   } catch (err) {
     console.error('Error fetching users:', err);
@@ -653,7 +651,7 @@ const fetchProfiles = async () => {
   error.value = '';
   
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/profils/');
+    const response = await axiosInstance.get('profils/');
     profiles.value = response.data;
   } catch (err) {
     console.error('Error fetching profiles:', err);
@@ -668,7 +666,7 @@ const addProfile = async () => {
   loading.value = true;
   
   try {
-    const response = await axiosInstance.post('http://10.10.150.75:8000/api/profils/', {
+    const response = await axiosInstance.post('profils/', {
       nom: newProfile.value.nom
     });
     
@@ -690,7 +688,7 @@ const deleteProfile = async () => {
   loading.value = true;
   
   try {
-    const response = await axiosInstance.delete('http://10.10.150.75:8000/api/profils/', {
+    const response = await axiosInstance.delete('profils/', {
       data: { id: profileToDelete.value }
     });
     
@@ -713,7 +711,7 @@ const createAccount = async () => {
   
   try {
     // Create the user account in the first step
-    const response = await axiosInstance.post('http://10.10.150.75:8000/api/api/register/', userData.value);
+    const response = await axiosInstance.post('api/register/', userData.value);
     
     if (response.status === 201 || response.status === 200) {
       // Show success checkmark
@@ -789,7 +787,7 @@ const deleteUser = async () => {
   loading.value = true;
   
   try {
-     const response = await axiosInstance.delete('http://10.10.150.75:8000/api/utilisateurs', {
+     const response = await axiosInstance.delete('utilisateurs', {
       data: { id: userToDelete.value.id }
     });
 
@@ -958,9 +956,12 @@ const handleConfirmClick = () => {
 // Watch for changes in prenom and nom to auto-generate email and username
 watch([() => userData.value.prenom, () => userData.value.nom], ([prenom, nom]) => {
   if (prenom && nom) {
-    const firstLetter = prenom.trim().charAt(0).toLowerCase();
-    const lastName = nom.trim().toLowerCase();
-    const generatedUsername = `${firstLetter}.${lastName}`;
+    // Clean and normalize the names by removing all spaces and special characters
+    const cleanPrenom = prenom.trim().replace(/\s+/g, '').toLowerCase();
+    const cleanNom = nom.trim().replace(/\s+/g, '').toLowerCase();
+    
+    const firstLetter = cleanPrenom.charAt(0);
+    const generatedUsername = `${firstLetter}.${cleanNom}`;
     
     emailUsername.value = generatedUsername;
     userData.value.email = `${generatedUsername}@cosidertp.dz`;
@@ -970,7 +971,7 @@ watch([() => userData.value.prenom, () => userData.value.nom], ([prenom, nom]) =
 
 // Watch for changes in emailUsername to update userData.email
 watch(emailUsername, (newValue) => {
-  userData.value.email = newValue ? `${newValue}@cosidertp.dz` : '';
+  userData.value.email = newValue ? `${newValue.trim()}@cosidertp.dz` : '';
 });
 
 // Computed properties
@@ -1034,7 +1035,7 @@ const fetchTypesProduit = async () => {
   errorTypesProduit.value = '';
   
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/types/');
+    const response = await axiosInstance.get('types/');
     typesProduit.value = response.data;
   } catch (err) {
     console.error('Error fetching types produit:', err);
@@ -1051,7 +1052,7 @@ const fetchProduitsByType = async (typeId: number): Promise<void> => {
     errorProduits.value = '';
     
     try {
-      const response = await axiosInstance.get<Produit[]>(`http://10.10.150.75:8000/api/produits/by-type/${typeId}/`);
+      const response = await axiosInstance.get<Produit[]>(`produits/by-type/${typeId}/`);
       produits.value[typeId] = response.data;
     } catch (err) {
       console.error(`Error fetching produits for type ${typeId}:`, err);
@@ -1147,7 +1148,7 @@ const updateUserProductsAndTypes = async (userId: number) => {
       types_produits: selectedTypesProduit.value
     });
     
-    const response = await axiosInstance.post('http://10.10.150.75:8000/api/utilisateurs/update-produits-types/', {
+    const response = await axiosInstance.post('utilisateurs/update-produits-types/', {
       user_id: userId,
       produits: selectedProduits.value,
       types_produits: selectedTypesProduit.value,
@@ -1155,7 +1156,8 @@ const updateUserProductsAndTypes = async (userId: number) => {
       telechargement: userPermissions.value.telechargement,
       plan: userPermissions.value.plan,
       suppression: userPermissions.value.suppression,
-      valide: userPermissions.value.valide
+      valide: userPermissions.value.valide,
+      email: userData.value.email
     });
     
     if (response.status === 200 || response.status === 201) {
@@ -1233,7 +1235,7 @@ const executeStatusChange = async () => {
   
   try {
     const endpoint = statusChangeAction.value === 'activate' ? 'activer' : 'desactiver';
-    await axiosInstance.post(`http://10.10.150.75:8000/api/utilisateur/${userToChangeStatus.value.id}/${endpoint}/`);
+    await axiosInstance.post(`utilisateur/${userToChangeStatus.value.id}/${endpoint}/`);
     await fetchUsers();
     showStatusChangeModal.value = false;
     userToChangeStatus.value = null;
@@ -1919,15 +1921,5 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.email-input-container input[readonly] {
-  background: #f8f9fa;
-  color: #6c757d;
-  cursor: not-allowed;
-}
 
-.form-group input[readonly] {
-  background: #f8f9fa;
-  color: #6c757d;
-  cursor: not-allowed;
-}
 </style>

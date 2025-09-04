@@ -182,7 +182,7 @@ const fetchTypesProduit = async () => {
   error.value = '';
   
   try {
-    const response = await axiosInstance.get('http://10.10.150.75:8000/api/types/');
+    const response = await axiosInstance.get('types/');
     typesProduit.value = response.data;
   } catch (err) {
     console.error('Error fetching types produit:', err);
@@ -205,7 +205,7 @@ const fetchProduitsByType = async (typeId: number): Promise<void> => {
     errorProduits.value = '';
     
     try {
-      const response = await axiosInstance.get<Produit[]>(`http://10.10.150.75:8000/api/produits/by-type/${typeId}/`);
+      const response = await axiosInstance.get<Produit[]>(`produits/by-type/${typeId}/`);
       produits.value[typeId] = response.data;
     } catch (err) {
       console.error(`Error fetching produits for type ${typeId}:`, err);

@@ -1,8 +1,9 @@
 // services/auth.ts
-import axios from 'axios'
+
+import axiosInstance from '../axios.ts'
 
 export async function logout(refreshToken: string) {
-  return axios.post('http://10.10.150.75:8000/api/api/logout/', {
+  return axiosInstance.post('api/logout/', {
     refresh: refreshToken,
   })
 }

@@ -82,14 +82,14 @@
               <p class="stat-number">{{ statistics?.documents || 0 }}</p>
             </div>
           </div>
-          <div v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide" class="stat-card valid">
+          <div v-if="userStore.userRole.value === userStore.ROLES.MISE_A_JOUR || userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide" class="stat-card valid">
             <div class="stat-icon">✅</div>
             <div class="stat-content">
               <h3>Documents Valides</h3>
               <p class="stat-number">{{ statistics?.['Documents valides'] || 0 }}</p>
             </div>
           </div>
-          <div v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide" class="stat-card invalid">
+          <div v-if="userStore.userRole.value === userStore.ROLES.MISE_A_JOUR || userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide" class="stat-card invalid">
             <div class="stat-icon">❌</div>
             <div class="stat-content">
               <h3>Documents Non Valides</h3>
@@ -141,7 +141,7 @@
           <th>Plan</th>
           <th>Vidéo</th>
           <th>Photos</th>
-          <th v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">Validation</th>
+          <th v-if="userStore.userRole.value === userStore.ROLES.MISE_A_JOUR || userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">Validation</th>
           <!-- <th>Actions</th> -->
         </tr>
         </thead>
@@ -199,7 +199,7 @@
               </div>
               <span v-else class="no-file">—</span>
             </td>
-            <td v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">
+            <td v-if="userStore.userRole.value === userStore.ROLES.MISE_A_JOUR || userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">
               <span v-if="document.valide === true" class="valide-status valid">Oui</span>
               <div v-else-if="userStore.user.value?.valide" class="validation-actions">
                 <span class="valide-status invalid">Non</span>
@@ -867,7 +867,8 @@ const filteredDocuments = computed(() => {
   let filtered = documents.value;
   
   // Apply validation filter for users with profile ID 3 (CONSULTATION) who don't have validation permission
-  if (userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide) {
+  // Profile ID 4 (MISE_A_JOUR) can see all documents regardless of validation status
+  if (userStore.userRole.value === userStore.ROLES.CONSULTATION && !userStore.user.value?.valide) {
     filtered = filtered.filter(doc => doc.valide === true);
   }
   // Apply search filter
@@ -959,12 +960,13 @@ async function viewDocument(document: Document, fileType: 'fichier' | 'video' | 
       }
     } else if (fileType === 'photos') {
       // For photos, use the view-photos endpoint
-      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-photos/${document.idDocument}/`, {
-        signal: abortController.signal
+      const response = await axiosInstance.get(`documents/view-photos/${document.idDocument}/`, {
+        signal: abortController.signal,
+        responseType: 'blob'
       })
       
-      if (response.ok) {
-        const blob = await response.blob()
+      if (response.status === 200) {
+        const blob = response.data
         const fileUrl = URL.createObjectURL(blob)
         
         selectedDocument.value = {
