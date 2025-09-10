@@ -938,11 +938,42 @@ async function deleteDocument() {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
   }
 }
+// Toast notification system
+interface Toast {
+  id: number
+  message: string
+  type: 'success' | 'error'
+}
+
+const toasts = ref<Toast[]>([])
+let toastId = 0
+
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  const toast: Toast = {
+    id: ++toastId,
+    message,
+    type
+  }
+  toasts.value.push(toast)
+  
+  // Auto remove after 4 seconds
+  setTimeout(() => {
+    removeToast(toast.id)
+  }, 4000)
+}
+
+function removeToast(id: number) {
+  const index = toasts.value.findIndex(t => t.id === id)
+  if (index > -1) {
+    toasts.value.splice(index, 1)
+  }
+}
+
 // function redirectToAddDocument() { router.push('/add-document') }
 async function viewDocument(document: Document, fileType: 'fichier' | 'video' | 'photos' = 'fichier') {
   loadingConsulter.value = true
   loadingDocumentId.value = document.idDocument
-  
+  showToast('Veuillez patienter, le document se charge...', 'success')
   // Log the consult action
   await logUserAction(document.idDocument, LOG_ACTIONS.CONSULT_FILE)
   

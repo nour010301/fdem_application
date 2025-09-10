@@ -10,8 +10,8 @@
         Informations de contact
       </h2>
       <div class="info-row">
-        <span class="info-label">Gmail :</span>
-        <span class="info-value">yourname@gmail.com</span>
+        <span class="info-label">Email :</span>
+        <span class="info-value">developpement@cosidettp.dz</span>
       </div>
       <div class="info-row">
         <span class="info-label">Numéro de téléphone :</span>
@@ -26,16 +26,33 @@
       </h2>
       <div class="info-row">
         <span class="info-label">Types de fichiers acceptés :</span>
-        <span class="info-value accent">pdf, dwg, docx</span>
+        <div class="info-value">
+          <div class="file-types">
+            <div class="file-type-item">
+              <span class="bullet">●</span> PDF avec PDF.js
+            </div>
+            <div class="file-type-item">
+              <span class="bullet">●</span> Images (JPG, PNG, GIF)
+            </div>
+            <div class="file-type-item">
+              <span class="bullet">●</span> Vidéos (MP4, MOV, AVI)
+            </div>
+          </div>
+        </div>
       </div>
       <div class="info-row">
         <span class="info-label">Taille maximale autorisée :</span>
-        <span class="info-value">20 MB</span>
+        <div class="info-value">
+          <div class="size-limits">
+            <!-- <div class="size-item">Documents et Images : <span class="accent">20 MB</span></div> -->
+            <div class="size-item">Vidéos : <span class="accent">1 GB</span></div>
+          </div>
+        </div>
       </div>
-      <div class="info-row">
+      <!-- <div class="info-row">
         <span class="info-label">Format recommandé du nom de fichier :</span>
         <span class="info-value">[code]-[date]-[type].pdf</span>
-      </div>
+      </div> -->
     </section>
   </div>
 </template>
@@ -46,33 +63,33 @@
 
 <style scoped>
 .param-settings-page {
-  max-width: 960px;
-  margin: 0.5rem auto 0 auto;
-  padding: 1.2rem 2.5rem;
+  max-width: 800px;
+  margin: 0.3rem auto 0 auto;
+  padding: 0.8rem 1.5rem;
   background: linear-gradient(117deg, #181e3e 57%, #283a77 140%);
-  border-radius: 2.2em;
+  border-radius: 1.5em;
   border: 2px solid #23305b;
-  min-height: 88vh;
+  min-height: 70vh;
   box-shadow: 0 18px 90px 4px rgba(20,33,65,0.26);
   position: relative;
   z-index: 1;
 }
 
 .decor-accent {
-  width: 80px;
-  height: 5px;
+  width: 60px;
+  height: 3px;
   background: linear-gradient(90deg, #3ff780, #2196f3 60%, #5e69ff 100%);
   border-radius: 99px;
-  margin: 0 auto 2rem auto;
+  margin: 0 auto 1rem auto;
   box-shadow: 0 2px 14px #2196f355;
 }
 
 .title {
   color: #90caf9;
-  font-size: 2.9em;
-  font-weight: 900;
+  font-size: 2em;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  margin-bottom: 2.85rem;
+  margin-bottom: 1.5rem;
   text-align: center;
   text-shadow: 0 8px 32px #1a237e88, 0 1.5px 0 #212427;
 }
@@ -80,9 +97,9 @@
 .info-card {
   position: relative;
   background: linear-gradient(112deg, #1c2a55e6 68%, #223baed7 160%);
-  border-radius: 1.7em;
-  padding: 2.7em 2.4em 2.2em 2.4em;
-  margin-bottom: 2.6rem;
+  border-radius: 1.2em;
+  padding: 1.5em 1.8em 1.2em 1.8em;
+  margin-bottom: 1.5rem;
   border: 1.6px solid #2196f388;
   box-shadow: 0 2px 40px 0 #181e3e39;
   overflow: hidden;
@@ -110,12 +127,12 @@
 
 .section-title {
   color: #90caf9;
-  font-size: 1.5em;
+  font-size: 1.2em;
   font-weight: 700;
-  margin-bottom: 2.2em;
+  margin-bottom: 1.2em;
   letter-spacing: 0.012em;
-  border-left: 5px solid #3ff780;
-  padding-left: 1.3em;
+  border-left: 4px solid #3ff780;
+  padding-left: 1em;
   text-shadow: 0 3px 20px #1a237e1a;
   background: linear-gradient(90deg, #1a237e10 50%, transparent 100%);
   border-radius: 0.3em;
@@ -124,16 +141,16 @@
 .info-row {
   display: flex;
   align-items: flex-start;
-  gap: 2.6em;
-  margin-bottom: 2.1em;
-  font-size: 1.34em;
+  gap: 1.5em;
+  margin-bottom: 1.2em;
+  font-size: 1em;
 }
 .info-label {
   font-weight: 600;
   color: #e2f0fb;
-  min-width: 270px;
+  min-width: 200px;
   letter-spacing: 0.01em;
-  font-size: 1em;
+  font-size: 0.95em;
 }
 .info-value {
   color: #ffffff;
@@ -146,6 +163,38 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-shadow: 0 2px 16px #3ff78033;
+}
+
+.file-types {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+
+.file-type-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.bullet {
+  color: #3ff780;
+  font-weight: bold;
+}
+
+.size-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+
+.size-item {
+  font-size: 1em;
+}
+
+.size-item .accent {
+  color: #3ff780;
+  font-weight: 700;
 }
 @media (max-width: 1200px) {
   .param-settings-page {

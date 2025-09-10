@@ -1,962 +1,616 @@
-# Documentation Complète - Application FDEM v2
-
-## Table des Matières
-
-1. [Vue d'ensemble du Projet](#vue-densemble-du-projet)
-2. [Architecture Technique](#architecture-technique)
-3. [Fonctionnalités Principales](#fonctionnalités-principales)
-4. [Gestion des Utilisateurs et Rôles](#gestion-des-utilisateurs-et-rôles)
-5. [Modules de l'Application](#modules-de-lapplication)
-6. [Système de Documents](#système-de-documents)
-7. [Bibliothèque et Arborescence](#bibliothèque-et-arborescence)
-8. [Contexte et Relations](#contexte-et-relations)
-9. [Interface Utilisateur](#interface-utilisateur)
-10. [Sécurité et Authentification](#sécurité-et-authentification)
-11. [Installation et Configuration](#installation-et-configuration)
-
----
+# Documentation Complète - FDEM (Fond Documentaire)
 
 ## Vue d'ensemble du Projet
 
-### Description
-L'application FDEM v2 est un système de gestion documentaire avancé développé avec Vue.js 3 et TypeScript. Elle permet la gestion structurée de documents techniques avec un système d'arborescence hiérarchique et de contexte relationnel.
+**FDEM** est une application de gestion documentaire développée avec Vue 3, TypeScript et Vite. Elle permet la gestion, la recherche, et la consultation de documents techniques avec un système de permissions basé sur les rôles utilisateurs.
 
-### Objectifs Principaux
-- **Gestion documentaire structurée** : Organisation hiérarchique des documents
-- **Contrôle d'accès granulaire** : Système de rôles et permissions
-- **Interface moderne et responsive** : Design adaptatif pour tous les appareils
-- **Visualisation de documents** : Support PDF, images, vidéos
-- **Tableaux de bord analytiques** : Statistiques et graphiques en temps réel
+### Technologies Utilisées
 
----
+- **Frontend**: Vue 3 avec Composition API, TypeScript
+- **Build Tool**: Vite
+- **Routing**: Vue Router 4
+- **HTTP Client**: Axios
+- **Styling**: CSS personnalisé avec design responsive
+- **Authentification**: JWT Token
+- **Visualisation**: Chart.js pour les statistiques
+- **PDF**: PDF.js pour la visualisation, jsPDF pour la génération
+- **Compression**: JSZip pour les archives
 
-## Architecture Technique
+## Architecture du Projet
 
-### Stack Technologique
-- **Frontend** : Vue.js 3 avec Composition API
-- **Langage** : TypeScript
-- **Build Tool** : Vite
-- **Styling** : CSS personnalisé avec design moderne
-- **Routing** : Vue Router 4
-- **HTTP Client** : Axios avec intercepteurs
-- **Charts** : Chart.js
-- **PDF Generation** : jsPDF, html2pdf.js
-- **PDF Viewing** : PDF.js
-
-### Structure du Projet
 ```
-app_fdem_v2/
-├── src/
-│   ├── components/          # Composants réutilisables
-│   │   ├── DynamicFormModal.vue
-│   │   ├── PdfViewer.vue
-│   │   ├── Sidebar.vue
-│   │   └── Topbar.vue
-│   ├── layouts/            # Layouts de pages
-│   │   └── PagesLayout.vue
-│   ├── router/             # Configuration du routage
-│   │   └── index.ts
-│   ├── services/           # Services métier
-│   │   ├── authService.ts
-│   │   └── logout.ts
-│   ├── store/              # Gestion d'état
-│   │   └── userStore.ts
-│   ├── types/              # Définitions TypeScript
-│   ├── views/              # Pages de l'application
-│   │   ├── DashboardView.vue
-│   │   ├── Documents.vue
-│   │   ├── AddDocView.vue
-│   │   ├── LoginView.vue
-│   │   └── [autres vues...]
-│   ├── axios.ts            # Configuration HTTP
-│   ├── App.vue             # Composant racine
-│   └── main.ts             # Point d'entrée
-├── public/                 # Assets statiques
-├── package.json            # Dépendances
-└── vite.config.ts         # Configuration Vite
+src/
+├── assets/           # Ressources statiques (images, styles)
+├── components/       # Composants réutilisables
+├── layouts/          # Layouts de pages
+├── router/           # Configuration du routage
+├── services/         # Services (auth, logs, etc.)
+├── store/            # Gestion d'état (Pinia/Composition API)
+├── types/            # Définitions TypeScript
+├── utils/            # Utilitaires
+├── views/            # Pages/Vues de l'application
+├── App.vue           # Composant racine
+└── main.ts           # Point d'entrée
 ```
 
----
+## Système de Rôles et Permissions
+
+### Rôles Disponibles
+
+#### 1. **Administrateur Fonctionnel** (Profil ID: 1)
+- **Accès**: Toutes les fonctionnalités sauf gestion des utilisateurs
+- **Permissions**:
+  - ✅ Ajout de documents
+  - ✅ Suppression de documents
+  - ✅ Export CSV
+  - ✅ Accès aux actions bibliothèque
+  - ❌ Gestion des utilisateurs
+  - ❌ Accès aux pages de structure (subdivisions)
+
+#### 2. **Administrateur Informatique** (Profil ID: 2)
+- **Accès**: Toutes les fonctionnalités (accès complet)
+- **Permissions**:
+  - ✅ Gestion des utilisateurs
+  - ✅ Ajout/suppression de documents
+  - ✅ Export CSV
+  - ✅ Accès aux pages de structure
+  - ✅ Voir la colonne "Créé par"
+  - ✅ Téléchargement/impression automatique
+  - ✅ Activation/désactivation des comptes
+
+#### 3. **Consultation** (Profil ID: 3)
+- **Accès**: Lecture seule avec restrictions
+- **Permissions**:
+  - ❌ Ajout de documents
+  - ❌ Suppression de documents
+  - ❌ Export CSV
+  - ❌ Gestion des utilisateurs
+  - ✅ Consultation uniquement des documents validés
+  - 🔒 Permissions spécifiques requises pour téléchargement/impression
+
+#### 4. **Mise à Jour** (Profil ID: 4)
+- **Accès**: Consultation + ajout de documents
+- **Permissions**:
+  - ✅ Ajout de documents
+  - ✅ Consultation de tous les documents
+  - ❌ Suppression de documents
+  - ❌ Gestion des utilisateurs
+  - 🔒 Permissions spécifiques requises pour téléchargement/impression
+
+### Permissions Spécifiques
+
+Chaque utilisateur peut avoir des permissions individuelles :
+
+- **`impression`**: Autorisation d'imprimer les documents
+- **`telechargement`**: Autorisation de télécharger les documents
+- **`plan`**: Autorisation d'accéder aux plans AutoCAD/ZIP
+- **`suppression`**: Autorisation de supprimer les documents
+- **`valide`**: Autorisation de valider les documents
 
 ## Fonctionnalités Principales
 
-### 1. Tableau de Bord (Dashboard)
-**Localisation** : `/Accueil`
+### 1. **Authentification et Sécurité**
 
-#### Statistiques en Temps Réel
-- **Cartes de statistiques modernes** : Affichage des métriques clés
-  - Nombre de types de produits
-  - Nombre de produits
-  - Nombre de structures
-  - Nombre de bureaux d'études
-  - Nombre de projets
-  - Nombre de documents
-  - Et autres entités
+#### Connexion
+- Authentification par nom d'utilisateur/mot de passe
+- Génération et gestion de tokens JWT
+- Redirection automatique selon les permissions
 
-#### Graphiques Interactifs
-- **Graphique de répartition par type de produit** : Visualisation en barres
-- **Graphiques temporels des documents** :
-  - Par année
-  - Par mois
-  - Par trimestre
-- **Boutons de basculement** pour changer la vue temporelle
+#### Gestion de Session
+- Stockage sécurisé des tokens
+- Déconnexion automatique en cas d'expiration
+- Protection des routes par middleware
 
-#### Documents Récents
-- **Liste des 4 derniers documents ajoutés**
-- **Informations affichées** :
-  - Type de fichier (PDF, Autre)
-  - Désignation du document
-  - Date de création
+### 2. **Gestion des Documents**
 
-### 2. Gestion des Documents
-**Localisation** : `/documents`
+#### Ajout de Documents
+- **Accès**: Administrateurs + Mise à jour
+- **Fonctionnalités**:
+  - Upload de fichiers multiples (PDF, images, vidéos)
+  - Conversion automatique d'images en PDF
+  - Classification hiérarchique (Type → Produit → Structure → Section → Subdivisions)
+  - Métadonnées automatiques (date, utilisateur)
+  - **Mode Structure**: Gestion documentaire classique avec arborescence
+  - **Mode Contexte**: Gestion des intervenants et projets
+  - **Pièces Graphiques**: Import de fichiers sources (AutoCAD, ZIP)
+  - **Compression vidéo**: Optimisation automatique des fichiers volumineux
+  - **Fiches techniques**: Upload de documents PDF pour chaque intervenant
+  - **Gestion des directeurs**: Attribution de directeurs aux projets avec dates
+  - **Interface resizable**: Panneaux ajustables pour optimiser l'espace de travail
 
-#### Fonctionnalités de Base
-- **Affichage tabulaire** avec pagination
-- **Recherche en temps réel** dans tous les champs
-- **Tri par colonnes** (ascendant/descendant)
-- **Filtrage avancé** par critères multiples
+#### Recherche et Filtrage
+- **Filtres disponibles**:
+  - Type de produit
+  - Produit
+  - Structure
+  - Section
+  - Subdivisions (4 niveaux)
+  - Statut de validation
+- **Recherche textuelle** dans tous les champs
+- **Tri** par colonnes
+- **Pagination** des résultats
 
-#### Filtres Disponibles
-- Type de produit
-- Produit
-- Section
-- Structure
-- Subdivisions (4 niveaux)
+#### Consultation de Documents
+- **Visualiseurs intégrés**:
+  - PDF avec PDF.js
+  - Images (JPG, PNG, GIF)
+  - Vidéos (MP4, MOV, AVI)
+- **Actions disponibles** (selon permissions):
+  - Téléchargement
+  - Impression
+  - Consultation en plein écran
 
-#### Actions sur Documents
-- **Consultation** : Visualisation dans un viewer intégré
-- **Téléchargement** (selon permissions)
-- **Impression** (selon permissions)
-- **Suppression** (selon rôle)
-- **Modification** des métadonnées
+#### Validation de Documents
+- **Accès**: Utilisateurs avec permission `valide`
+- **Processus**: Validation manuelle avec confirmation
+- **Effet**: Les documents validés deviennent visibles pour les utilisateurs "Consultation"
 
-### 3. Ajout de Documents
-**Localisation** : `/add-document`
+### 3. **Gestion des Utilisateurs**
 
-#### Deux Modes de Création
+#### Création de Comptes
+- **Accès**: Administrateurs uniquement
+- **Processus en étapes**:
+  1. Informations utilisateur (nom, prénom, email, profil)
+  2. Sélection des types de produits
+  3. Sélection des produits spécifiques
+  4. Attribution des permissions
 
-##### Mode Structure
-- **Sélection hiérarchique** :
-  1. Type de produit
-  2. Produit
-  3. Structure
-  4. Section
-  5. Division Niveau 1
-  6. Subdivision Niveau 2 (si applicable)
-  7. Subdivision Niveau 3 (si applicable)
-  8. Subdivision Niveau 4 (si applicable)
+#### Gestion des Permissions
+- Attribution granulaire des permissions par utilisateur
+- Restriction d'accès par types de produits et produits
+- Modification des permissions existantes
 
-##### Mode Contexte
-- **Sélection d'entités contextuelles** :
-  - Projets
-  - Maîtres d'ouvrage
-  - Maîtres d'œuvre
-  - Soustraitants de travaux
-  - Fournisseurs
-  - BET Soustraitants études
-  - Direction du projet
+#### Activation/Désactivation
+- **Accès**: Administrateur Informatique uniquement
+- Désactivation temporaire sans suppression
+- Historique des statuts
 
-#### Types de Fichiers Supportés
-- **Documents** : PDF, TXT
-- **Images** : JPG, JPEG, PNG, GIF
-- **Vidéos** : MP4, MOV, AVI
-
-#### Fonctionnalités Avancées
-- **Conversion d'images en PDF** : Sélection multiple d'images
-- **Aperçu en temps réel** de l'arborescence sélectionnée
-- **Validation des permissions** avant ajout
-
----
-
-## Gestion des Utilisateurs et Rôles
-
-### Système de Rôles
-L'application implémente 4 niveaux de rôles avec des permissions spécifiques :
-
-#### 1. Administrateur Fonctionnel (Profil 1)
-**Rôle** : Gestionnaire métier avec tous les droits
-
-##### Accès aux Pages :
-- ✅ **Accueil** (`/Accueil`) : Tableau de bord complet
-- ✅ **Documents** (`/documents`) : Consultation, filtrage, recherche
-- ✅ **Ajouter Document** (`/add-document`) : Création de documents
-- ✅ **Utilisateurs** (`/users`) : Gestion complète des utilisateurs
-- ✅ **Paramètres** (`/parametre`) : Configuration système
-- ✅ **Profil** (`/profile`) : Gestion du profil personnel
-- ❌ **Pages Bibliothèque** : Accès restreint (Arborescence)
-
-##### Permissions Spécifiques :
-- ✅ **Créer des documents** : Mode Structure et Contexte
-- ✅ **Modifier des documents** : Métadonnées et fichiers
-- ✅ **Supprimer des documents** : Suppression définitive
-- ✅ **Télécharger tous fichiers** : Sans restriction
-- ✅ **Imprimer tous documents** : Sans restriction
-- ✅ **Gérer les utilisateurs** : Création, modification, suppression
-- ✅ **Exporter des données** : CSV, rapports
-- ✅ **Accès contexte complet** : Toutes les entités contextuelles
-- ✅ **Gestion des directeurs** : Ajout/modification dans contexte
-
-##### Actions dans l'Interface :
-- **Boutons "Ajouter"** : Visibles et actifs partout
-- **Boutons "Supprimer"** : Visibles et actifs
-- **Menu Utilisateurs** : Visible dans la sidebar
-- **Export CSV** : Disponible dans les listes
-- **Toutes les modales** : Accès complet aux fonctionnalités
-
----
-
-#### 2. Administrateur Informatique (Profil 2)
-**Rôle** : Administrateur technique avec accès système complet
-
-##### Accès aux Pages :
-- ✅ **Accueil** (`/Accueil`) : Tableau de bord complet
-- ✅ **Documents** (`/documents`) : Consultation, filtrage, recherche
-- ✅ **Ajouter Document** (`/add-document`) : Création de documents
-- ✅ **Utilisateurs** (`/users`) : Gestion complète des utilisateurs
-- ✅ **Paramètres** (`/parametre`) : Configuration système
-- ✅ **Profil** (`/profile`) : Gestion du profil personnel
-- ✅ **Pages Bibliothèque** : **ACCÈS EXCLUSIF** aux pages d'arborescence
-  - ✅ **Produits** (`/produit`)
-  - ✅ **Types de Produits** (`/type_produit`)
-  - ✅ **Sections** (`/sections`)
-  - ✅ **Structures** (`/structures`)
-  - ✅ **Subdivisions Niv. 1-4** (`/subdivisions_niv1-4`)
-- ✅ **Pages Contexte** : Toutes les pages contextuelles
-  - ✅ **Bureau d'Études** (`/bur-etude-list`)
-  - ✅ **Fournisseurs** (`/list-fournisseur`)
-  - ✅ **Directeurs** (`/list-directeur`)
-  - ✅ **Projets Produits** (`/list-projet-produit`)
-  - ✅ **Maîtres d'Œuvre** (`/maitre-oeuvre-list`)
-  - ✅ **Maîtres d'Ouvrage** (`/maitre-ouvrage-list`)
-  - ✅ **Soustraitants** (`/soustraitants`)
-
-##### Permissions Spécifiques :
-- ✅ **Toutes les permissions du Profil 1** PLUS :
-- ✅ **Gestion de l'arborescence** : CRUD complet sur la structure
-- ✅ **Configuration système** : Paramètres avancés
-- ✅ **Maintenance des données** : Nettoyage, optimisation
-- ✅ **Accès base de données** : Via interface d'administration
-- ✅ **Téléchargement illimité** : Tous formats, toutes tailles
-- ✅ **Impression illimitée** : Sans restrictions
-
-##### Actions dans l'Interface :
-- **Menu Bibliothèque** : Complètement visible avec sous-menus
-- **Pages d'arborescence** : Seul profil avec accès
-- **Boutons CRUD** : Visibles sur toutes les pages de structure
-- **Configuration avancée** : Paramètres système
-
----
-
-#### 3. Consultation (Profil 3)
-**Rôle** : Utilisateur en lecture seule
-
-##### Accès aux Pages :
-- ✅ **Accueil** (`/Accueil`) : Tableau de bord (lecture seule)
-- ✅ **Documents** (`/documents`) : Consultation et recherche uniquement
-- ❌ **Ajouter Document** (`/add-document`) : **ACCÈS INTERDIT**
-- ❌ **Utilisateurs** (`/users`) : **ACCÈS INTERDIT**
-- ✅ **Paramètres** (`/parametre`) : Consultation uniquement
-- ✅ **Profil** (`/profile`) : Consultation du profil personnel
-- ❌ **Pages Bibliothèque** : **ACCÈS INTERDIT**
-- ❌ **Pages Contexte** : **ACCÈS INTERDIT**
-
-##### Permissions Spécifiques :
-- ✅ **Consulter les documents** : Visualisation dans le viewer
-- ✅ **Rechercher et filtrer** : Toutes les fonctions de recherche
-- ✅ **Voir les statistiques** : Tableaux de bord et graphiques
-- ❌ **Créer des documents** : **INTERDIT**
-- ❌ **Modifier des documents** : **INTERDIT**
-- ❌ **Supprimer des documents** : **INTERDIT**
-- ⚠️ **Télécharger** : Selon permission individuelle `telechargement`
-- ⚠️ **Imprimer** : Selon permission individuelle `impression`
-- ❌ **Gérer les utilisateurs** : **INTERDIT**
-- ❌ **Exporter des données** : **INTERDIT**
-
-##### Actions dans l'Interface :
-- **Boutons "Ajouter"** : **MASQUÉS** ou **DÉSACTIVÉS**
-- **Boutons "Supprimer"** : **MASQUÉS**
-- **Boutons "Modifier"** : **MASQUÉS**
-- **Menu Utilisateurs** : **MASQUÉ** dans la sidebar
-- **Menu Bibliothèque** : **MASQUÉ** dans la sidebar
-- **Viewer de documents** : Contrôles de téléchargement/impression conditionnels
-- **Tableaux** : Mode consultation uniquement
-
-##### Permissions Individuelles :
-- **`telechargement: true`** : Peut télécharger les documents
-- **`telechargement: false`** : Pas de téléchargement
-- **`impression: true`** : Peut imprimer les documents
-- **`impression: false`** : Pas d'impression
-
----
-
-#### 4. Mise à Jour (Profil 4)
-**Rôle** : Utilisateur avec droits de modification
-
-##### Accès aux Pages :
-- ✅ **Accueil** (`/Accueil`) : Tableau de bord complet
-- ✅ **Documents** (`/documents`) : Consultation, filtrage, recherche
-- ✅ **Ajouter Document** (`/add-document`) : Création de documents
-- ❌ **Utilisateurs** (`/users`) : **ACCÈS INTERDIT**
-- ✅ **Paramètres** (`/parametre`) : Configuration personnelle
-- ✅ **Profil** (`/profile`) : Gestion du profil personnel
-- ❌ **Pages Bibliothèque** : **ACCÈS INTERDIT** (Arborescence)
-- ✅ **Pages Contexte** : Consultation des pages contextuelles
-
-##### Permissions Spécifiques :
-- ✅ **Créer des documents** : Mode Structure et Contexte
-- ✅ **Modifier des documents** : Métadonnées et fichiers
-- ❌ **Supprimer des documents** : **INTERDIT**
-- ✅ **Télécharger des fichiers** : Selon permissions individuelles
-- ✅ **Imprimer des documents** : Selon permissions individuelles
-- ❌ **Gérer les utilisateurs** : **INTERDIT**
-- ❌ **Exporter des données** : **INTERDIT**
-- ✅ **Accès contexte** : Consultation et sélection pour documents
-- ✅ **Gestion des directeurs** : Ajout dans le contexte
-
-##### Actions dans l'Interface :
-- **Boutons "Ajouter"** : Visibles et actifs pour les documents
-- **Boutons "Supprimer"** : **MASQUÉS** pour les documents
-- **Boutons "Modifier"** : Visibles pour les documents
-- **Menu Utilisateurs** : **MASQUÉ** dans la sidebar
-- **Menu Bibliothèque** : Partiellement visible (contexte uniquement)
-- **Modales de création** : Accès complet
-- **Export CSV** : **MASQUÉ**
-
----
-
-### Matrice des Permissions
-
-| Fonctionnalité | Admin Fonc. (1) | Admin IT (2) | Consultation (3) | Mise à Jour (4) |
-|----------------|-----------------|--------------|------------------|------------------|
-| **Tableau de bord** | ✅ Complet | ✅ Complet | ✅ Lecture seule | ✅ Complet |
-| **Consulter documents** | ✅ | ✅ | ✅ | ✅ |
-| **Créer documents** | ✅ | ✅ | ❌ | ✅ |
-| **Modifier documents** | ✅ | ✅ | ❌ | ✅ |
-| **Supprimer documents** | ✅ | ✅ | ❌ | ❌ |
-| **Télécharger** | ✅ | ✅ | ⚠️ Conditionnel | ⚠️ Conditionnel |
-| **Imprimer** | ✅ | ✅ | ⚠️ Conditionnel | ⚠️ Conditionnel |
-| **Gérer utilisateurs** | ✅ | ✅ | ❌ | ❌ |
-| **Pages arborescence** | ❌ | ✅ **EXCLUSIF** | ❌ | ❌ |
-| **Pages contexte** | ✅ | ✅ | ❌ | ✅ Consultation |
-| **Export données** | ✅ | ✅ | ❌ | ❌ |
-| **Gestion directeurs** | ✅ | ✅ | ❌ | ✅ |
-
-### Contrôle d'Accès dans le Code
-
-#### Vérifications Automatiques :
-```typescript
-// Dans userStore.ts
-const canAddDocuments = computed(() => 
-  userRole.value !== ROLES.CONSULTATION
-)
-
-const canManageUsers = computed(() => 
-  isAdminFonctionnel.value || isAdminInformatique.value
-)
-
-const canViewStructurePages = computed(() => 
-  isAdminInformatique.value
-)
-```
-
-#### Interface Adaptative :
-- **Boutons conditionnels** : Affichage selon les permissions
-- **Menus dynamiques** : Sidebar adaptée au rôle
-- **Redirections automatiques** : Vers pages autorisées
-- **Messages d'erreur** : En cas d'accès non autorisé
-
-### Gestion des Permissions
-- **Contrôle granulaire** par fonctionnalité
-- **Vérification côté client et serveur**
-- **Interface adaptative** selon les droits
-- **Audit des actions** : Traçabilité par utilisateur
-
----
-
-## Modules de l'Application
-
-### 1. Authentification
-**Fichiers** : `LoginView.vue`, `authService.ts`
-
-#### Fonctionnalités
-- **Connexion sécurisée** avec JWT
-- **Refresh automatique** des tokens
-- **Déconnexion propre**
-- **Redirection automatique** selon l'état d'authentification
-
-### 2. Profil Utilisateur
-**Localisation** : `/profile`
-
-#### Informations Affichées
-- Nom et prénom
-- Email
-- Poste et département
-- Téléphone
-- Profil/rôle
-- Permissions spécifiques
-
-### 3. Gestion des Utilisateurs
-**Localisation** : `/users`
-**Accès** : Administrateurs uniquement
-
-#### Fonctionnalités
-- **Liste des utilisateurs** avec filtrage
-- **Création de nouveaux comptes**
-- **Modification des profils**
-- **Gestion des permissions**
-- **Activation/désactivation** des comptes
-
----
-
-## Système de Documents
-
-### Structure Hiérarchique
-L'application organise les documents selon une arborescence à 8 niveaux :
-
-1. **Type de Produit** : Catégorie principale
-2. **Produit** : Sous-catégorie du type
-3. **Structure** : Organisation structurelle
-4. **Section** : Division de la structure
-5. **Subdivision Niveau 1** : Premier niveau de subdivision
-6. **Subdivision Niveau 2** : Deuxième niveau (optionnel)
-7. **Subdivision Niveau 3** : Troisième niveau (optionnel)
-8. **Subdivision Niveau 4** : Quatrième niveau (optionnel)
-
-### Métadonnées des Documents
-Chaque document contient :
-- **Identifiant unique**
-- **Désignation**
-- **Chemin du fichier**
-- **Version**
-- **Date de création**
-- **Date de modification**
-- **Références hiérarchiques** complètes
-
-### Visualiseur Intégré
-**Composant** : `PdfViewer.vue`
-
-#### Fonctionnalités
-- **Visualisation PDF** native
-- **Support des images** (JPG, PNG, GIF)
-- **Lecture vidéo** (MP4, MOV, AVI)
-- **Contrôles de téléchargement/impression** selon permissions
-- **Interface responsive**
-
----
-
-## Bibliothèque et Arborescence
-
-### Pages de Structure
-**Accès** : Administrateur Informatique uniquement
+### 4. **Bibliothèque et Classification**
 
 #### Arborescence
-- **Produits** (`/produit`) : Gestion des produits
-- **Types de Produits** (`/type_produit`) : Gestion des types
-- **Sections** (`/sections`) : Gestion des sections
-- **Structures** (`/structures`) : Gestion des structures
-- **Subdivisions Niveau 1-4** : Gestion des subdivisions
+- **Types de Produit**: Catégories principales
+- **Produits**: Sous-catégories par type
+- **Sections**: Divisions par produit
+- **Structures**: Organisation par section
+- **Subdivisions**: 4 niveaux hiérarchiques
 
-#### Fonctionnalités par Page
-- **CRUD complet** (Create, Read, Update, Delete)
-- **Validation des données**
-- **Relations hiérarchiques**
-- **Interface de gestion intuitive**
+#### Contexte
+- **Projets**: Gestion des projets
+- **Intervenants**:
+  - Bureaux d'étude
+  - Fournisseurs
+  - Directeurs
+  - Maîtres d'œuvre
+  - Maîtres d'ouvrage
+  - Sous-traitants
 
-### Navigation Hiérarchique
-**Composant** : `Sidebar.vue`
+### 5. **Statistiques et Reporting**
 
-#### Structure du Menu
-- **Accueil** : Tableau de bord
-- **Documents** : Gestion documentaire
-- **Ajouter Document** : Création de documents
-- **Bibliothèque** (menu déroulant) :
-  - **Arborescence** : Pages de structure
-  - **Contexte** : Pages contextuelles
-- **Utilisateurs** : Gestion des comptes
-- **Paramètres** : Configuration
-- **Déconnexion**
+#### Tableau de Bord
+- Nombre total de documents
+- Documents validés/non validés
+- Statistiques par utilisateur (pour admins)
+- Graphiques de répartition
 
----
+#### Logs d'Activité
+- Traçabilité des actions utilisateurs
+- Types d'actions loggées:
+  - `CONSULT_FILE`: Consultation de fichier
+  - `DOWNLOAD_FILE`: Téléchargement
+  - `PRINT_FILE`: Impression
+  - `DELETE`: Suppression
 
-## Contexte et Relations
+### 6. **Gestion des Profils**
 
-### Entités Contextuelles
-L'application gère les relations entre documents et entités métier :
+#### Profil Utilisateur
+- Consultation des informations personnelles
+- Modification du mot de passe
+- Affichage des permissions attribuées
 
-#### 1. Projets
-- **Code unique**
-- **Description**
-- **Adresse et wilaya**
-- **Relations avec directeurs**
-
-#### 2. Maîtres d'Ouvrage/d'Œuvre
-- **Désignation**
-- **Description**
-- **Coordonnées complètes**
-- **Directeurs associés** avec dates
-
-#### 3. Fournisseurs
-- **Désignation**
-- **Description**
-- **Adresse et contacts**
-- **Relations produits**
-
-#### 4. Soustraitants
-- **Travaux** et **Études** (BET)
-- **Informations complètes**
-- **Directeurs et dates**
-
-#### 5. Direction de Projet
-- **Directeurs par projet**
-- **Périodes d'affectation**
-- **Fonctions et contacts**
-
-### Gestion des Relations
-- **Associations multiples** possibles
-- **Dates de début/fin** pour les affectations
-- **Interface de sélection** intuitive
-- **Validation des contraintes** métier
-
----
+#### Paramètres
+- Configuration des préférences
+- Gestion des notifications
+- Personnalisation de l'interface
 
 ## Interface Utilisateur
 
-### Design System
-- **Palette de couleurs** : Bleu/vert avec dégradés
-- **Typographie** : Inter, Segoe UI, Roboto
-- **Composants** : Design moderne et cohérent
-- **Animations** : Transitions fluides
+### Navigation Principale
 
-### Responsive Design
-- **Mobile First** : Adaptation automatique
-- **Breakpoints** : 600px, 900px, 1200px
-- **Navigation adaptative** : Menu burger sur mobile
-- **Tableaux responsifs** : Scroll horizontal si nécessaire
+#### Sidebar Adaptative
+- **Accueil**: Tableau de bord
+- **Fond Documentaire**: Ajout de documents
+- **Recherche**: Consultation et filtrage
+- **Bibliothèque**: (Selon permissions)
+  - Arborescence (Types, Produits, Sections, Structures, Subdivisions)
+  - Contexte (Projets, Intervenants)
+- **Utilisateurs**: Gestion des comptes (Admins uniquement)
+- **Paramètres**: Configuration
+- **Profil**: Informations personnelles
+- **Déconnexion**
 
-### Accessibilité
-- **Contraste élevé** : Respect des standards WCAG
-- **Navigation clavier** : Support complet
-- **Labels sémantiques** : Aria-labels appropriés
-- **Focus visible** : Indicateurs clairs
+#### Topbar
+- Logo et titre de l'application
+- Informations utilisateur connecté
+- Bouton de basculement sidebar (mobile)
 
 ### Composants Réutilisables
 
-#### 1. Modales Dynamiques
-**Composant** : `DynamicFormModal.vue`
-- **Configuration flexible**
-- **Validation intégrée**
-- **Actions personnalisables**
+#### Visualiseurs de Fichiers
+- **PdfViewer**: Affichage PDF avec contrôles
+- **ImageViewer**: Galerie d'images avec zoom
+- **VideoViewer**: Lecteur vidéo intégré
+- **FileViewer**: Sélecteur automatique selon le type
 
-#### 2. Tableaux de Données
-- **Tri et filtrage**
-- **Pagination**
-- **Actions en ligne**
-- **Export de données**
+#### Modales et Formulaires
+- **DynamicFormModal**: Formulaires configurables
+- Modales de confirmation
+- Assistants multi-étapes (création utilisateur)
 
-#### 3. Formulaires
-- **Validation en temps réel**
-- **Messages d'erreur contextuels**
-- **Champs conditionnels**
-
----
-
-## Sécurité et Authentification
-
-### Authentification JWT
-**Fichier** : `axios.ts`
-
-#### Fonctionnalités
-- **Tokens d'accès** : Durée limitée
-- **Refresh tokens** : Renouvellement automatique
-- **Intercepteurs HTTP** : Gestion transparente
-- **Déconnexion automatique** : En cas d'expiration
+## Sécurité et Contrôle d'Accès
 
 ### Protection des Routes
-**Fichier** : `router/index.ts`
-
-#### Mécanismes
-- **Guards de navigation** : Vérification avant accès
-- **Redirection automatique** : Vers login si non authentifié
-- **Contrôle des permissions** : Par rôle utilisateur
-
-### Sécurité des Données
-- **Validation côté client** : Première ligne de défense
-- **Sanitisation** : Nettoyage des entrées utilisateur
-- **Contrôle d'accès** : Vérification des permissions
-- **Audit trail** : Traçabilité des actions
-
----
-
-## Installation et Configuration
-
-### Prérequis
-- **Node.js** : Version 16 ou supérieure
-- **npm** ou **yarn** : Gestionnaire de paquets
-- **Navigateur moderne** : Support ES6+
-
-### Installation
-```bash
-# Cloner le projet
-git clone [repository-url]
-cd app_fdem_v2
-
-# Installer les dépendances
-npm install
-
-# Configuration des variables d'environnement
-cp .env.example .env
-# Éditer .env avec vos paramètres
-
-# Lancement en développement
-npm run dev
-
-# Build pour production
-npm run build
+```typescript
+// Middleware de vérification d'authentification
+router.beforeEach((to, from, next) => {
+  const isPublic = to.matched.some(record => record.meta.public)
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const isLoggedIn = !!localStorage.getItem('access_token')
+  
+  if (requiresAuth && !isLoggedIn) {
+    return next('/login')
+  }
+  return next()
+})
 ```
+
+### Contrôle d'Accès Basé sur les Rôles (RBAC)
+```typescript
+// Vérifications de permissions
+const canManageUsers = computed(() => isAdminInformatique.value)
+const canAddDocuments = computed(() => 
+  isAdminFonctionnel.value || isAdminInformatique.value || isMiseAJour.value
+)
+const canDeleteItems = computed(() => 
+  isAdminFonctionnel.value || isAdminInformatique.value
+)
+```
+
+### Filtrage des Données
+- Les utilisateurs "Consultation" ne voient que les documents validés
+- Restriction d'accès aux types de produits et produits autorisés
+- Masquage conditionnel des colonnes sensibles
+
+## Configuration et Déploiement
 
 ### Variables d'Environnement
 ```env
-VITE_API_URL=http://your-api-url/api/
+VITE_API_BASE_URL=http://10.10.150.75:8000/api/
+VITE_APP_TITLE=FDEM APP
+```
+
+### Scripts de Build
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  }
+}
 ```
 
 ### Dépendances Principales
-```json
-{
-  "vue": "^3.5.13",
-  "vue-router": "^4.5.0",
-  "axios": "^1.8.4",
-  "typescript": "~5.7.2",
-  "chart.js": "^4.4.9",
-  "jspdf": "^2.5.1",
-  "html2pdf.js": "^0.10.3",
-  "pdfjs-dist": "^5.2.133"
+- **Vue 3**: Framework frontend
+- **TypeScript**: Typage statique
+- **Axios**: Client HTTP
+- **Vue Router**: Routage SPA
+- **Chart.js**: Graphiques
+- **PDF.js**: Visualisation PDF
+- **jsPDF**: Génération PDF
+- **JSZip**: Compression de fichiers
+
+## Modèles de Données
+
+### Entités Principales
+
+#### Document
+| Attribut | Type | Nullable | Description |
+|----------|------|----------|-------------|
+| idDocument | number | ❌ | Clé primaire |
+| designation | string | ✅ | Description du document |
+| idTypeProduit | number | ✅ | Référence vers TypeProduit |
+| idProduit | number | ✅ | Référence vers Produit |
+| idStructure | number | ✅ | Référence vers Structure |
+| idSection | number | ✅ | Référence vers Section |
+| idSubDivisionNv_1 | number | ✅ | Référence vers SubDivisionNv1 |
+| idSubDivisionNv_2 | number | ✅ | Référence vers SubDivisionNv2 |
+| idSubDivisionNv_3 | number | ✅ | Référence vers SubDivisionNv3 |
+| idSubDivisionNv_4 | number | ✅ | Référence vers SubDivisionNv4 |
+| chemin | string | ✅ | Chemin de stockage |
+| version | string | ✅ | Version du document |
+| dateCreation | datetime | ❌ | Date de création |
+| dateModification | datetime | ✅ | Date de dernière modification |
+| fichier | string | ✅ | URL du fichier principal |
+| nomFichier | string | ✅ | Nom original du fichier |
+| video | string | ✅ | URL du fichier vidéo |
+| photos | string | ✅ | URL de l'archive photos |
+| nomPhotos | string | ✅ | Nom de l'archive photos |
+| plan | string | ✅ | URL du plan AutoCAD/ZIP |
+| valide | boolean | ❌ | Statut de validation (défaut: false) |
+| creerPar | number | ✅ | ID de l'utilisateur créateur |
+
+#### Utilisateur
+| Attribut | Type | Nullable | Description |
+|----------|------|----------|-------------|
+| id | number | ❌ | Clé primaire |
+| username | string | ❌ | Nom d'utilisateur unique |
+| password | string | ❌ | Mot de passe hashé |
+| email | string | ✅ | Adresse email |
+| nom | string | ✅ | Nom de famille |
+| prenom | string | ✅ | Prénom |
+| poste | string | ✅ | Poste occupé |
+| telephone | string | ✅ | Numéro de téléphone |
+| departement | string | ✅ | Département |
+| profil | number | ❌ | Référence vers Profil |
+| types_produits | number[] | ✅ | IDs des types autorisés |
+| produits | number[] | ✅ | IDs des produits autorisés |
+| impression | boolean | ❌ | Permission impression (défaut: false) |
+| telechargement | boolean | ❌ | Permission téléchargement (défaut: false) |
+| plan | boolean | ❌ | Permission plans (défaut: false) |
+| suppression | boolean | ❌ | Permission suppression (défaut: false) |
+| valide | boolean | ❌ | Permission validation (défaut: false) |
+| is_active | boolean | ❌ | Statut actif (défaut: true) |
+| date_joined | datetime | ❌ | Date de création du compte |
+| last_login | datetime | ✅ | Dernière connexion |
+
+#### TypeProduit
+| Attribut | Type | Nullable | Description |
+|----------|------|----------|-------------|
+| idTypeProduit | number | ❌ | Clé primaire |
+| designation | string | ❌ | Nom du type de produit |
+
+#### Produit
+| Attribut | Type | Nullable | Description |
+|----------|------|----------|-------------|
+| idProduit | number | ❌ | Clé primaire |
+| designation | string | ❌ | Nom du produit |
+| idTypeProduit | number | ❌ | Référence vers TypeProduit |
+
+#### Structure
+| Attribut | Type | Nullable | Description |
+|----------|------|----------|-------------|
+| idStructure | number | ❌ | Clé primaire |
+| designation | string | ✅ | Nom de la structure |
+| nom | string | ✅ | Nom alternatif |
+| idProduit | number | ✅ | Référence vers Produit |
+
+## API Détaillée
+
+### Base URL
+```
+http://10.10.150.75:8000/api/
+```
+
+### Authentification
+
+#### POST /api/login/
+**Description**: Authentification utilisateur
+
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|--------------|
+| username | string | ✅ | Nom d'utilisateur |
+| password | string | ✅ | Mot de passe |
+
+**Réponse**:
+| Champ | Type | Description |
+|-------|------|--------------|
+| token | string | JWT token d'authentification |
+| user | object | Informations utilisateur |
+
+#### GET /profile/
+**Description**: Récupération du profil utilisateur connecté
+
+**Réponse**:
+| Champ | Type | Description |
+|-------|------|--------------|
+| idUser | number | Identifiant unique |
+| username | string | Nom d'utilisateur |
+| email | string | Adresse email |
+| nom | string | Nom de famille |
+| prenom | string | Prénom |
+| telephone | string | Numéro de téléphone |
+| departement | string | Département |
+| profil | number | ID du profil (1-4) |
+| types_produits | number[] | IDs des types de produits autorisés |
+| produits | number[] | IDs des produits autorisés |
+| impression | boolean | Permission d'impression |
+| telechargement | boolean | Permission de téléchargement |
+| plan | boolean | Permission d'accès aux plans |
+| suppression | boolean | Permission de suppression |
+| valide | boolean | Permission de validation |
+
+### Gestion des Documents
+
+#### GET /documents/
+**Description**: Liste complète des documents
+
+**Réponse**: Array d'objets Document
+| Champ | Type | Description |
+|-------|------|--------------|
+| idDocument | number | Identifiant unique |
+| designation | string | Description du document |
+| idTypeProduit | number | ID du type de produit |
+| idProduit | number | ID du produit |
+| fichier | string | URL du fichier principal |
+| video | string | URL de la vidéo |
+| photos | string | URL des photos |
+| plan | string | URL du plan AutoCAD/ZIP |
+| valide | boolean | Statut de validation |
+| dateCreation | string | Date de création (ISO) |
+| creerParUsername | string | Nom d'utilisateur créateur |
+
+#### GET /documentsFilter/
+**Description**: Documents filtrés selon critères
+
+**Paramètres de requête**:
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|--------------|
+| idTypeProduit | number | ❌ | Filtre par type de produit |
+| idProduit | number | ❌ | Filtre par produit |
+| idStructure | number | ❌ | Filtre par structure |
+| idSection | number | ❌ | Filtre par section |
+| valide | boolean | ❌ | Filtre par statut de validation |
+
+#### POST /documents/
+**Description**: Création d'un nouveau document
+
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|--------------|
+| designation | string | ✅ | Description du document |
+| idTypeProduit | number | ✅ | ID du type de produit |
+| idProduit | number | ✅ | ID du produit |
+| fichier | file | ❌ | Fichier principal |
+| video | file | ❌ | Fichier vidéo |
+| photos | file | ❌ | Archive photos |
+| plan | file | ❌ | Plan AutoCAD/ZIP |
+
+### Gestion des Utilisateurs
+
+#### GET /utilisateurs/
+**Description**: Liste de tous les utilisateurs
+
+**Réponse**: Array d'objets Utilisateur
+| Champ | Type | Description |
+|-------|------|--------------|
+| id | number | Identifiant unique |
+| username | string | Nom d'utilisateur |
+| email | string | Adresse email |
+| nom | string | Nom de famille |
+| prenom | string | Prénom |
+| profil | object | Objet profil avec id et nom |
+| types_produits | number[] | IDs des types de produits autorisés |
+| produits | number[] | IDs des produits autorisés |
+| impression | boolean | Permission d'impression |
+| telechargement | boolean | Permission de téléchargement |
+| plan | boolean | Permission d'accès aux plans |
+| suppression | boolean | Permission de suppression |
+| valide | boolean | Permission de validation |
+| is_active | boolean | Statut actif/inactif |
+
+#### POST /api/register/
+**Description**: Création d'un nouveau compte utilisateur
+
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|--------------|
+| username | string | ✅ | Nom d'utilisateur unique |
+| password | string | ✅ | Mot de passe |
+| email | string | ✅ | Adresse email |
+| nom | string | ✅ | Nom de famille |
+| prenom | string | ✅ | Prénom |
+| profil | number | ✅ | ID du profil (1-4) |
+
+### Bibliothèque
+
+#### GET /types/
+**Description**: Liste de tous les types de produit
+
+**Réponse**: Array d'objets TypeProduit
+| Champ | Type | Description |
+|-------|------|--------------|
+| idTypeProduit | number | Identifiant unique |
+| designation | string | Nom du type de produit |
+
+#### GET /produits/by-type/{id}/
+**Description**: Produits filtrés par type
+
+**Réponse**: Array d'objets Produit
+| Champ | Type | Description |
+|-------|------|--------------|
+| idProduit | number | Identifiant unique |
+| designation | string | Nom du produit |
+| idTypeProduit | number | ID du type parent |
+
+### Statistiques
+
+#### GET /statistics/
+**Description**: Statistiques globales du système
+
+**Réponse**: Objet Statistiques
+| Champ | Type | Description |
+|-------|------|--------------|
+| statistics | object | Objet contenant les statistiques |
+| statistics.documents | number | Nombre total de documents |
+| statistics["Documents valides"] | number | Nombre de documents validés |
+| statistics["Documents non valides"] | number | Nombre de documents non validés |
+
+## Bonnes Pratiques et Conventions
+
+### Structure du Code
+- **Composition API**: Utilisation systématique
+- **TypeScript**: Typage strict des interfaces
+- **Composants SFC**: Single File Components
+- **Réactivité**: Refs et computed properties
+
+### Gestion d'État
+```typescript
+// Store utilisateur avec Composition API
+export const useUserStore = () => {
+  const currentUser = ref<UserProfile | null>(null)
+  
+  const fetchUserProfile = async () => {
+    // Logique de récupération
+  }
+  
+  return {
+    user: computed(() => currentUser.value),
+    fetchUserProfile,
+    // Permissions calculées
+    canManageUsers,
+    canAddDocuments
+  }
 }
 ```
 
-### Scripts Disponibles
-- `npm run dev` : Serveur de développement
-- `npm run build` : Build de production
-- `npm run preview` : Aperçu du build
+### Gestion des Erreurs
+- Try-catch systématique pour les appels API
+- Messages d'erreur utilisateur-friendly
+- Logging des erreurs pour le debugging
 
----
-
-## Fonctionnalités Avancées
-
-### 1. Filtrage Intelligent
-- **Filtres en cascade** : Mise à jour automatique des options
-- **Recherche textuelle** : Dans tous les champs simultanément
-- **Sauvegarde des filtres** : Persistance de session
-
-### 2. Export de Données
-- **Format CSV** : Pour analyse externe
-- **Sélection personnalisée** : Colonnes à exporter
-- **Filtres appliqués** : Export des données filtrées
-
-### 3. Gestion des Fichiers
-- **Upload multiple** : Sélection de plusieurs fichiers
-- **Conversion automatique** : Images vers PDF
-- **Validation des types** : Contrôle des formats
-- **Optimisation** : Compression et redimensionnement
-
-### 4. Notifications
-- **Messages de succès/erreur** : Feedback utilisateur
-- **Confirmations** : Pour actions critiques
-- **Indicateurs de chargement** : États d'attente
-
----
+### Performance
+- Lazy loading des composants
+- Pagination des listes longues
+- Mise en cache des données fréquemment utilisées
+- Optimisation des images et assets
 
 ## Maintenance et Évolution
 
-### Structure Modulaire
-- **Composants découplés** : Facilite la maintenance
-- **Services séparés** : Logique métier isolée
-- **Types TypeScript** : Documentation du code
+### Tests
+- Tests unitaires recommandés pour les composants critiques
+- Tests d'intégration pour les workflows complets
+- Tests E2E pour les parcours utilisateur
 
-### Bonnes Pratiques
-- **Code review** : Validation par les pairs
-- **Tests unitaires** : Couverture des fonctionnalités critiques
-- **Documentation** : Commentaires et README
-- **Versioning** : Git avec branches de fonctionnalités
+### Monitoring
+- Logs d'activité utilisateur
+- Métriques de performance
+- Surveillance des erreurs
 
 ### Évolutions Futures
-- **API REST** : Extension des endpoints
-- **Notifications push** : Alertes en temps réel
-- **Workflow** : Processus d'approbation
-- **Intégrations** : Systèmes externes
+- Notifications en temps réel
+- Workflow d'approbation avancé
+- Intégration avec systèmes externes
+- API mobile
+- Recherche full-text avancée
+
+## Support et Documentation
+
+### Ressources
+- **Vue 3 Documentation**: https://vuejs.org/
+- **TypeScript Handbook**: https://www.typescriptlang.org/docs/
+- **Vite Guide**: https://vitejs.dev/guide/
+
+### Contact
+Pour toute question technique ou fonctionnelle, contacter l'équipe de développement.
 
 ---
 
-## Support et Contact
-
-### Documentation Technique
-- **Code source** : Commentaires détaillés
-- **Architecture** : Diagrammes et schémas
-- **API** : Documentation des endpoints
-
-### Formation Utilisateurs
-- **Guides d'utilisation** : Par rôle utilisateur
-- **Vidéos tutorielles** : Fonctionnalités principales
-- **FAQ** : Questions fréquentes
-
----
-
-*Cette documentation couvre l'ensemble des fonctionnalités de l'application FDEM v2. Pour des questions spécifiques ou des demandes d'évolution, veuillez contacter l'équipe de développement.*
-
----
-
-## Détails Techniques Approfondis
-
-### Architecture des Composants
-
-#### 1. Structure des Fichiers Vue
-**Pattern utilisé** : Composition API avec `<script setup lang="ts">`
-
-**Exemple type** :
-```typescript
-// Imports
-import { ref, computed, onMounted } from 'vue'
-import axiosInstance from '../axios'
-import { useUserStore } from '../store/userStore'
-
-// Interfaces TypeScript
-interface Document {
-  idDocument: number
-  designation: string
-  // ...
-}
-
-// État réactif
-const documents = ref<Document[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
-
-// Computed properties
-const filteredDocuments = computed(() => {
-  // Logique de filtrage
-})
-
-// Méthodes
-async function fetchDocuments() {
-  // Logique de récupération
-}
-
-// Lifecycle
-onMounted(() => {
-  fetchDocuments()
-})
-```
-
-#### 2. Gestion d'État avec Pinia
-**Store utilisateur** (`userStore.ts`) :
-- **État centralisé** : Profil utilisateur, permissions
-- **Computed properties** : Vérifications de rôles
-- **Actions** : Récupération du profil, mise à jour
-- **Réactivité** : Mise à jour automatique de l'interface
-
-#### 3. Système de Routage
-**Configuration** (`router/index.ts`) :
-- **Guards de navigation** : Vérification d'authentification
-- **Méta-données** : Titres de pages, permissions requises
-- **Redirections** : Gestion des accès non autorisés
-- **Lazy loading** : Chargement différé des composants
-
-### API et Communication
-
-#### 1. Configuration Axios
-**Intercepteurs** :
-- **Request** : Ajout automatique du token Bearer
-- **Response** : Gestion du refresh token automatique
-- **Erreurs** : Redirection vers login si 401
-- **Retry** : Nouvelle tentative après refresh
-
-#### 2. Endpoints Principaux
-**Documents** :
-- `GET /documents/` : Liste paginée
-- `POST /documents/` : Création avec upload
-- `PUT /documents/{id}/` : Modification
-- `DELETE /documents/{id}/` : Suppression
-- `GET /documentsFilter/` : Filtrage avancé
-
-**Utilisateurs** :
-- `GET /utilisateurs/` : Liste des utilisateurs
-- `POST /api/register/` : Création de compte
-- `POST /utilisateurs/update-produits-types/` : Mise à jour permissions
-- `DELETE /utilisateurs/` : Suppression
-
-**Arborescence** :
-- `GET /types/` : Types de produits
-- `GET /produits/by-type/{id}/` : Produits par type
-- `GET /structures/` : Structures
-- `GET /subdivision-nv{1-4}/` : Subdivisions par niveau
-
-#### 3. Gestion des Erreurs
-**Stratégies** :
-- **Retry automatique** : 3 tentatives avec backoff
-- **Fallback** : Données en cache si disponibles
-- **Messages utilisateur** : Erreurs traduites en français
-- **Logging** : Envoi des erreurs au serveur (futur)
-
-### Sécurité Implémentée
-
-#### 1. Authentification JWT
-**Tokens** :
-- **Access Token** : Durée courte (15-30 min)
-- **Refresh Token** : Durée longue (7-30 jours)
-- **Stockage** : localStorage (à migrer vers httpOnly cookies)
-- **Rotation** : Nouveau refresh à chaque utilisation
-
-#### 2. Contrôle d'Accès
-**Niveaux** :
-- **Route level** : Guards de navigation
-- **Component level** : Affichage conditionnel
-- **API level** : Vérification côté serveur
-- **UI level** : Boutons désactivés selon permissions
-
-#### 3. Validation des Données
-**Côté Client** :
-- **TypeScript** : Typage strict des données
-- **Validation de formulaires** : Règles métier
-- **Sanitisation** : Nettoyage des entrées utilisateur
-
-**Côté Serveur** :
-- **Validation des schémas** : Vérification des structures
-- **Contrôle des permissions** : Vérification des droits
-- **Audit trail** : Traçabilité des actions
-
-### Performance et Optimisation
-
-#### 1. Optimisations Frontend
-**Bundle** :
-- **Tree shaking** : Élimination du code mort
-- **Code splitting** : Chargement par route
-- **Compression** : Gzip/Brotli
-- **Minification** : Réduction de la taille
-
-**Runtime** :
-- **Virtual DOM** : Optimisations Vue.js
-- **Computed caching** : Cache des calculs
-- **Event debouncing** : Limitation des appels
-- **Image lazy loading** : Chargement différé
-
-#### 2. Optimisations Réseau
-**Requêtes** :
-- **Pagination** : Chargement par pages
-- **Filtrage côté serveur** : Réduction des données
-- **Compression** : Réduction de la bande passante
-- **Cache HTTP** : Headers de cache appropriés
-
-#### 3. Optimisations Base de Données
-**Requêtes** :
-- **Index** : Sur les colonnes de recherche/tri
-- **Jointures optimisées** : Réduction des N+1
-- **Pagination** : LIMIT/OFFSET efficaces
-- **Cache de requêtes** : Redis/Memcached
-
-### Monitoring et Debugging
-
-#### 1. Outils de Développement
-**Vue DevTools** :
-- **Inspection des composants** : État et props
-- **Timeline** : Événements et mutations
-- **Performance** : Profiling des composants
-- **Routing** : Navigation et guards
-
-#### 2. Logging
-**Niveaux** :
-- **Error** : Erreurs critiques
-- **Warn** : Avertissements
-- **Info** : Informations générales
-- **Debug** : Détails de développement
-
-**Destinations** :
-- **Console** : Développement local
-- **Serveur** : Logs centralisés (futur)
-- **Fichiers** : Stockage local (futur)
-
-### Tests et Qualité
-
-#### 1. Tests Unitaires (À implémenter)
-**Framework** : Vitest + Vue Test Utils
-**Couverture** :
-- **Composants** : Rendu et interactions
-- **Store** : Actions et mutations
-- **Utils** : Fonctions utilitaires
-- **API** : Mocks des appels
-
-#### 2. Tests d'Intégration (À implémenter)
-**Framework** : Cypress/Playwright
-**Scénarios** :
-- **Authentification** : Login/logout
-- **CRUD** : Création/modification/suppression
-- **Navigation** : Parcours utilisateur
-- **Permissions** : Contrôles d'accès
-
-#### 3. Qualité du Code
-**Outils** :
-- **ESLint** : Règles de codage
-- **Prettier** : Formatage automatique
-- **TypeScript** : Vérification de types
-- **Husky** : Hooks Git (futur)
-
-### Déploiement et DevOps
-
-#### 1. Build et Packaging
-**Vite** :
-- **Hot Module Replacement** : Développement rapide
-- **Optimisations** : Tree shaking, minification
-- **Assets** : Gestion des ressources statiques
-- **Environnements** : Variables par environnement
-
-#### 2. Déploiement
-**Stratégies** :
-- **Static hosting** : Netlify, Vercel
-- **CDN** : Distribution globale
-- **Docker** : Containerisation (futur)
-- **CI/CD** : Déploiement automatique (futur)
-
-### Maintenance et Évolution
-
-#### 1. Versioning
-**Semantic Versioning** :
-- **Major** : Changements incompatibles
-- **Minor** : Nouvelles fonctionnalités
-- **Patch** : Corrections de bugs
-
-#### 2. Migration et Mise à Jour
-**Stratégies** :
-- **Backward compatibility** : Compatibilité ascendante
-- **Feature flags** : Activation progressive
-- **Database migrations** : Scripts de migration
-- **Rollback** : Procédures de retour arrière
-
----
-
-## Évolutions Futures
-
-### Phase 2 (Court terme)
-- **Notifications push** : Alertes temps réel
-- **Workflow d'approbation** : Processus de validation
-- **Audit trail complet** : Traçabilité détaillée
-- **Export Excel** : Format natif Microsoft
-
-### Phase 3 (Moyen terme)
-- **API REST complète** : Documentation OpenAPI
-- **Mobile app** : Application native
-- **Intégrations** : Systèmes externes
-- **Analytics** : Tableaux de bord avancés
-
-### Phase 4 (Long terme)
-- **Intelligence artificielle** : Classification automatique
-- **OCR** : Extraction de texte des images
-- **Recherche sémantique** : Recherche par contenu
-- **Collaboration** : Édition collaborative
-
----
-
-*Cette documentation technique complète couvre tous les aspects de l'application FDEM v2, de l'interface utilisateur aux détails d'implémentation. Elle est conçue pour servir de référence aux développeurs, administrateurs et utilisateurs finaux.*
-
-**Version du document** : 2.0  
-**Dernière mise à jour** : Décembre 2024  
-**Auteur** : Équipe de développement FDEM  
-**Contact** : support@fdem.dz
+*Documentation générée le $(date) - Version 2.0*

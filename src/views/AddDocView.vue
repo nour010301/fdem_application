@@ -5187,26 +5187,26 @@ async function viewDocument(document: Document, fileType: 'fichier' | 'video' | 
         detectedType: 'pdf'
       }
     } else {
-      const response = await axiosInstance.get(`documents/view-file/${document.idDocument}/`, {
+      // For fichier, use the view-file endpoint
+      const response = await fetch(`http://10.10.150.75:8000/api/documents/view-file/${document.idDocument}/`, {
         signal: abortController.signal
       })
       
-      if (abortController.signal.aborted) {
-        throw new Error('Request was cancelled')
-      }
-      
-      const blob = response.data
-      const fileUrl = URL.createObjectURL(blob)
-      
-      let detectedType = 'pdf'
-      if (blob.type && blob.type.startsWith('image/')) {
-        detectedType = 'image'
-      }
-      
-      selectedDocument.value = {
-        ...document,
-        fichier: fileUrl,
-        detectedType: detectedType
+      if (response.ok) {
+        const blob = await response.blob()
+        const fileUrl = URL.createObjectURL(blob)
+        
+        // Detect file type from blob content-type
+        let detectedType = 'pdf'
+        if (blob.type.startsWith('image/')) {
+          detectedType = 'image'
+        }
+        
+        selectedDocument.value = {
+          ...document,
+          fichier: fileUrl,
+          detectedType: detectedType
+        }
       }
     }
   } catch (error: any) {
