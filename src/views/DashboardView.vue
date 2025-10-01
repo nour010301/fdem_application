@@ -6,7 +6,7 @@
 
     <!-- Highlighted Stats Cards -->
     <div class="dashboard-grid highlighted-stats">
-      <template v-for="key in ['type produits', 'produits', 'documents']" :key="key">
+      <template v-for="key in ['types de produits', 'produits', 'documents']" :key="key">
         <div class="stat-card highlighted" v-if="filteredStatistics[key] !== undefined">
           <div class="stat-icon">
             <i :class="iconForKey(key)"></i>
@@ -14,7 +14,7 @@
           <div class="stat-info">
             <div class="stat-label">
               {{ formatKey(key) }}
-              <span v-if="key === 'documents'" class="stat-subtitle"> (plan, multimédia, images....)</span>
+              <span v-if="key === 'documents'" class="stat-subtitle"> (plan, multimédia...)</span>
             </div>
             <div class="stat-value">{{ filteredStatistics[key] }}</div>
           </div>
@@ -40,7 +40,7 @@
       <!-- Chart 1: Répartition par produit/type -->
       <div class="chart-container">
         <div class="chart-card glass">
-          <div class="chart-title">Répartition par produit/type (graphique)</div>
+          <div class="chart-title">Répartition des produits par type</div>
           <div class="chart-placeholder">
             <canvas id="typeChart"></canvas>
           </div>
@@ -95,26 +95,40 @@ const loading = ref(true);
 
 // --- Modern Statistics Mapping ---
 const iconMap: Record<string, string> = {
-  "type produits": "fas fa-cubes",
+  "types de produits": "fas fa-cubes",
   "produits": "fas fa-box",
-  // "structures": "fas fa-building",
-  "bureau etudes": "fas fa-user-tie",
+  "bureaux d'études": "fas fa-user-tie",
   "projets": "fas fa-project-diagram",
-  "maitre oeuvres": "fas fa-hard-hat",
-  "maitre ouvrages": "fas fa-briefcase",
+  "maîtres d’œuvre": "fas fa-hard-hat",
+  "maîtres d’ouvrage": "fas fa-briefcase",
   "fournisseurs": "fas fa-truck",
-  "soustraitantss": "fas fa-people-carry",
-  "direction projets": "fas fa-sitemap",
+  "soustraitants": "fas fa-people-carry",
+  "direction des projets": "fas fa-sitemap",
   "documents": "fas fa-file-alt",
+  "documents valides": "fas fa-check-circle",
+  "documents non valides": "fas fa-times-circle",
+};
+
+const keyLabelMap: Record<string, string> = {
+  "types de produits": "Types de produits",
+  "produits": "Produits",
+  "documents": "Documents",
+  "bureaux d'études": "Bureaux d'études",
+  "projets": "Projets",
+  "maîtres d’œuvre": "Maîtres d’œuvre",
+  "maîtres d’ouvrage": "Maîtres d’ouvrage",
+  "fournisseurs": "Fournisseurs",
+  "soustraitants": "Soustraitants",
+  "direction des projets": "Direction des projets",
+  "documents valides": "Documents validés",
+  "documents non valides": "Documents non validés",
 };
 
 function iconForKey(key: string): string {
   return iconMap[key] || "fas fa-info-circle";
 }
 function formatKey(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, l => l.toLocaleUpperCase('fr-FR'));
+  return keyLabelMap[key] || key;
 }
 
 // State
@@ -126,10 +140,32 @@ const fetchData = async () => {
   loading.value = true;
   try {
     const statisticsResponse = await axiosInstance.get('statistics/');
-    statistics.value = statisticsResponse.data.statistics;
-    // Filter out structures from the displayed statistics
-    const { structures, 'type produits': typeProduits, produits, documents, ...regular } = statistics.value || {};
-    filteredStatistics.value = { 'type produits': typeProduits, produits, documents };
+    const raw = statisticsResponse.data.statistics;
+    statistics.value = {
+      "types de produits": raw["type produits"],
+      "produits": raw["produits"],
+      "documents": raw["documents"],
+      "bureaux d'études": raw["bureau etudes"],
+      "projets": raw["projets"],
+      "maîtres d’œuvre": raw["maitre oeuvres"],
+      "maîtres d’ouvrage": raw["maitre ouvrages"],
+      "fournisseurs": raw["fournisseurs"],
+      "soustraitants": raw["soustraitantss"],
+      "direction des projets": raw["direction projets"],
+      "documents validés": raw["Documents valides"],
+      "documents non validés": raw["Documents non valides"],
+    };
+    filteredStatistics.value = {
+      "types de produits": statistics.value["types de produits"],
+      "produits": statistics.value["produits"],
+      "documents": statistics.value["documents"],
+    };
+    const {
+      "types de produits": _tp,
+      "produits": _p,
+      "documents": _d,
+      ...regular
+    } = statistics.value;
     regularStatistics.value = regular;
   } catch (error) {
     console.error('Error fetching statistics:', error);

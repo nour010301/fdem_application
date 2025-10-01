@@ -212,7 +212,7 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<keyof SubdivisionNv3>('idSubDivisionNv_3')
+const sortColumn = ref<'nom' | 'designation' | 'idSubDivisionNv_2'>('nom')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
@@ -232,7 +232,7 @@ const subdivisionToUpdate = ref<SubdivisionNv3 | null>(null)
 
 const userStore = useUserStore()
 
-function toggleSort(column: keyof SubdivisionNv3) {
+function toggleSort(column: 'nom' | 'designation' | 'idSubDivisionNv_2') {
   if (sortColumn.value === column) {
     sortAsc.value = !sortAsc.value
   } else {
@@ -249,12 +249,30 @@ const filteredSubdivs = computed(() => {
       item.designation?.toLowerCase().includes(s)
     )
     .sort((a, b) => {
-      const valA = a[sortColumn.value]
-      const valB = b[sortColumn.value]
-      if (valA == null || valB == null) return 0
-      return sortAsc.value
-        ? String(valA).localeCompare(String(valB))
-        : String(valB).localeCompare(String(valA))
+      // Primary sort by nom (A to Z)
+      const nameA = a.nom.toLowerCase()
+      const nameB = b.nom.toLowerCase()
+      
+      if (sortColumn.value === 'nom') {
+        // If sorting by nom column, respect user's sort direction
+        if (nameA < nameB) return sortAsc.value ? -1 : 1
+        if (nameA > nameB) return sortAsc.value ? 1 : -1
+        return 0
+      } else {
+        // For other columns, sort by that column first, then by nom as secondary sort
+        const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
+        const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
+        
+        if (fieldA !== fieldB) {
+          if (fieldA < fieldB) return sortAsc.value ? -1 : 1
+          if (fieldA > fieldB) return sortAsc.value ? 1 : -1
+        }
+        
+        // Secondary sort by nom (always A to Z)
+        if (nameA < nameB) return -1
+        if (nameA > nameB) return 1
+        return 0
+      }
     })
 })
 

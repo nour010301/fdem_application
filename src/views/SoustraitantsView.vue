@@ -90,31 +90,28 @@
           <textarea v-model="newSoustraitant.description" placeholder="Description (optionnelle)" />
         </div>
         <div class="form-group">
-          <label>Adresse *</label>
+          <label>Adresse</label>
           <input 
             v-model="newSoustraitant.adresse" 
             placeholder="Adresse" 
-            :class="{ 'error': validationErrors.adresse }"
           />
-          <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div>
+          <!-- <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div> -->
         </div>
         <div class="form-group">
-          <label>Téléphone *</label>
+          <label>Téléphone</label>
           <input 
             v-model="newSoustraitant.telephone" 
             placeholder="Téléphone" 
-            :class="{ 'error': validationErrors.telephone }"
           />
-          <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div>
+          <!-- <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div> -->
         </div>
         <div class="form-group">
-          <label>Email *</label>
+          <label>Email</label>
           <input 
             v-model="newSoustraitant.email" 
             placeholder="Email" 
-            :class="{ 'error': validationErrors.email }"
           />
-          <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div>
+          <!-- <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div> -->
         </div>
         <div class="modal-actions">
           <button @click="validateAndAddSoustraitant">Ajouter</button>
@@ -174,7 +171,7 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'idSoustraitants' | 'designationStt' | 'description' | 'adresse' | 'telephone' | 'email'>('idSoustraitants')
+const sortColumn = ref<'designationStt' | 'description' | 'adresse' | 'telephone' | 'email'>('designationStt')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
@@ -213,12 +210,30 @@ const filteredSoustraitants = computed(() => {
   )
 
   return filtered.sort((a, b) => {
-    const fieldA = a[sortColumn.value] ?? ''
-    const fieldB = b[sortColumn.value] ?? ''
-
-    if (fieldA < fieldB) return sortAsc.value ? -1 : 1
-    if (fieldA > fieldB) return sortAsc.value ? 1 : -1
-    return 0
+    // Primary sort by designation (A to Z)
+    const nameA = a.designationStt.toLowerCase()
+    const nameB = b.designationStt.toLowerCase()
+    
+    if (sortColumn.value === 'designationStt') {
+      // If sorting by designation column, respect user's sort direction
+      if (nameA < nameB) return sortAsc.value ? -1 : 1
+      if (nameA > nameB) return sortAsc.value ? 1 : -1
+      return 0
+    } else {
+      // For other columns, sort by that column first, then by designation as secondary sort
+      const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
+      const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
+      
+      if (fieldA !== fieldB) {
+        if (fieldA < fieldB) return sortAsc.value ? -1 : 1
+        if (fieldA > fieldB) return sortAsc.value ? 1 : -1
+      }
+      
+      // Secondary sort by designation (always A to Z)
+      if (nameA < nameB) return -1
+      if (nameA > nameB) return 1
+      return 0
+    }
   })
 })
 
@@ -233,7 +248,7 @@ async function fetchSoustraitants() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('Soustraitants/')
+    const response = await axiosInstance.get('soustraitants/')
     soustraitants.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
@@ -244,7 +259,7 @@ async function fetchSoustraitants() {
 
 async function addSoustraitant() {
   try {
-    const res = await axiosInstance.post('Soustraitants/', newSoustraitant.value)
+    const res = await axiosInstance.post('soustraitants/', newSoustraitant.value)
     soustraitants.value.push(res.data)
     showAddPopup.value = false
     newSoustraitant.value = { designationStt: '', description: '', adresse: '', telephone: '', email: '' }
@@ -272,7 +287,7 @@ async function updateSoustraitant() {
       telephone: soustraitantToUpdate.value.telephone,
       email: soustraitantToUpdate.value.email
     }
-    await axiosInstance.put(`Soustraitants/${soustraitantToUpdate.value.idSoustraitants}/`, soustraitantToSend)
+    await axiosInstance.put(`soustraitants/${soustraitantToUpdate.value.idSoustraitants}/`, soustraitantToSend)
     const index = soustraitants.value.findIndex(s => s.idSoustraitants === soustraitantToUpdate.value!.idSoustraitants)
     if (index !== -1) {
       soustraitants.value[index] = { ...soustraitantToUpdate.value }
@@ -286,7 +301,7 @@ async function updateSoustraitant() {
 async function deleteSoustraitant() {
   if (!soustraitantToDelete.value) return
   try {
-    await axiosInstance.delete(`Soustraitants/${soustraitantToDelete.value.idSoustraitants}/`)
+    await axiosInstance.delete(`soustraitants/${soustraitantToDelete.value.idSoustraitants}/`)
     soustraitants.value = soustraitants.value.filter(s => s.idSoustraitants !== soustraitantToDelete.value!.idSoustraitants)
     soustraitantToDelete.value = null
   } catch (e: any) {
@@ -312,17 +327,17 @@ function validateRequiredFields() {
   
   if (!newSoustraitant.value.adresse.trim()) {
     errors.adresse = 'L\'adresse est requise'
-    isValid = false
+    // isValid = false
   }
   
   if (!newSoustraitant.value.telephone.trim()) {
     errors.telephone = 'Le téléphone est requis'
-    isValid = false
+    // isValid = false
   }
   
   if (!newSoustraitant.value.email.trim()) {
     errors.email = 'L\'email est requis'
-    isValid = false
+    // isValid = false
   }
   
   validationErrors.value = errors

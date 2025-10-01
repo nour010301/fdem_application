@@ -76,22 +76,20 @@
           <div v-if="validationErrors.nomPrenomDirecteur" class="error-message">{{ validationErrors.nomPrenomDirecteur }}</div>
         </div>
         <div class="form-group">
-          <label>Fonction *</label>
+          <label>Fonction</label>
           <input 
             v-model="newDirecteur.fonction" 
             placeholder="Fonction" 
-            :class="{ 'error': validationErrors.fonction }"
           />
-          <div v-if="validationErrors.fonction" class="error-message">{{ validationErrors.fonction }}</div>
+          <!-- <div v-if="validationErrors.fonction" class="error-message">{{ validationErrors.fonction }}</div> -->
         </div>
         <div class="form-group">
-          <label>Téléphone *</label>
+          <label>Téléphone</label>
           <input 
             v-model="newDirecteur.telephone" 
             placeholder="Téléphone" 
-            :class="{ 'error': validationErrors.telephone }"
           />
-          <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div>
+          <!-- <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div> -->
         </div>
         <div class="modal-actions">
           <button @click="validateAndAddDirecteur">Ajouter</button>
@@ -147,7 +145,7 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'idDirecteur' | 'nomPrenomDirecteur' | 'fonction' | 'telephone'>('idDirecteur')
+const sortColumn = ref<'nomPrenomDirecteur' | 'fonction' | 'telephone'>('nomPrenomDirecteur')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
@@ -183,8 +181,8 @@ const filteredDirecteurs = computed(() => {
   )
 
   return filtered.sort((a, b) => {
-    const fieldA = a[sortColumn.value] ?? ''
-    const fieldB = b[sortColumn.value] ?? ''
+    const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
+    const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
 
     if (fieldA < fieldB) return sortAsc.value ? -1 : 1
     if (fieldA > fieldB) return sortAsc.value ? 1 : -1
@@ -278,12 +276,12 @@ function validateRequiredFields() {
   
   if (!newDirecteur.value.fonction.trim()) {
     errors.fonction = 'La fonction est requise'
-    isValid = false
+    // isValid = false
   }
   
   if (!newDirecteur.value.telephone.trim()) {
     errors.telephone = 'Le téléphone est requis'
-    isValid = false
+    // isValid = false
   }
   
   validationErrors.value = errors

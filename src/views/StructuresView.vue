@@ -130,7 +130,7 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'idStructure' | 'nom' | 'designation'>('idStructure')
+const sortColumn = ref<'nom' | 'designation'>('nom')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
@@ -164,11 +164,30 @@ const filteredStructures = computed(() => {
       struct.idStructure.toString().includes(s)
     )
     .sort((a, b) => {
-      const fieldA = a[sortColumn.value]
-      const fieldB = b[sortColumn.value]
-      return sortAsc.value
-        ? (fieldA < fieldB ? -1 : fieldA > fieldB ? 1 : 0)
-        : (fieldA > fieldB ? -1 : fieldA < fieldB ? 1 : 0)
+      // Primary sort by nom (A to Z)
+      const nameA = a.nom.toLowerCase()
+      const nameB = b.nom.toLowerCase()
+      
+      if (sortColumn.value === 'nom') {
+        // If sorting by nom column, respect user's sort direction
+        if (nameA < nameB) return sortAsc.value ? -1 : 1
+        if (nameA > nameB) return sortAsc.value ? 1 : -1
+        return 0
+      } else {
+        // For other columns, sort by that column first, then by nom as secondary sort
+        const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
+        const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
+        
+        if (fieldA !== fieldB) {
+          if (fieldA < fieldB) return sortAsc.value ? -1 : 1
+          if (fieldA > fieldB) return sortAsc.value ? 1 : -1
+        }
+        
+        // Secondary sort by nom (always A to Z)
+        if (nameA < nameB) return -1
+        if (nameA > nameB) return 1
+        return 0
+      }
     })
 })
 

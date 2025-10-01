@@ -24,7 +24,7 @@
       <!-- INITIAL FORM FIELDS -->
       <form v-if="mode !== 'contexte'" class="structure-step-form" @submit.prevent="submitForm">
         <div class="step">
-          <label for="type-produit">Type de Produit</label>
+          <label for="type-produit">Types de produits</label>
           <select id="type-produit" v-model="selectedTypeId">
             <option value="" disabled>Choisir un type</option>
             <option v-for="type in typeProduits" :key="type.idTypeProduit" :value="type.idTypeProduit">
@@ -33,10 +33,10 @@
           </select>
         </div>
         <div class="step" v-if="selectedTypeId">
-          <label for="produit">Produit</label>
-          <select id="produit" v-model="selectedProduitId" :disabled="!produits.length">
+          <label for="produit">Produits</label>
+          <select id="produit" v-model="selectedProduitId" :disabled="!filteredProduits.length">
             <option value="" disabled>Choisir un produit</option>
-            <option v-for="prod in produits" :key="prod.idProduit" :value="prod.idProduit">
+            <option v-for="prod in filteredProduits" :key="prod.idProduit" :value="prod.idProduit">
               {{ prod.designation }}
             </option>
           </select>
@@ -99,7 +99,7 @@
           </select>
         </div> -->
         <p v-if="!isSubDivAllowed && selectedDivisionId" style="color: #E53935;">
-          Cette subdivision ne permet pas la création de documents.
+          Veuillez continuer la sélection.
         </p>
 
         <div
@@ -218,7 +218,18 @@
                   </thead>
                   <tbody>
                     <tr v-for="document in filteredDocList" :key="document.idDocument">
-                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td class="description-cell" :title="document.designation || document.nomFichier || ''">
+                        <div class="description-content">
+                          <span>{{ getDescriptionDisplay(document) }}</span>
+                          <button 
+                            v-if="needsTruncation(document.designation || document.nomFichier || '')"
+                            @click="toggleDescription(document.idDocument)"
+                            class="description-toggle-btn"
+                          >
+                            {{ isDescriptionExpanded(document.idDocument) ? 'voir moins' : 'voir plus' }}
+                          </button>
+                        </div>
+                      </td>
                       <td>
                         <div v-if="document.nomFichier" class="document-actions">
                           <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
@@ -310,7 +321,18 @@
                   </thead>
                   <tbody>
                     <tr v-for="document in filteredDocList" :key="document.idDocument">
-                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td class="description-cell" :title="document.designation || document.nomFichier || ''">
+                        <div class="description-content">
+                          <span>{{ getDescriptionDisplay(document) }}</span>
+                          <button 
+                            v-if="needsTruncation(document.designation || document.nomFichier || '')"
+                            @click="toggleDescription(document.idDocument)"
+                            class="description-toggle-btn"
+                          >
+                            {{ isDescriptionExpanded(document.idDocument) ? 'voir moins' : 'voir plus' }}
+                          </button>
+                        </div>
+                      </td>
                       <td>
                         <div v-if="document.nomFichier" class="document-actions">
                           <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
@@ -384,7 +406,18 @@
                   </thead>
                   <tbody>
                     <tr v-for="document in filteredDocList" :key="document.idDocument">
-                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td class="description-cell" :title="document.designation || document.nomFichier || ''">
+                        <div class="description-content">
+                          <span>{{ getDescriptionDisplay(document) }}</span>
+                          <button 
+                            v-if="needsTruncation(document.designation || document.nomFichier || '')"
+                            @click="toggleDescription(document.idDocument)"
+                            class="description-toggle-btn"
+                          >
+                            {{ isDescriptionExpanded(document.idDocument) ? 'voir moins' : 'voir plus' }}
+                          </button>
+                        </div>
+                      </td>
                       <td>
                         <div v-if="document.nomFichier" class="document-actions">
                           <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
@@ -489,7 +522,18 @@
                   </thead>
                   <tbody>
                     <tr v-for="document in filteredValidationDocList" :key="document.idDocument">
-                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td class="description-cell" :title="document.designation || document.nomFichier || ''">
+                        <div class="description-content">
+                          <span>{{ getDescriptionDisplay(document) }}</span>
+                          <button 
+                            v-if="needsTruncation(document.designation || document.nomFichier || '')"
+                            @click="toggleDescription(document.idDocument)"
+                            class="description-toggle-btn"
+                          >
+                            {{ isDescriptionExpanded(document.idDocument) ? 'voir moins' : 'voir plus' }}
+                          </button>
+                        </div>
+                      </td>
                       <td>
                         <div v-if="document.nomFichier" class="document-actions">
                           <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
@@ -586,7 +630,18 @@
                   </thead>
                   <tbody>
                     <tr v-for="document in filteredDocList" :key="document.idDocument">
-                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td class="description-cell" :title="document.designation || document.nomFichier || ''">
+                        <div class="description-content">
+                          <span>{{ getDescriptionDisplay(document) }}</span>
+                          <button 
+                            v-if="needsTruncation(document.designation || document.nomFichier || '')"
+                            @click="toggleDescription(document.idDocument)"
+                            class="description-toggle-btn"
+                          >
+                            {{ isDescriptionExpanded(document.idDocument) ? 'voir moins' : 'voir plus' }}
+                          </button>
+                        </div>
+                      </td>
                       <td>
                         <div v-if="document.nomFichier" class="document-actions">
                           <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
@@ -708,7 +763,7 @@
                     <span class="arb-value">{{ selectedMaitreOeuvreNoms.join(', ') }}<span v-if="hasMoreMOE" class="more-indicator"> (+plus...)</span></span>
                   </div>
                   <div v-if="selectedSoustraitantNoms.length" class="arb-line">
-                    <span class="arb-label">Soustraitants:</span>
+                    <span class="arb-label">Sous-traitants:</span>
                     <span class="arb-value">{{ selectedSoustraitantNoms.join(', ') }}<span v-if="hasMoreSoustraitants" class="more-indicator"> (+plus...)</span></span>
                   </div>
                   <div v-if="selectedFournisseurNoms.length" class="arb-line">
@@ -940,27 +995,96 @@
                   
                   <!-- Plan Files (Only for PiecesGraphiques and when PDF is selected) -->
                   <div v-if="isPiecesGraphiques && uploadedFile" class="plan-section">
-                    <label class="file-upload-label">Vous pouvez importer un plan en format source (optionnel)</label>
-                    <div style="display: flex; gap: 0.8em; align-items: center; margin-bottom: 0.5em;">
-                      <input ref="graphicsFolderInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf" @change="addGraphicsFile" webkitdirectory style="display: none;" />
-                      <button @click="graphicsFolderInput?.click()" class="save-btn" style="font-size: 0.9em; padding: 0.6em 1.2em;">Sélectionner Fichiers Source</button>
-                      <span style="color: #bbdefb; font-size: 0.9em;">{{ graphicsFiles.length }} fichier(s) sélectionné(s)</span>
-                    </div>
-                    <div v-if="graphicsFiles.length > 0" class="file-info">
-                      <span class="file-selected-text">{{ graphicsFiles.length }} fichier(s) sélectionné(s)</span>
-                      <button @click="showPlanDetails = !showPlanDetails" class="toggle-btn">{{ showPlanDetails ? 'Voir moins' : 'Voir plus' }}</button>
-                    </div>
+                  <label class="file-upload-label">
+                    Vous pouvez importer un plan en format source (optionnel)
+                  </label>
+                  <p style="font-size: 0.85em; color: #6b7280; margin-bottom: 0.5em;">
+                    Sélectionnez un fichier ZIP, plusieurs fichiers individuels, ou un dossier complet. Les fichiers individuels et dossiers seront automatiquement zippés.
+                  </p>
+                  <div style="display: flex; gap: 0.8em; align-items: center; margin-bottom: 0.5em;">
                     
-                    <div v-if="showPlanDetails && graphicsFiles.length > 0" class="file-details">
-                      <h4>Fichiers sélectionnés ({{ graphicsFiles.length }}):</h4>
-                      <div class="file-list">
-                        <div v-for="(file, index) in graphicsFiles" :key="index" class="file-item">
-                          <span>{{ file.name }}</span>
-                          <button @click="removeGraphicsFile(index)" type="button" class="remove-file" title="Retirer ce fichier">Retirer</button>
-                        </div>
+                    <!-- Input for individual files -->
+                    <input
+                      ref="graphicsFileInput"
+                      type="file"
+                      accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf,.zip"
+                      @change="addGraphicsFile"
+                      multiple
+                      style="display: none;"
+                    />
+                    
+                    <!-- Input for folder selection -->
+                    <input
+                      ref="graphicsFolderInput"
+                      type="file"
+                      webkitdirectory
+                      @change="addGraphicsFolder"
+                      style="display: none;"
+                    />
+                    
+                    <button
+                      @click="graphicsFileInput?.click()"
+                      class="save-btn"
+                      style="font-size: 0.9em; padding: 0.6em 1.2em;"
+                    >
+                      Sélectionner Fichiers ou ZIP
+                    </button>
+                    
+                    <button
+                      @click="graphicsFolderInput?.click()"
+                      class="save-btn"
+                      style="font-size: 0.9em; padding: 0.6em 1.2em; background: #10b981;"
+                    >
+                      Sélectionner Dossier
+                    </button>
+                    
+                    <span style="color: #bbdefb; font-size: 0.9em;">
+                      {{ graphicsFiles.length }} fichier(s) sélectionné(s)
+                    </span>
+                  </div>
+
+                  <div v-if="graphicsFiles.length > 0" class="file-info">
+                    <span class="file-selected-text">{{ graphicsFiles.length }} fichier(s) sélectionné(s)</span>
+                    <button @click="showPlanDetails = !showPlanDetails" class="toggle-btn">
+                      {{ showPlanDetails ? 'Voir moins' : 'Voir plus' }}
+                    </button>
+                  </div>
+
+                  <div v-if="showPlanDetails && graphicsFiles.length > 0" class="file-details">
+                    <h4>Fichiers sélectionnés ({{ graphicsFiles.length }}):</h4>
+                    <div v-if="graphicsFiles.length === 1 && graphicsFiles[0].name.toLowerCase().endsWith('.zip')" class="zip-info">
+                      <div class="file-item zip-file">
+                        <span>📦 {{ graphicsFiles[0].name }} (Fichier ZIP)</span>
+                        <button
+                          @click="removeGraphicsFile(0)"
+                          type="button"
+                          class="remove-file"
+                          title="Retirer ce fichier"
+                        >
+                          Retirer
+                        </button>
+                      </div>
+                      <small style="color: #10b981; font-style: italic;">Ce fichier ZIP sera envoyé directement</small>
+                    </div>
+                    <div v-else class="file-list">
+                      <div v-if="graphicsFiles.length > 1" class="zip-notice">
+                        <small style="color: #f59e0b; font-style: italic;">Ces fichiers seront automatiquement zippés avant l'envoi</small>
+                      </div>
+                      <div v-for="(file, index) in graphicsFiles" :key="index" class="file-item">
+                        <span>{{ file.name }}</span>
+                        <button
+                          @click="removeGraphicsFile(index)"
+                          type="button"
+                          class="remove-file"
+                          title="Retirer ce fichier"
+                        >
+                          Retirer
+                        </button>
                       </div>
                     </div>
                   </div>
+                </div>
+
                 </div>
                 
                 <!-- Option 3: Video Files -->
@@ -1049,7 +1173,18 @@
                   </thead>
                   <tbody>
                     <tr v-for="document in filteredDocList" :key="document.idDocument">
-                      <td>{{ document.designation || document.nomFichier || '(non renseigné)' }}</td>
+                      <td class="description-cell" :title="document.designation || document.nomFichier || ''">
+                        <div class="description-content">
+                          <span>{{ getDescriptionDisplay(document) }}</span>
+                          <button 
+                            v-if="needsTruncation(document.designation || document.nomFichier || '')"
+                            @click="toggleDescription(document.idDocument)"
+                            class="description-toggle-btn"
+                          >
+                            {{ isDescriptionExpanded(document.idDocument) ? 'voir moins' : 'voir plus' }}
+                          </button>
+                        </div>
+                      </td>
                       <td>
                         <div v-if="document.nomFichier" class="document-actions">
                           <button @click="viewDocument(document, 'fichier')" class="action-btn view-btn" :disabled="isAnyDocumentLoading">
@@ -1701,21 +1836,45 @@
           <button @click="closeImportPlanModal" class="import-plan-close">&times;</button>
         </div>
         <div class="import-plan-modal-body">
+          <p style="font-size: 0.85em; color: #6b7280; margin-bottom: 1em;">
+            Sélectionnez un fichier ZIP, plusieurs fichiers individuels, ou un dossier complet. Les fichiers individuels et dossiers seront automatiquement zippés.
+          </p>
           <div class="import-plan-step">
-            <label>Sélectionner un dossier:</label>
+            <label class="file-upload-label">Sélectionner un dossier:</label>
             <div class="import-plan-upload">
+              <!-- Individual files input -->
+              <input ref="planImportFilesInput" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.gif,.dwg,.dxf,.zip" multiple @change="addPlanImportFiles" style="display: none;" />
+              <!-- Folder input -->
               <input ref="planImportInput" type="file" webkitdirectory @change="addPlanImportFolder" style="display: none;" />
-              <button @click="planImportInput?.click()" class="import-plan-btn">
-                📁 Choisir Dossier
-              </button>
+              
+              <div style="display: flex; gap: 0.5em; margin-bottom: 0.5em;">
+                <button @click="planImportFilesInput?.click()" class="import-plan-btn">
+                  📄 Sélectionner Fichiers ou ZIP
+                </button>
+                <button @click="planImportInput?.click()" class="import-plan-btn" style="background: #10b981;">
+                  📁 Choisir Dossier
+                </button>
+              </div>
               <span class="import-plan-count">{{ planImportFiles.length }} fichier(s)</span>
             </div>
             <div v-if="planImportFiles.length > 0" class="import-plan-files">
-              <div class="import-plan-file" v-for="(file, index) in planImportFiles.slice(0, 3)" :key="index">
-                {{ file.name }}
+              <div v-if="planImportFiles.length === 1 && planImportFiles[0].name.toLowerCase().endsWith('.zip')" class="zip-info">
+                <div class="import-plan-file zip-file">
+                  📦 {{ planImportFiles[0].name }} (Fichier ZIP)
+                </div>
+                <small style="color: #10b981; font-style: italic;">Ce fichier ZIP sera envoyé directement</small>
               </div>
-              <div v-if="planImportFiles.length > 3" class="import-plan-more">
-                +{{ planImportFiles.length - 3 }} autres fichiers
+              <div v-else>
+                <div v-if="planImportFiles.length > 1" class="zip-notice" style="margin-bottom: 0.5em;">
+                  <small style="color: #f59e0b; font-style: italic;">Ces fichiers seront automatiquement zippés avant l'envoi</small>
+                </div>
+                <div class="import-plan-file" v-for="(file, index) in planImportFiles.slice(0, 5)" :key="index">
+                  <span>{{ file.name }}</span>
+                  <button @click="removePlanImportFile(index)" type="button" class="remove-plan-file" title="Retirer ce fichier">×</button>
+                </div>
+                <div v-if="planImportFiles.length > 5" class="import-plan-more">
+                  +{{ planImportFiles.length - 5 }} autres fichiers
+                </div>
               </div>
             </div>
           </div>
@@ -2269,12 +2428,37 @@
 .import-plan-file {
   color: #333;
   font-size: 0.85rem;
-  padding: 2px 0;
+  padding: 8px;
   border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+  margin-bottom: 4px;
+  border-radius: 4px;
 }
 
 .import-plan-file:last-child {
   border-bottom: none;
+}
+
+.remove-plan-file {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.remove-plan-file:hover {
+  background: #c82333;
 }
 
 .import-plan-more {
@@ -2553,6 +2737,26 @@
   color: #374151;
 }
 
+/* File Upload Styles */
+.zip-file {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.zip-info {
+  margin-bottom: 8px;
+}
+
+.zip-notice {
+  margin-bottom: 8px;
+  padding: 6px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 4px;
+}
+
 /* Responsive Button Group */
 .responsive-buttons {
   display: flex;
@@ -2569,6 +2773,50 @@
   white-space: nowrap;
   flex: 1 1 auto;
   max-width: 200px;
+}
+
+/* Expandable Description Styles */
+.description-cell {
+  max-width: 200px;
+  min-width: 150px;
+}
+
+.description-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.description-content span {
+  line-height: 1.4;
+  font-size: 0.9rem;
+}
+
+.description-toggle-btn {
+  background: none;
+  border: none;
+  color: #43E97B;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  align-self: flex-start;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.description-toggle-btn:hover {
+  background: rgba(67, 233, 123, 0.1);
+  color: #3bc96a;
+  text-decoration: none;
+}
+
+.description-toggle-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(67, 233, 123, 0.3);
 }
 
 /* Mobile responsiveness */
@@ -2590,6 +2838,19 @@
     width: 95%;
     max-width: none;
   }
+  
+  .description-cell {
+    max-width: 120px;
+    min-width: 100px;
+  }
+  
+  .description-content span {
+    font-size: 0.8rem;
+  }
+  
+  .description-toggle-btn {
+    font-size: 0.7rem;
+  }
 }
 
 @media (max-width: 1200px) {
@@ -2610,6 +2871,7 @@ import ImageViewer from '../components/ImageViewer.vue'
 import VideoViewer from '../components/VideoViewer.vue'
 import { useUserStore } from '../store/userStore'
 import { logUserAction, LOG_ACTIONS } from '../services/logService'
+import JSZip from 'jszip'
 
 
 // const API_BASE = 'http://10.10.150.75:8000/api'
@@ -2734,6 +2996,7 @@ const compressionProgress = ref('')
 const isCreatingDocument = ref(false)
 const creationProgress = ref('')
 const graphicsFiles = ref<File[]>([])
+const graphicsFileInput = ref<HTMLInputElement>()
 const graphicsFolderInput = ref<HTMLInputElement>()
 const selectedPhotos = ref<File[]>([])
 const photosInput = ref<HTMLInputElement>()
@@ -2754,6 +3017,7 @@ const fileInput = ref<HTMLInputElement>()
 const showImportPlanModal = ref(false)
 const planImportFiles = ref<File[]>([])
 const planImportInput = ref<HTMLInputElement>()
+const planImportFilesInput = ref<HTMLInputElement>()
 const documentToImportPlan = ref<any>(null)
 const isUploadingPlan = ref(false)
 
@@ -2770,11 +3034,11 @@ onMounted(async () => {
       axiosInstance.get(`subdiv2et3/`),
       axiosInstance.get(`subdiv3et4/`)
     ])
-    typeProduits.value = typesRes.data
-    structures.value = structuresRes.data
-    allSubDivs1Et2.value = subDivsRes.data
-    allSubDivs2Et3.value = subDivs3Res.data
-    allSubDivs3Et4.value = subDivs4Res.data
+    typeProduits.value = typesRes.data.sort((a: any, b: any) => (a.designation || '').toString().toLowerCase().localeCompare((b.designation || '').toString().toLowerCase()))
+    structures.value = structuresRes.data.sort((a: any, b: any) => (a.designation || '').toString().toLowerCase().localeCompare((b.designation || '').toString().toLowerCase()))
+    allSubDivs1Et2.value = subDivsRes.data.sort((a: any, b: any) => (a.idSubDivisionNv_2?.nom || '').toString().toLowerCase().localeCompare((b.idSubDivisionNv_2?.nom || '').toString().toLowerCase()))
+    allSubDivs2Et3.value = subDivs3Res.data.sort((a: any, b: any) => (a.idSubDivisionNv_3?.nom || '').toString().toLowerCase().localeCompare((b.idSubDivisionNv_3?.nom || '').toString().toLowerCase()))
+    allSubDivs3Et4.value = subDivs4Res.data.sort((a: any, b: any) => (a.idSubDivisionNv_4?.nom || '').toString().toLowerCase().localeCompare((b.idSubDivisionNv_4?.nom || '').toString().toLowerCase()))
   } catch (error) {
     console.error('Erreur lors du chargement initial', error)
   }
@@ -2795,8 +3059,8 @@ watch(selectedTypeId, async (newTypeId) => {
         axiosInstance.get(`produits/by-type/${newTypeId}/`),
         axiosInstance.get(`sections/by-type/${newTypeId}/`)
       ])
-      produits.value = produitsRes.data
-      sections.value = sectionsRes.data
+      produits.value = produitsRes.data.sort((a: any, b: any) => (a.designation || '').toString().toLowerCase().localeCompare((b.designation || '').toString().toLowerCase()))
+      sections.value = sectionsRes.data.sort((a: any, b: any) => (a.designation || '').toString().toLowerCase().localeCompare((b.designation || '').toString().toLowerCase()))
     } catch (error) {
       console.error('Erreur produits/sections', error)
     }
@@ -2905,7 +3169,7 @@ watch(selectedStructureId, async (newStructureId) => {
   if (newStructureId !== null) {
     try {
       const res = await axiosInstance.get(`subdivision-nv1/by-structure/${newStructureId}/`)
-      divisionsNv1.value = res.data
+      divisionsNv1.value = res.data.sort((a: any, b: any) => (a.nom || '').toString().toLowerCase().localeCompare((b.nom || '').toString().toLowerCase()))
     } catch (error) {
       console.error('Erreur divisions nv1', error)
     }
@@ -2919,6 +3183,32 @@ watch([selectedSectionId, selectedDivisionId, selectedSubDiv2Id, selectedSubDiv3
   showSuccess.value = false
   showStructureDocContent.value = false
   showValidationMode.value = false
+})
+
+// Computed property to filter products where date_suppression is null
+const filteredProduits = computed(() => {
+  return produits.value.filter(prod => prod.date_suppression === null)
+})
+
+// Computed properties to filter other entities where date_suppression is null
+const filteredFournisseurs = computed(() => {
+  return fournisseursList.value.filter(item => item.date_suppression === null)
+})
+
+const filteredMaitresOuvrage = computed(() => {
+  return maitresOuvrageList.value.filter(item => item.date_suppression === null)
+})
+
+const filteredMaitresOeuvre = computed(() => {
+  return maitresOeuvreList.value.filter(item => item.date_suppression === null)
+})
+
+const filteredSoustraitants = computed(() => {
+  return soustraitantsList.value.filter(item => item.date_suppression === null)
+})
+
+const filteredBureauxEtudes = computed(() => {
+  return bureauxEtudesList.value.filter(item => item.date_suppression === null)
 })
 
 const requiresSubDiv2 = computed(() => {
@@ -2993,57 +3283,136 @@ async function onVideoChange(e: Event) {
   const files = (e.target as HTMLInputElement).files
   if (files && files.length > 0) {
     const originalVideo = files[0]
-    console.log('Selected video:', originalVideo.name, 'Type:', originalVideo.type, 'Size:', originalVideo.size)
     
-    // For videos >30MB, use original to avoid timeout
-    if (originalVideo.size > 30 * 1024 * 1024) {
-      uploadedVideo.value = originalVideo
-      showToast('Vidéo volumineuse - utilisée sans compression', 'success')
-      return
-    }
-    
-    // For videos 5-30MB, compress with fast method
-    if (originalVideo.size > 5 * 1024 * 1024) {
-      isCompressingVideo.value = true
-      compressionProgress.value = 'Compression rapide en cours...'
-      
-      try {
-        const compressedVideo = await compressVideoFast(originalVideo)
-        uploadedVideo.value = compressedVideo
-        
-        const compressionRatio = ((originalVideo.size - compressedVideo.size) / originalVideo.size * 100).toFixed(1)
-        showToast(`Vidéo compressée! Réduction: ${compressionRatio}%`, 'success')
-      } catch (error) {
-        console.error('Video compression failed:', error)
-        uploadedVideo.value = originalVideo
-        showToast('Compression échouée - vidéo originale utilisée', 'error')
-      } finally {
-        isCompressingVideo.value = false
-        compressionProgress.value = ''
-      }
-    } else {
       // Small videos, use as-is
-      uploadedVideo.value = originalVideo
-    }
+    uploadedVideo.value = originalVideo
+    
   }
 }
 
 function addGraphicsFile(e: Event) {
   const files = (e.target as HTMLInputElement).files
   if (files && files.length > 0) {
-    const newFile = files[0]
-    graphicsFiles.value = [...graphicsFiles.value, newFile]
-    console.log('Added graphics file:', newFile.name, 'Total graphics files:', graphicsFiles.value.length)
-    // Reset plan details state when new files are selected
+    // Check if it's a single ZIP file
+    if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+      graphicsFiles.value = [files[0]]
+      showToast(`Fichier ZIP sélectionné: ${files[0].name}`, 'success')
+    } else {
+      // Multiple files - we'll zip them later
+      graphicsFiles.value = [...graphicsFiles.value, ...Array.from(files)]
+      console.log(
+        'Fichiers ajoutés:',
+        Array.from(files).map(f => f.name),
+        'Total fichiers:',
+        graphicsFiles.value.length
+      )
+    }
+
     showPlanDetails.value = false
-    // Don't clear other file selections - allow multiple file types
-    // Clear the input so the same file can be selected again
     ;(e.target as HTMLInputElement).value = ''
   }
 }
 
+// Function to handle folder selection
+async function addGraphicsFolder(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    try {
+      showToast('Création du fichier ZIP à partir du dossier...', 'success')
+      
+      // Create ZIP from folder
+      const zip = new JSZip()
+      const fileArray = Array.from(files)
+      
+      // Add all files to ZIP maintaining folder structure
+      for (const file of fileArray) {
+        const relativePath = file.webkitRelativePath || file.name
+        zip.file(relativePath, file)
+      }
+      
+      // Generate ZIP blob
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      
+      // Create a File object from the blob
+      const folderName = fileArray[0].webkitRelativePath?.split('/')[0] || 'dossier'
+      const zipFile = new File([zipBlob], `${folderName}.zip`, { type: 'application/zip' })
+      
+      // Replace current files with the ZIP
+      graphicsFiles.value = [zipFile]
+      
+      showToast(`Dossier zippé avec succès: ${zipFile.name} (${fileArray.length} fichiers)`, 'success')
+      showPlanDetails.value = false
+      ;(e.target as HTMLInputElement).value = ''
+      
+    } catch (error) {
+      console.error('Erreur lors de la création du ZIP:', error)
+      showToast('Erreur lors de la création du fichier ZIP', 'error')
+    }
+  }
+}
+
+// Function to handle individual files for plan import
+function addPlanImportFiles(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    // Check if it's a single ZIP file
+    if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+      planImportFiles.value = [files[0]]
+      showToast(`Fichier ZIP sélectionné: ${files[0].name}`, 'success')
+    } else {
+      // Multiple files - we'll zip them later
+      planImportFiles.value = [...planImportFiles.value, ...Array.from(files)]
+    }
+    ;(e.target as HTMLInputElement).value = ''
+  }
+}
+
+// Function to handle folder selection for plan import
+async function addPlanImportFolder(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    try {
+      showToast('Création du fichier ZIP à partir du dossier...', 'success')
+      
+      // Create ZIP from folder
+      const zip = new JSZip()
+      const fileArray = Array.from(files)
+      
+      // Add all files to ZIP maintaining folder structure
+      for (const file of fileArray) {
+        const relativePath = file.webkitRelativePath || file.name
+        zip.file(relativePath, file)
+      }
+      
+      // Generate ZIP blob
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      
+      // Create a File object from the blob
+      const folderName = fileArray[0].webkitRelativePath?.split('/')[0] || 'dossier'
+      const zipFile = new File([zipBlob], `${folderName}.zip`, { type: 'application/zip' })
+      
+      // Replace current files with the ZIP
+      planImportFiles.value = [zipFile]
+      
+      showToast(`Dossier zippé avec succès: ${zipFile.name} (${fileArray.length} fichiers)`, 'success')
+      ;(e.target as HTMLInputElement).value = ''
+      
+    } catch (error) {
+      console.error('Erreur lors de la création du ZIP:', error)
+      showToast('Erreur lors de la création du fichier ZIP', 'error')
+    }
+  }
+}
+
+
+
 function removeGraphicsFile(index: number) {
   graphicsFiles.value.splice(index, 1)
+}
+
+// Function to remove individual files from plan import
+function removePlanImportFile(index: number) {
+  planImportFiles.value.splice(index, 1)
 }
 
 
@@ -3071,85 +3440,6 @@ function onSinglePhotoChange(e: Event) {
 
 function removePhoto(index: number) {
   selectedPhotos.value.splice(index, 1)
-}
-
-async function compressVideoFast(file: File): Promise<File> {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video')
-    video.muted = true
-    video.playsInline = true
-    
-    const timeout = setTimeout(() => {
-      reject(new Error('Compression timeout'))
-    }, 60000) // 1 minute timeout
-    
-    video.onloadedmetadata = () => {
-      try {
-        const canvas = document.createElement('canvas')
-        
-        // More aggressive resolution reduction
-        const scale = Math.min(1, 480 / Math.max(video.videoWidth, video.videoHeight))
-        canvas.width = Math.floor(video.videoWidth * scale)
-        canvas.height = Math.floor(video.videoHeight * scale)
-        
-        const stream = canvas.captureStream(15) // 15 FPS
-        const chunks: Blob[] = []
-        
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'video/webm',
-          videoBitsPerSecond: 300000 // 300kbps
-        })
-        
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunks.push(e.data)
-        }
-        
-        mediaRecorder.onstop = () => {
-          clearTimeout(timeout)
-          const blob = new Blob(chunks, { type: 'video/webm' })
-          const compressedFile = new File([blob], 
-            file.name.replace(/\.[^/.]+$/, '_compressed.webm'), 
-            { type: 'video/webm' }
-          )
-          resolve(compressedFile)
-        }
-        
-        mediaRecorder.start()
-        
-        const ctx = canvas.getContext('2d')!
-        let frame = 0
-        const maxFrames = Math.min(video.duration * 15, 600) // Max 40 seconds
-        
-        const drawFrame = () => {
-          if (frame >= maxFrames) {
-            mediaRecorder.stop()
-            return
-          }
-          
-          video.currentTime = frame / 15
-          video.onseeked = () => {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-            frame++
-            compressionProgress.value = `Compression: ${Math.round(frame/maxFrames*100)}%`
-            setTimeout(drawFrame, 30) // Faster frame processing
-          }
-        }
-        
-        drawFrame()
-        
-      } catch (error) {
-        clearTimeout(timeout)
-        reject(error)
-      }
-    }
-    
-    video.onerror = () => {
-      clearTimeout(timeout)
-      reject(new Error('Erreur vidéo'))
-    }
-    
-    video.src = URL.createObjectURL(file)
-  })
 }
 
 
@@ -3363,11 +3653,29 @@ async function submitForm() {
     
     // Handle graphics files (zip them for PiecesGraphiques) - append as 'plan'
     if (graphicsFiles.value.length > 0) {
-      creationProgress.value = 'Compression des fichiers graphiques...';
-      const zipFile = await createZipFile(graphicsFiles.value, nonFichier.value || 'pieces-graphiques');
-      console.log('Appending plan to FormData:', zipFile.name, 'Type:', zipFile.type, 'Size:', zipFile.size)
-      formData.append('plan', zipFile, zipFile.name);
+      let planFile: File;
+      
+      // If we have a single ZIP file, use it directly
+      if (graphicsFiles.value.length === 1 && graphicsFiles.value[0].name.toLowerCase().endsWith('.zip')) {
+        planFile = graphicsFiles.value[0];
+      } else {
+        // Multiple files - create ZIP
+        creationProgress.value = 'Création du fichier ZIP...';
+        const zip = new JSZip();
+        
+        // Add all files to ZIP
+        for (const file of graphicsFiles.value) {
+          zip.file(file.name, file);
+        }
+        
+        // Generate ZIP blob
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        planFile = new File([zipBlob], 'plan_files.zip', { type: 'application/zip' });
+      }
+      
+      formData.append('plan', planFile, planFile.name);
     }
+
     
     // Handle photos (convert to PDF) - append as 'photos'
     if (selectedPhotos.value.length > 0) {
@@ -3481,6 +3789,44 @@ const searchQuery = ref('');
 const contextAjouterSearchQuery = ref('');
 const contextConsulterSearchQuery = ref('');
 
+// Expandable description functionality
+const expandedDescriptions = ref<Record<number, boolean>>({});
+
+// Function to truncate description text
+function truncateDescription(text: string, maxLength: number = 30): string {
+  if (!text) return '(non renseigné)';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
+
+// Function to toggle description expansion
+function toggleDescription(documentId: number) {
+  expandedDescriptions.value[documentId] = !expandedDescriptions.value[documentId];
+}
+
+// Function to check if description is expanded
+function isDescriptionExpanded(documentId: number): boolean {
+  return expandedDescriptions.value[documentId] || false;
+}
+
+// Function to get display text for description
+function getDescriptionDisplay(document: any): string {
+  const text = document.designation || document.nomFichier || '';
+  if (!text) return '(non renseigné)';
+  
+  if (isDescriptionExpanded(document.idDocument)) {
+    return text;
+  }
+  
+  return truncateDescription(text, 30);
+}
+
+// Function to check if description needs truncation
+function needsTruncation(text: string): boolean {
+  if (!text) return false;
+  return text.length > 30;
+}
+
 // Computed property to filter documents based on search query and user permissions
 const filteredDocList = computed(() => {
   let filteredDocs = docList.value;
@@ -3524,12 +3870,29 @@ const filteredValidationDocList = computed(() => {
 
 // Computed property to filter context ajouter items
 const filteredContextAjouterItems = computed(() => {
+  // Get the filtered list based on entity type
+  let baseList = contextAjouter.value.all;
+  
+  // Apply date_suppression filter based on entity type
+  if (contextAjouter.value.entityKey === 'fournisseur') {
+    baseList = baseList.filter(item => item.date_suppression === null);
+  } else if (contextAjouter.value.entityKey === 'maitre_ouvrage') {
+    baseList = baseList.filter(item => item.date_suppression === null);
+  } else if (contextAjouter.value.entityKey === 'maitre_oeuvre') {
+    baseList = baseList.filter(item => item.date_suppression === null);
+  } else if (contextAjouter.value.entityKey === 'soustraitants_tvx') {
+    baseList = baseList.filter(item => item.date_suppression === null);
+  } else if (contextAjouter.value.entityKey === 'bet_soustraitants_etudes') {
+    baseList = baseList.filter(item => item.date_suppression === null);
+  }
+  
+  // Apply search filter if search query exists
   if (!contextAjouterSearchQuery.value.trim()) {
-    return contextAjouter.value.all;
+    return baseList;
   }
   
   const query = contextAjouterSearchQuery.value.toLowerCase().trim();
-  return contextAjouter.value.all.filter(item => 
+  return baseList.filter(item => 
     contextAjouter.value.columnKeys.some(key => 
       (item[key]?.toString() || '').toLowerCase().includes(query)
     )
@@ -3684,25 +4047,25 @@ const contextConsulterEntityConfig: Record<string, EntityConfig> = {
     columnKeys: ["idFournisseur", "designationFournisseur", "description", "telephone", "email"]
   },
   maitre_oeuvre: {
-    label: "Maître d'Œuvre",
+    label: "Maîtres d'Œuvre",
     endpoint: ((produitId: number) => `/moe/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["ID", "Désignation", "Description", "Email"],
     columnKeys: ["idMaitreOeuvre", "designationMO", "description", "email"]
   },
   maitre_ouvrage: {
-    label: "Maître d'Ouvrage",
+    label: "Maîtres d'Ouvrage",
     endpoint: ((produitId: number) => `moa/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["ID", "Désignation", "Description", "Email"],
     columnKeys: ["idMaitreOuvrage", "designationMOg", "description", "email"]
   },
   soustraitants_tvx: {
-    label: "Soustraitants Travaux",
+    label: "Sous-traitants Travaux",
     endpoint: ((produitId: number) => `soustraitants/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["ID", "Désignation", "Description", "Téléphone", "Email"],
     columnKeys: ["idSoustraitants", "designationStt", "description", "telephone", "email"]
   },
   bet_soustraitants_etudes: {
-    label: "BET Soustraitants Études",
+    label: "BET Sous-traitants",
     endpoint: ((produitId: number) => `bet/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["ID", "Nom", "Description", "Téléphone", "Email"],
     columnKeys: ["idBET", "nom", "description", "telephone", "email"]
@@ -3882,11 +4245,11 @@ function getColKeyByHeader(header: string) {
 // Context entities list for UI
 const contextEntities = [
   { key: "projet", label: "Projet" },
-  { key: "maitre_ouvrage", label: "Maître d'Ouvrage" },
-  { key: "maitre_oeuvre", label: "Maître d'Œuvre" },
-  { key: "soustraitants_tvx", label: "Soustraitants de Travaux" },
+  { key: "maitre_ouvrage", label: "Maîtres d'Ouvrage" },
+  { key: "maitre_oeuvre", label: "Maîtres d'Œuvre" },
+  { key: "soustraitants_tvx", label: "Sous-traitants de Travaux" },
   { key: "fournisseur", label: "Fournisseur" },
-  { key: "bet_soustraitants_etudes", label: "BET Soustraitants Études" },
+  { key: "bet_soustraitants_etudes", label: "BET Sous-traitants" },
   { key: "direction_projet", label: "Direction du Projet" }
 ];
 // MODAL STATE FOR CONTEXTE "AJOUTER"
@@ -3995,17 +4358,48 @@ async function onAjouter(entityKey: string) {
   contextAjouter.value.columnKeys = config.columnKeys;
 
   // Fetch all possible items for right-table
-  if (config.listRef.value.length === 0) {
+  const originalListRef = entityKey === 'fournisseur' ? fournisseursList :
+                         entityKey === 'maitre_ouvrage' ? maitresOuvrageList :
+                         entityKey === 'maitre_oeuvre' ? maitresOeuvreList :
+                         entityKey === 'soustraitants_tvx' ? soustraitantsList :
+                         entityKey === 'bet_soustraitants_etudes' ? bureauxEtudesList :
+                         config.listRef;
+  
+  if (originalListRef.value.length === 0) {
     try {
       const { data } = await axiosInstance.get(config.api);
-      config.listRef.value = data;
+      // Sort the data alphabetically based on the primary display field
+      let sortedData = data;
+      if (entityKey === 'projet') {
+        sortedData = data.sort((a: any, b: any) => (a.code || '').toString().toLowerCase().localeCompare((b.code || '').toString().toLowerCase()));
+      } else if (entityKey === 'fournisseur') {
+        sortedData = data.sort((a: any, b: any) => (a.designationFournisseur || '').toString().toLowerCase().localeCompare((b.designationFournisseur || '').toString().toLowerCase()));
+      } else if (entityKey === 'maitre_ouvrage') {
+        sortedData = data.sort((a: any, b: any) => (a.designationMOg || '').toString().toLowerCase().localeCompare((b.designationMOg || '').toString().toLowerCase()));
+      } else if (entityKey === 'maitre_oeuvre') {
+        sortedData = data.sort((a: any, b: any) => (a.designationMO || '').toString().toLowerCase().localeCompare((b.designationMO || '').toString().toLowerCase()));
+      } else if (entityKey === 'soustraitants_tvx') {
+        sortedData = data.sort((a: any, b: any) => (a.designationStt || '').toString().toLowerCase().localeCompare((b.designationStt || '').toString().toLowerCase()));
+      } else if (entityKey === 'bet_soustraitants_etudes') {
+        sortedData = data.sort((a: any, b: any) => (a.nom || '').toString().toLowerCase().localeCompare((b.nom || '').toString().toLowerCase()));
+      } else if (entityKey === 'direction_projet') {
+        sortedData = data.sort((a: any, b: any) => (a.nomPrenomDirecteur || '').toString().toLowerCase().localeCompare((b.nomPrenomDirecteur || '').toString().toLowerCase()));
+      }
+      originalListRef.value = sortedData;
     } catch (e) {
       showToast("Erreur lors du chargement des " + config.label, 'error');
       contextAjouter.value.visible = false;
       return;
     }
   }
-  contextAjouter.value.all = config.listRef.value;
+  // Use filtered list (excludes deleted items) for display
+  const filteredListRef = entityKey === 'fournisseur' ? filteredFournisseurs :
+                         entityKey === 'maitre_ouvrage' ? filteredMaitresOuvrage :
+                         entityKey === 'maitre_oeuvre' ? filteredMaitresOeuvre :
+                         entityKey === 'soustraitants_tvx' ? filteredSoustraitants :
+                         entityKey === 'bet_soustraitants_etudes' ? filteredBureauxEtudes :
+                         config.listRef;
+  contextAjouter.value.all = filteredListRef.value;
 
   // Fetch already selected items from backend for left-table
   let selectedList: any[] = [];
@@ -5039,8 +5433,7 @@ async function viewFicheTechnique(entityKey: string, item: any) {
     }
     
     // Fetch the PDF file
-    const response = await fetch(`${endpoint}?${params.toString()}`);
-    
+    const response = await fetch(`http://10.10.150.75:8000/api/${endpoint}?${params.toString()}`);
     if (!response.ok) {
       throw new Error('Fiche technique non trouvée');
     }
@@ -5649,7 +6042,7 @@ const contextEntitiesConfig = {
   },
   bet_soustraitants_etudes: {
     label: "BET Soustraitants Études",
-    api: '/bet-soustraitants-etudes/',
+    api: '/bureaux-etudes/',
     idCol: 'idBET',
     columns: ['ID', 'Nom', 'Description', 'Téléphone', 'Email'],
     columnKeys: ['idBetSoustraitant', 'nom', 'description', 'telephone', 'email'],
@@ -5931,12 +6324,7 @@ function closeImportPlanModal() {
   isUploadingPlan.value = false
 }
 
-function addPlanImportFolder(e: Event) {
-  const files = (e.target as HTMLInputElement).files
-  if (files && files.length > 0) {
-    planImportFiles.value = Array.from(files)
-  }
-}
+
 
 async function submitPlanImport() {
   if (!planImportFiles.value.length || !documentToImportPlan.value) {
@@ -5949,9 +6337,29 @@ async function submitPlanImport() {
   try {
     const formData = new FormData()
     
-    // Create zip file from selected files
-    const zipFile = await createZipFile(planImportFiles.value, `plan-${documentToImportPlan.value.idDocument}`)
-    formData.append('plan', zipFile)
+    // Handle graphics files (zip them automatically) - similar to main form
+    if (planImportFiles.value.length > 0) {
+      let planFile: File;
+      
+      // If we have a single ZIP file, use it directly
+      if (planImportFiles.value.length === 1 && planImportFiles.value[0].name.toLowerCase().endsWith('.zip')) {
+        planFile = planImportFiles.value[0];
+      } else {
+        // Multiple files - create ZIP automatically
+        const zip = new JSZip();
+        
+        // Add all files to ZIP
+        for (const file of planImportFiles.value) {
+          zip.file(file.name, file);
+        }
+        
+        // Generate ZIP blob
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        planFile = new File([zipBlob], `plan-${documentToImportPlan.value.idDocument}.zip`, { type: 'application/zip' });
+      }
+      
+      formData.append('plan', planFile, planFile.name);
+    }
     
     // Use the PUT endpoint to update the document with the plan
     await axiosInstance.put(`documents/create-two-file/${documentToImportPlan.value.idDocument}/`, formData, {

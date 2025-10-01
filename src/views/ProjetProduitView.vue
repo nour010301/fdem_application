@@ -80,24 +80,22 @@
           <textarea v-model="newProjet.description" placeholder="Description (optionnelle)" />
         </div>
         <div class="form-group">
-          <label>Adresse *</label>
+          <label>Adresse</label>
           <input 
             v-model="newProjet.adresse" 
             placeholder="Adresse" 
-            :class="{ 'error': validationErrors.adresse }"
           />
-          <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div>
+          <!-- <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div> -->
         </div>
         <div class="form-group">
-          <label>Wilaya *</label>
+          <label>Wilaya</label>
           <select 
             v-model="newProjet.wilaya"
-            :class="{ 'error': validationErrors.wilaya }"
           >
             <option value="" disabled>Sélectionnez une wilaya</option>
             <option v-for="wilaya in wilayas" :key="wilaya" :value="wilaya">{{ wilaya }}</option>
           </select>
-          <div v-if="validationErrors.wilaya" class="error-message">{{ validationErrors.wilaya }}</div>
+          <!-- <div v-if="validationErrors.wilaya" class="error-message">{{ validationErrors.wilaya }}</div> -->
         </div>
         <div class="modal-actions">
           <button @click="validateAndAddProjet">Ajouter</button>
@@ -205,12 +203,30 @@ const filteredProjets = computed(() => {
   );
 
   return filtered.sort((a, b) => {
-    const fieldA = a[sortColumn.value] ?? '';
-    const fieldB = b[sortColumn.value] ?? '';
-
-    if (fieldA < fieldB) return sortAsc.value ? -1 : 1;
-    if (fieldA > fieldB) return sortAsc.value ? 1 : -1;
-    return 0;
+    // Primary sort by code (A to Z)
+    const nameA = a.code.toLowerCase()
+    const nameB = b.code.toLowerCase()
+    
+    if (sortColumn.value === 'code') {
+      // If sorting by code column, respect user's sort direction
+      if (nameA < nameB) return sortAsc.value ? -1 : 1
+      if (nameA > nameB) return sortAsc.value ? 1 : -1
+      return 0
+    } else {
+      // For other columns, sort by that column first, then by code as secondary sort
+      const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
+      const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
+      
+      if (fieldA !== fieldB) {
+        if (fieldA < fieldB) return sortAsc.value ? -1 : 1
+        if (fieldA > fieldB) return sortAsc.value ? 1 : -1
+      }
+      
+      // Secondary sort by code (always A to Z)
+      if (nameA < nameB) return -1
+      if (nameA > nameB) return 1
+      return 0
+    }
   });
 });
 
@@ -302,12 +318,12 @@ function validateRequiredFields() {
   
   if (!newProjet.value.adresse.trim()) {
     errors.adresse = 'L\'adresse est requise'
-    isValid = false
+    // isValid = false
   }
   
   if (!newProjet.value.wilaya) {
     errors.wilaya = 'La wilaya est requise'
-    isValid = false
+    // isValid = false
   }
   
   validationErrors.value = errors

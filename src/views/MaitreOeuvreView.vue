@@ -85,22 +85,20 @@
           <textarea v-model="newMaitreOeuvre.description" placeholder="Description (optionnelle)" />
         </div>
         <div class="form-group">
-          <label>Adresse *</label>
+          <label>Adresse</label>
           <input 
             v-model="newMaitreOeuvre.adresse" 
             placeholder="Adresse" 
-            :class="{ 'error': validationErrors.adresse }"
           />
-          <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div>
+          <!-- <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div> -->
         </div>
         <div class="form-group">
-          <label>Email *</label>
+          <label>Email</label>
           <input 
             v-model="newMaitreOeuvre.email" 
             placeholder="Email" 
-            :class="{ 'error': validationErrors.email }"
           />
-          <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div>
+          <!-- <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div> -->
         </div>
         <div class="modal-actions">
           <button @click="validateAndAddMaitreOeuvre">Ajouter</button>
@@ -158,7 +156,7 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'idMaitreOeuvre' | 'designationMO' | 'description' | 'adresse' | 'email'>('idMaitreOeuvre')
+const sortColumn = ref<'designationMO' | 'description' | 'adresse' | 'email'>('designationMO')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
@@ -195,12 +193,30 @@ const filteredMaitresOeuvre = computed(() => {
   )
 
   return filtered.sort((a, b) => {
-    const fieldA = a[sortColumn.value] ?? ''
-    const fieldB = b[sortColumn.value] ?? ''
-
-    if (fieldA < fieldB) return sortAsc.value ? -1 : 1
-    if (fieldA > fieldB) return sortAsc.value ? 1 : -1
-    return 0
+    // Primary sort by designation (A to Z)
+    const nameA = a.designationMO.toLowerCase()
+    const nameB = b.designationMO.toLowerCase()
+    
+    if (sortColumn.value === 'designationMO') {
+      // If sorting by designation column, respect user's sort direction
+      if (nameA < nameB) return sortAsc.value ? -1 : 1
+      if (nameA > nameB) return sortAsc.value ? 1 : -1
+      return 0
+    } else {
+      // For other columns, sort by that column first, then by designation as secondary sort
+      const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
+      const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
+      
+      if (fieldA !== fieldB) {
+        if (fieldA < fieldB) return sortAsc.value ? -1 : 1
+        if (fieldA > fieldB) return sortAsc.value ? 1 : -1
+      }
+      
+      // Secondary sort by designation (always A to Z)
+      if (nameA < nameB) return -1
+      if (nameA > nameB) return 1
+      return 0
+    }
   })
 })
 
@@ -291,12 +307,12 @@ function validateRequiredFields() {
   
   if (!newMaitreOeuvre.value.adresse.trim()) {
     errors.adresse = 'L\'adresse est requise'
-    isValid = false
+    // isValid = false
   }
   
   if (!newMaitreOeuvre.value.email.trim()) {
     errors.email = 'L\'email est requis'
-    isValid = false
+    // isValid = false
   }
   
   validationErrors.value = errors

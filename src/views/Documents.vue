@@ -588,7 +588,7 @@ const userStore = useUserStore()
 // Computed property to check if user can see "Créé par" column
 // Only ADMIN_INFORMATIQUE (profile 2) can see this column
 const canSeeCreatedBy = computed(() => {
-  return userStore.isAdminInformatique.value
+  return userStore.isAdminInformatique.value || userStore.isAdminFonctionnel.value
 })
 
 // Computed property to check if user can download plans
@@ -649,8 +649,8 @@ async function loadFilterOptions() {
       axiosInstance.get('subdiv2et3/'),
       axiosInstance.get('subdiv3et4/')
     ]);
-    typesProduit.value = typesRes.data;
-    structures.value = structuresRes.data;
+    typesProduit.value = typesRes.data.sort((a: any, b: any) => (a.designation || '').toLowerCase().localeCompare((b.designation || '').toLowerCase()));
+    structures.value = structuresRes.data.sort((a: any, b: any) => (a.designation || a.nom || '').toLowerCase().localeCompare((b.designation || b.nom || '').toLowerCase()));
     allSubDivs1Et2.value = subDivsRes.data;
     allSubDivs2Et3.value = subDivs3Res.data;
     allSubDivs3Et4.value = subDivs4Res.data;
@@ -663,22 +663,22 @@ async function loadFilterOptions() {
 
 // Computed properties for cascading filters
 const filteredProduits = computed(() => {
-  if (!selectedTypeProduit.value) return produits.value
-  return produits.value.filter(prod => prod.idTypeProduit == selectedTypeProduit.value)
+  if (!selectedTypeProduit.value) return produits.value.sort((a, b) => (a.designation || '').toLowerCase().localeCompare((b.designation || '').toLowerCase()))
+  return produits.value.filter(prod => prod.idTypeProduit == selectedTypeProduit.value).sort((a, b) => (a.designation || '').toLowerCase().localeCompare((b.designation || '').toLowerCase()))
 })
 
 const filteredSubdivisions2 = computed(() => {
   if (!selectedSubdivision1.value) return []
   return allSubDivs1Et2.value.filter(
     item => item.idSubDivisionNv_1.idSubDivisionNv_1 === selectedSubdivision1.value
-  )
+  ).sort((a, b) => (a.idSubDivisionNv_2.nom || '').toLowerCase().localeCompare((b.idSubDivisionNv_2.nom || '').toLowerCase()))
 })
 
 const filteredSubdivisions3 = computed(() => {
   if (!selectedSubdivision2.value) return []
   return allSubDivs2Et3.value.filter(
     item => item.idSubDivisionNv_2.idSubDivisionNv_2 === selectedSubdivision2.value
-  )
+  ).sort((a, b) => (a.idSubDivisionNv_3.nom || '').toLowerCase().localeCompare((b.idSubDivisionNv_3.nom || '').toLowerCase()))
 })
 
 // Cascading filter change handlers
@@ -704,8 +704,8 @@ async function onTypeProduitChange() {
         axiosInstance.get(`produits/by-type/${selectedTypeProduit.value}/`),
         axiosInstance.get(`sections/by-type/${selectedTypeProduit.value}/`)
       ])
-      produits.value = produitsRes.data
-      sections.value = sectionsRes.data
+      produits.value = produitsRes.data.sort((a: any, b: any) => (a.designation || '').toLowerCase().localeCompare((b.designation || '').toLowerCase()))
+      sections.value = sectionsRes.data.sort((a: any, b: any) => (a.designation || '').toLowerCase().localeCompare((b.designation || '').toLowerCase()))
     } catch (error) {
       console.error('Error loading produits/sections:', error)
     }
@@ -739,7 +739,7 @@ async function onStructureChange() {
   if (selectedStructure.value) {
     try {
       const res = await axiosInstance.get(`subdivision-nv1/by-structure/${selectedStructure.value}/`)
-      subdivisions1.value = res.data
+      subdivisions1.value = res.data.sort((a: any, b: any) => (a.nom || '').toLowerCase().localeCompare((b.nom || '').toLowerCase()))
     } catch (error) {
       console.error('Error loading subdivisions1:', error)
     }

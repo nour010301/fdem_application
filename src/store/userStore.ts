@@ -61,10 +61,10 @@ export const useUserStore = () => {
   const canDeleteItems = computed(() => isAdminFonctionnel.value || isAdminInformatique.value)
   const canExportCSV = computed(() => isAdminFonctionnel.value || isAdminInformatique.value)
   const canViewBibliothequeActions = computed(() => isAdminFonctionnel.value || isAdminInformatique.value)
-  const canViewStructurePages = computed(() => isAdminInformatique.value)
+  const canViewStructurePages = computed(() => isAdminFonctionnel.value || isAdminInformatique.value)
   
   // Bibliotheque pages permissions - only ADMIN_INFORMATIQUE (profile 2) has access
-  const canAccessBibliothequePages = computed(() => isAdminInformatique.value)
+  const canAccessBibliothequePages = computed(() => isAdminFonctionnel.value || isAdminInformatique.value)
   
   // Document-specific permissions based on user profile
   const canDownloadDocuments = computed(() => {

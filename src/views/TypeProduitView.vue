@@ -178,7 +178,7 @@ interface TypeProduit {
   const currentPage = ref(1)
   const pageSize = 10
   
-  const sortColumn = ref<'idTypeProduit' | 'designation' | 'description'>('idTypeProduit')
+  const sortColumn = ref<'designation' | 'description'>('designation')
   const sortAsc = ref(true)
   
 
@@ -243,12 +243,30 @@ interface TypeProduit {
     )
   
     return filtered.sort((a, b) => {
-      const fieldA = a[sortColumn.value]
-      const fieldB = b[sortColumn.value]
-  
-      if (fieldA < fieldB) return sortAsc.value ? -1 : 1
-      if (fieldA > fieldB) return sortAsc.value ? 1 : -1
-      return 0
+      // Primary sort by designation (A to Z)
+      const nameA = a.designation.toLowerCase()
+      const nameB = b.designation.toLowerCase()
+      
+      if (sortColumn.value === 'designation') {
+        // If sorting by designation column, respect user's sort direction
+        if (nameA < nameB) return sortAsc.value ? -1 : 1
+        if (nameA > nameB) return sortAsc.value ? 1 : -1
+        return 0
+      } else {
+        // For other columns, sort by that column first, then by designation as secondary sort
+        const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
+        const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
+        
+        if (fieldA !== fieldB) {
+          if (fieldA < fieldB) return sortAsc.value ? -1 : 1
+          if (fieldA > fieldB) return sortAsc.value ? 1 : -1
+        }
+        
+        // Secondary sort by designation (always A to Z)
+        if (nameA < nameB) return -1
+        if (nameA > nameB) return 1
+        return 0
+      }
     })
   })
   

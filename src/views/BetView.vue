@@ -90,31 +90,28 @@
           <textarea v-model="newBE.description" placeholder="Description (optionnelle)" />
         </div>
         <div class="form-group">
-          <label>Adresse *</label>
+          <label>Adresse</label>
           <input 
             v-model="newBE.adresse" 
-            placeholder="Adresse" 
-            :class="{ 'error': validationErrors.adresse }"
+            placeholder="Adresse (optionnelle)" 
           />
-          <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div>
+          <!-- <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div> -->
         </div>
         <div class="form-group">
-          <label>Téléphone *</label>
+          <label>Téléphone</label>
           <input 
             v-model="newBE.telephone" 
-            placeholder="Téléphone" 
-            :class="{ 'error': validationErrors.telephone }"
+            placeholder="Téléphone (optionnelle)" 
           />
-          <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div>
+          <!-- <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div> -->
         </div>
         <div class="form-group">
-          <label>Email *</label>
+          <label>Email</label>
           <input 
             v-model="newBE.email" 
-            placeholder="Email" 
-            :class="{ 'error': validationErrors.email }"
+            placeholder="Email (optionnelle)" 
           />
-          <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div>
+          <!-- <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div> -->
         </div>
         <div class="modal-actions">
           <button @click="validateAndAddBE">Ajouter</button>
@@ -174,7 +171,7 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'idBET' | 'nom' | 'description' | 'adresse' | 'telephone' | 'email'>('idBET')
+const sortColumn = ref<'nom' | 'description' | 'adresse' | 'telephone' | 'email'>('nom')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
@@ -213,12 +210,30 @@ const filteredBEs = computed(() => {
   )
 
   return filtered.sort((a, b) => {
-    const fieldA = a[sortColumn.value]
-    const fieldB = b[sortColumn.value]
-
-    if (fieldA < fieldB) return sortAsc.value ? -1 : 1
-    if (fieldA > fieldB) return sortAsc.value ? 1 : -1
-    return 0
+    // Primary sort by name (A to Z)
+    const nameA = a.nom.toLowerCase()
+    const nameB = b.nom.toLowerCase()
+    
+    if (sortColumn.value === 'nom') {
+      // If sorting by name column, respect user's sort direction
+      if (nameA < nameB) return sortAsc.value ? -1 : 1
+      if (nameA > nameB) return sortAsc.value ? 1 : -1
+      return 0
+    } else {
+      // For other columns, sort by that column first, then by name as secondary sort
+      const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
+      const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
+      
+      if (fieldA !== fieldB) {
+        if (fieldA < fieldB) return sortAsc.value ? -1 : 1
+        if (fieldA > fieldB) return sortAsc.value ? 1 : -1
+      }
+      
+      // Secondary sort by name (always A to Z)
+      if (nameA < nameB) return -1
+      if (nameA > nameB) return 1
+      return 0
+    }
   })
 })
 
@@ -306,22 +321,22 @@ function validateRequiredFields() {
   
   if (!newBE.value.nom.trim()) {
     errors.nom = 'Le nom est requis'
-    isValid = false
+     isValid = false
   }
   
   if (!newBE.value.adresse.trim()) {
     errors.adresse = 'L\'adresse est requise'
-    isValid = false
+    // isValid = false
   }
   
   if (!newBE.value.telephone.trim()) {
     errors.telephone = 'Le téléphone est requis'
-    isValid = false
+    // isValid = false
   }
   
   if (!newBE.value.email.trim()) {
     errors.email = 'L\'email est requis'
-    isValid = false
+    // isValid = false
   }
   
   validationErrors.value = errors
