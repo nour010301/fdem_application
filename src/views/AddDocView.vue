@@ -204,8 +204,14 @@
                 placeholder="Rechercher un document..." 
                 class="search-input-sidebar"
               />
+              
+              <!-- Pagination Info -->
+              <div v-if="filteredDocList.length > 0" class="pagination-info">
+                Affichage de {{ paginationInfo.start }} à {{ paginationInfo.end }} sur {{ paginationInfo.total }} documents
+              </div>
+              
               <div class="table-container">
-                <table v-if="filteredDocList.length" class="sidebar-table">
+                <table v-if="paginatedDocList.length" class="sidebar-table">
                   <thead>
                     <tr>
                       <th>Description</th>
@@ -217,7 +223,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="document in filteredDocList" :key="document.idDocument">
+                    <tr v-for="document in paginatedDocList" :key="document.idDocument">
                       <td class="description-cell" :title="document.designation || document.nomFichier || ''">
                         <div class="description-content">
                           <span>{{ getDescriptionDisplay(document) }}</span>
@@ -279,12 +285,51 @@
                     </tr>
                   </tbody>
                 </table>
+                
                 <div v-else-if="!docList.length" class="no-data">
                   Aucun document trouvé pour l'arborescence sélectionnée.
                 </div>
-                <div v-else class="no-data">
+                <div v-else-if="filteredDocList.length === 0" class="no-data">
                   Aucun document trouvé pour "{{ searchQuery }}".
                 </div>
+              </div>
+              
+              <!-- Pagination Controls - Outside scrollable container -->
+              <div v-if="totalPages > 1" class="pagination-controls">
+                <button 
+                  @click="previousPage" 
+                  :disabled="currentPage === 1" 
+                  class="pagination-btn"
+                >
+                  ← Précédent
+                </button>
+                
+                <span class="pagination-pages">
+                  <button 
+                    v-for="page in Math.min(5, totalPages)" 
+                    :key="page" 
+                    @click="goToPage(page)" 
+                    :class="['pagination-page', { active: currentPage === page }]"
+                  >
+                    {{ page }}
+                  </button>
+                  <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                  <button 
+                    v-if="totalPages > 5 && currentPage < totalPages - 2" 
+                    @click="goToPage(totalPages)" 
+                    :class="['pagination-page', { active: currentPage === totalPages }]"
+                  >
+                    {{ totalPages }}
+                  </button>
+                </span>
+                
+                <button 
+                  @click="nextPage" 
+                  :disabled="currentPage === totalPages" 
+                  class="pagination-btn"
+                >
+                  Suivant →
+                </button>
               </div>
             </div>
           </div>
@@ -309,8 +354,14 @@
                 placeholder="Rechercher un document..." 
                 class="search-input-sidebar"
               />
+              
+              <!-- Pagination Info -->
+              <div v-if="filteredDocList.length > 0" class="pagination-info">
+                Affichage de {{ paginationInfo.start }} à {{ paginationInfo.end }} sur {{ paginationInfo.total }} documents
+              </div>
+              
               <div class="table-container">
-                <table v-if="filteredDocList.length" class="sidebar-table">
+                <table v-if="paginatedDocList.length" class="sidebar-table">
                   <thead>
                     <tr>
                       <th>Description</th>
@@ -320,7 +371,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="document in filteredDocList" :key="document.idDocument">
+                    <tr v-for="document in paginatedDocList" :key="document.idDocument">
                       <td class="description-cell" :title="document.designation || document.nomFichier || ''">
                         <div class="description-content">
                           <span>{{ getDescriptionDisplay(document) }}</span>
@@ -361,12 +412,51 @@
                     </tr>
                   </tbody>
                 </table>
+                
                 <div v-else-if="!docList.length" class="no-data">
                   Aucun document trouvé pour l'arborescence sélectionnée.
                 </div>
-                <div v-else class="no-data">
+                <div v-else-if="filteredDocList.length === 0" class="no-data">
                   Aucun document trouvé pour "{{ searchQuery }}".
                 </div>
+              </div>
+              
+              <!-- Pagination Controls - Outside scrollable container -->
+              <div v-if="totalPages > 1" class="pagination-controls">
+                <button 
+                  @click="previousPage" 
+                  :disabled="currentPage === 1" 
+                  class="pagination-btn"
+                >
+                  ← Précédent
+                </button>
+                
+                <span class="pagination-pages">
+                  <button 
+                    v-for="page in Math.min(5, totalPages)" 
+                    :key="page" 
+                    @click="goToPage(page)" 
+                    :class="['pagination-page', { active: currentPage === page }]"
+                  >
+                    {{ page }}
+                  </button>
+                  <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                  <button 
+                    v-if="totalPages > 5 && currentPage < totalPages - 2" 
+                    @click="goToPage(totalPages)" 
+                    :class="['pagination-page', { active: currentPage === totalPages }]"
+                  >
+                    {{ totalPages }}
+                  </button>
+                </span>
+                
+                <button 
+                  @click="nextPage" 
+                  :disabled="currentPage === totalPages" 
+                  class="pagination-btn"
+                >
+                  Suivant →
+                </button>
               </div>
             </div>
           </div>
@@ -391,8 +481,14 @@
                 placeholder="Rechercher un document..." 
                 class="search-input-sidebar"
               />
+              
+              <!-- Pagination Info -->
+              <div v-if="filteredDocList.length > 0" class="pagination-info">
+                Affichage de {{ paginationInfo.start }} à {{ paginationInfo.end }} sur {{ paginationInfo.total }} documents
+              </div>
+              
               <div class="table-container">
-                <table v-if="filteredDocList.length" class="sidebar-table">
+                <table v-if="paginatedDocList.length" class="sidebar-table">
                   <thead>
                     <tr>
                       <th>Description</th>
@@ -405,7 +501,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="document in filteredDocList" :key="document.idDocument">
+                    <tr v-for="document in paginatedDocList" :key="document.idDocument">
                       <td class="description-cell" :title="document.designation || document.nomFichier || ''">
                         <div class="description-content">
                           <span>{{ getDescriptionDisplay(document) }}</span>
@@ -478,12 +574,51 @@
                     </tr>
                   </tbody>
                 </table>
+                
                 <div v-else-if="!docList.length" class="no-data">
                   Aucun document trouvé pour l'arborescence sélectionnée.
                 </div>
-                <div v-else class="no-data">
+                <div v-else-if="filteredDocList.length === 0" class="no-data">
                   Aucun document trouvé pour "{{ searchQuery }}".
                 </div>
+              </div>
+              
+              <!-- Pagination Controls - Outside scrollable container -->
+              <div v-if="totalPages > 1" class="pagination-controls">
+                <button 
+                  @click="previousPage" 
+                  :disabled="currentPage === 1" 
+                  class="pagination-btn"
+                >
+                  ← Précédent
+                </button>
+                
+                <span class="pagination-pages">
+                  <button 
+                    v-for="page in Math.min(5, totalPages)" 
+                    :key="page" 
+                    @click="goToPage(page)" 
+                    :class="['pagination-page', { active: currentPage === page }]"
+                  >
+                    {{ page }}
+                  </button>
+                  <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                  <button 
+                    v-if="totalPages > 5 && currentPage < totalPages - 2" 
+                    @click="goToPage(totalPages)" 
+                    :class="['pagination-page', { active: currentPage === totalPages }]"
+                  >
+                    {{ totalPages }}
+                  </button>
+                </span>
+                
+                <button 
+                  @click="nextPage" 
+                  :disabled="currentPage === totalPages" 
+                  class="pagination-btn"
+                >
+                  Suivant →
+                </button>
               </div>
             </div>
           </div>
@@ -508,8 +643,14 @@
                 placeholder="Rechercher un document..." 
                 class="search-input-sidebar"
               />
+              
+              <!-- Pagination Info -->
+              <div v-if="filteredValidationDocList.length > 0" class="pagination-info">
+                Affichage de {{ validationPaginationInfo.start }} à {{ validationPaginationInfo.end }} sur {{ validationPaginationInfo.total }} documents
+              </div>
+              
               <div class="table-container">
-                <table v-if="filteredValidationDocList.length" class="sidebar-table">
+                <table v-if="paginatedValidationDocList.length" class="sidebar-table">
                   <thead>
                     <tr>
                       <th>Description</th>
@@ -521,7 +662,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="document in filteredValidationDocList" :key="document.idDocument">
+                    <tr v-for="document in paginatedValidationDocList" :key="document.idDocument">
                       <td class="description-cell" :title="document.designation || document.nomFichier || ''">
                         <div class="description-content">
                           <span>{{ getDescriptionDisplay(document) }}</span>
@@ -585,12 +726,51 @@
                     </tr>
                   </tbody>
                 </table>
+                
                 <div v-else-if="!docList.length" class="no-data">
                   Aucun document trouvé pour l'arborescence sélectionnée.
                 </div>
-                <div v-else class="no-data">
+                <div v-else-if="filteredValidationDocList.length === 0" class="no-data">
                   Aucun document à valider trouvé pour "{{ searchQuery }}".
                 </div>
+              </div>
+              
+              <!-- Pagination Controls - Outside scrollable container -->
+              <div v-if="validationTotalPages > 1" class="pagination-controls">
+                <button 
+                  @click="previousPage" 
+                  :disabled="currentPage === 1" 
+                  class="pagination-btn"
+                >
+                  ← Précédent
+                </button>
+                
+                <span class="pagination-pages">
+                  <button 
+                    v-for="page in Math.min(5, validationTotalPages)" 
+                    :key="page" 
+                    @click="goToPage(page)" 
+                    :class="['pagination-page', { active: currentPage === page }]"
+                  >
+                    {{ page }}
+                  </button>
+                  <span v-if="validationTotalPages > 5" class="pagination-ellipsis">...</span>
+                  <button 
+                    v-if="validationTotalPages > 5 && currentPage < validationTotalPages - 2" 
+                    @click="goToPage(validationTotalPages)" 
+                    :class="['pagination-page', { active: currentPage === validationTotalPages }]"
+                  >
+                    {{ validationTotalPages }}
+                  </button>
+                </span>
+                
+                <button 
+                  @click="nextPage" 
+                  :disabled="currentPage === validationTotalPages" 
+                  class="pagination-btn"
+                >
+                  Suivant →
+                </button>
               </div>
             </div>
           </div>
@@ -615,8 +795,14 @@
                 placeholder="Rechercher un document..." 
                 class="search-input-sidebar"
               />
+              
+              <!-- Pagination Info -->
+              <div v-if="filteredDocList.length > 0" class="pagination-info">
+                Affichage de {{ paginationInfo.start }} à {{ paginationInfo.end }} sur {{ paginationInfo.total }} documents
+              </div>
+              
               <div class="table-container">
-                <table v-if="filteredDocList.length" class="sidebar-table">
+                <table v-if="paginatedDocList.length" class="sidebar-table">
                   <thead>
                     <tr>
                       <th>Description</th>
@@ -629,7 +815,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="document in filteredDocList" :key="document.idDocument">
+                    <tr v-for="document in paginatedDocList" :key="document.idDocument">
                       <td class="description-cell" :title="document.designation || document.nomFichier || ''">
                         <div class="description-content">
                           <span>{{ getDescriptionDisplay(document) }}</span>
@@ -696,12 +882,51 @@
                     </tr>
                   </tbody>
                 </table>
+                
                 <div v-else-if="!docList.length" class="no-data">
                   Aucun document trouvé pour l'arborescence sélectionnée.
                 </div>
-                <div v-else class="no-data">
+                <div v-else-if="filteredDocList.length === 0" class="no-data">
                   Aucun document trouvé pour "{{ searchQuery }}".
                 </div>
+              </div>
+              
+              <!-- Pagination Controls - Outside scrollable container -->
+              <div v-if="totalPages > 1" class="pagination-controls">
+                <button 
+                  @click="previousPage" 
+                  :disabled="currentPage === 1" 
+                  class="pagination-btn"
+                >
+                  ← Précédent
+                </button>
+                
+                <span class="pagination-pages">
+                  <button 
+                    v-for="page in Math.min(5, totalPages)" 
+                    :key="page" 
+                    @click="goToPage(page)" 
+                    :class="['pagination-page', { active: currentPage === page }]"
+                  >
+                    {{ page }}
+                  </button>
+                  <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                  <button 
+                    v-if="totalPages > 5 && currentPage < totalPages - 2" 
+                    @click="goToPage(totalPages)" 
+                    :class="['pagination-page', { active: currentPage === totalPages }]"
+                  >
+                    {{ totalPages }}
+                  </button>
+                </span>
+                
+                <button 
+                  @click="nextPage" 
+                  :disabled="currentPage === totalPages" 
+                  class="pagination-btn"
+                >
+                  Suivant →
+                </button>
               </div>
             </div>
           </div>
@@ -1672,13 +1897,13 @@
             
             <button @click="showSelectiveDelete" class="delete-btn-selective">
               <span class="btn-icon">📝</span>
-              <span class="btn-text">Retirer des fichiers</span>
+              <span class="btn-text">Retirer des Elements du Document</span>
             </button>
           </div>
           
           <!-- Selective file deletion section -->
           <div v-if="deleteMode === 'selective'" class="selective-delete-section">
-            <h4>Sélectionnez les fichiers à retirer :</h4>
+            <h4>Sélectionnez les elements à retirer :</h4>
             <div class="file-checkboxes">
               <label v-if="documentToDelete?.fichier" class="file-checkbox">
                 <input type="checkbox" v-model="filesToDelete.fichier">
@@ -2860,6 +3085,115 @@
     min-width: 100px;
   }
 }
+
+/* Pagination Styles */
+.pagination-info {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: 10px 0;
+  text-align: center;
+  padding: 8px;
+  background: rgba(67, 233, 123, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(67, 233, 123, 0.2);
+}
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+}
+
+.pagination-btn {
+  background: linear-gradient(135deg, #43E97B 0%, #38d9a9 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(67, 233, 123, 0.3);
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #38d9a9 0%, #20c997 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(67, 233, 123, 0.4);
+}
+
+.pagination-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.6;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-page {
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 36px;
+}
+
+.pagination-page:hover {
+  background: #f3f4f6;
+  border-color: #43E97B;
+}
+
+.pagination-page.active {
+  background: linear-gradient(135deg, #43E97B 0%, #38d9a9 100%);
+  color: white;
+  border-color: #43E97B;
+  box-shadow: 0 2px 4px rgba(67, 233, 123, 0.3);
+}
+
+.pagination-ellipsis {
+  color: #6b7280;
+  padding: 0 8px;
+  font-weight: bold;
+}
+
+/* Mobile responsiveness for pagination */
+@media (max-width: 768px) {
+  .pagination-controls {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .pagination-btn {
+    width: 100%;
+    max-width: 200px;
+  }
+  
+  .pagination-pages {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .pagination-info {
+    font-size: 0.8rem;
+  }
+}
 </style>
 
 <script setup lang="ts">
@@ -3789,6 +4123,10 @@ const searchQuery = ref('');
 const contextAjouterSearchQuery = ref('');
 const contextConsulterSearchQuery = ref('');
 
+// Pagination functionality
+const currentPage = ref(1);
+const itemsPerPage = ref(5);
+
 // Expandable description functionality
 const expandedDescriptions = ref<Record<number, boolean>>({});
 
@@ -3827,6 +4165,35 @@ function needsTruncation(text: string): boolean {
   return text.length > 30;
 }
 
+// Pagination functions
+function goToPage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
+}
+
+function previousPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+}
+
+// Reset pagination when search changes
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
+
+// Reset pagination when documents change
+watch(docList, () => {
+  currentPage.value = 1;
+});
+
 // Computed property to filter documents based on search query and user permissions
 const filteredDocList = computed(() => {
   let filteredDocs = docList.value;
@@ -3837,17 +4204,37 @@ const filteredDocList = computed(() => {
   }
   
   // Apply search filter if search query exists
-  if (!searchQuery.value.trim()) {
-    return filteredDocs;
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    filteredDocs = filteredDocs.filter(doc => 
+      (doc.designation || '').toLowerCase().includes(query) ||
+      (doc.nomFichier || '').toLowerCase().includes(query) ||
+      getDocumentType(doc).toLowerCase().includes(query) ||
+      (doc.idDocument?.toString() || '').includes(query)
+    );
   }
   
-  const query = searchQuery.value.toLowerCase().trim();
-  return filteredDocs.filter(doc => 
-    (doc.designation || '').toLowerCase().includes(query) ||
-    (doc.nomFichier || '').toLowerCase().includes(query) ||
-    getDocumentType(doc).toLowerCase().includes(query) ||
-    (doc.idDocument?.toString() || '').includes(query)
-  );
+  return filteredDocs;
+});
+
+// Computed property for paginated documents
+const paginatedDocList = computed(() => {
+  const startIndex = (currentPage.value - 1) * itemsPerPage.value;
+  const endIndex = startIndex + itemsPerPage.value;
+  return filteredDocList.value.slice(startIndex, endIndex);
+});
+
+// Computed property for total pages
+const totalPages = computed(() => {
+  return Math.ceil(filteredDocList.value.length / itemsPerPage.value);
+});
+
+// Computed property for pagination info
+const paginationInfo = computed(() => {
+  const total = filteredDocList.value.length;
+  const start = total === 0 ? 0 : (currentPage.value - 1) * itemsPerPage.value + 1;
+  const end = Math.min(currentPage.value * itemsPerPage.value, total);
+  return { start, end, total };
 });
 
 // Computed property to filter documents for validation (only documents with valide: false)
@@ -3866,6 +4253,26 @@ const filteredValidationDocList = computed(() => {
     getDocumentType(doc).toLowerCase().includes(query) ||
     (doc.idDocument?.toString() || '').includes(query)
   );
+});
+
+// Computed property for paginated validation documents
+const paginatedValidationDocList = computed(() => {
+  const startIndex = (currentPage.value - 1) * itemsPerPage.value;
+  const endIndex = startIndex + itemsPerPage.value;
+  return filteredValidationDocList.value.slice(startIndex, endIndex);
+});
+
+// Computed property for validation total pages
+const validationTotalPages = computed(() => {
+  return Math.ceil(filteredValidationDocList.value.length / itemsPerPage.value);
+});
+
+// Computed property for validation pagination info
+const validationPaginationInfo = computed(() => {
+  const total = filteredValidationDocList.value.length;
+  const start = total === 0 ? 0 : (currentPage.value - 1) * itemsPerPage.value + 1;
+  const end = Math.min(currentPage.value * itemsPerPage.value, total);
+  return { start, end, total };
 });
 
 // Computed property to filter context ajouter items

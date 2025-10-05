@@ -28,6 +28,10 @@
               Nom
               <span v-if="sortColumn === 'nom'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
+            <th @click="toggleSort('parent.nom')" class="sortable">
+              SubDiv Niv 1
+              <span v-if="sortColumn === 'parent.nom'">{{ sortAsc ? '▲' : '▼' }}</span>
+            </th>
             <th @click="toggleSort('designation')" class="sortable">
               Désignation
               <span v-if="sortColumn === 'designation'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -43,6 +47,7 @@
           <tr v-for="item in paginatedSubdivs" :key="item.idSubDivisionNv_2">
             <!-- <td>{{ item.idSubDivisionNv_2 }}</td> -->
             <td>{{ item.nom }}</td>
+            <td>{{ item.parent?.nom || '—' }}</td>
             <td>{{ item.designation || '—' }}</td>
             <td>{{ item.subDiv ? 'Oui' : 'Non' }}</td>
             <td>
@@ -149,7 +154,7 @@
         <h2>Modifier Subdivision</h2>
         <input v-model="subdivisionToUpdate.nom" placeholder="Nom" />
         <textarea v-model="subdivisionToUpdate.designation" placeholder="Désignation (optionnelle)" />
-        <select v-model="subdivisionToUpdate.idSubDivisionNv_1">
+        <select v-model="subdivisionToUpdate.parent.id">
           <option value="" disabled>Sélectionnez une subdivision Niveau 1</option>
           <option v-for="subdiv in subdivisionsNv1" :key="subdiv.idSubDivisionNv_1" :value="subdiv.idSubDivisionNv_1">
             {{ subdiv.nom }}
@@ -178,7 +183,13 @@ interface SubdivisionNv2 {
   nom: string
   designation: string | null
   subDiv: boolean
-  idSubDivisionNv_1: number
+  parent: {
+    id: number
+    nom: string
+    designation: string | null
+  }
+  date_suppression: string | null
+  idSubDivisionNv_1?: number // For update operations
 }
 
 interface SubdivisionNv1 {
@@ -206,7 +217,7 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'nom' | 'designation' | 'subDiv' | 'idSubDivisionNv_1'>('nom')
+const sortColumn = ref<'nom' | 'designation' | 'subDiv' | 'parent.nom'>('nom')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
@@ -225,7 +236,7 @@ const subdivisionToUpdate = ref<SubdivisionNv2 | null>(null)
 
 const userStore = useUserStore()
 
-function toggleSort(column: 'nom' | 'designation' | 'subDiv' | 'idSubDivisionNv_1') {
+function toggleSort(column: 'nom' | 'designation' | 'subDiv' | 'parent.nom') {
   if (sortColumn.value === column) {
     sortAsc.value = !sortAsc.value
   } else {
@@ -253,8 +264,14 @@ const filteredSubdivs = computed(() => {
         return 0
       } else {
         // For other columns, sort by that column first, then by nom as secondary sort
-        const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
-        const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
+        let fieldA, fieldB
+        if (sortColumn.value === 'parent.nom') {
+          fieldA = (a.parent?.nom || '').toString().toLowerCase()
+          fieldB = (b.parent?.nom || '').toString().toLowerCase()
+        } else {
+          fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
+          fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
+        }
         
         if (fieldA !== fieldB) {
           if (fieldA < fieldB) return sortAsc.value ? -1 : 1
@@ -362,7 +379,7 @@ async function updateSubdivision() {
       nom: subdivisionToUpdate.value.nom,
       designation: subdivisionToUpdate.value.designation,
       subDiv: subdivisionToUpdate.value.subDiv,
-      idSubDivisionNv_1: subdivisionToUpdate.value.idSubDivisionNv_1
+      idSubDivisionNv_1: subdivisionToUpdate.value.parent.id
     }
     await axiosInstance.put(`subdivision-nv2/${subdivisionToUpdate.value.idSubDivisionNv_2}/`, subdivisionToSend)
     const index = data.value.findIndex(s => s.idSubDivisionNv_2 === subdivisionToUpdate.value!.idSubDivisionNv_2)

@@ -35,6 +35,22 @@
       </div>
     </div>
 
+    <!-- Document Structure Section -->
+    <div class="dashboard-section">
+      <h2 class="section-title">Structure documentaire</h2>
+      <div class="document-structure-grid">
+        <div class="doc-structure-card" v-for="(value, key) in documentStructure" :key="key">
+          <div class="doc-structure-icon">
+            <i :class="iconForDocStructure(key)"></i>
+          </div>
+          <div class="doc-structure-info">
+            <div class="doc-structure-label">{{ formatDocStructureKey(key) }}</div>
+            <div class="doc-structure-value">{{ value }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Charts Section -->
     <div class="charts-container">
       <!-- Chart 1: Répartition par produit/type -->
@@ -74,8 +90,8 @@
         >
           <span
             class="doc-type"
-            :class="doc.fichier_pdf ? 'pdf' : 'autre'"
-          >{{ doc.fichier_pdf ? 'PDF' : 'Autre' }}</span>
+            :class="doc.fichier_pdf ? 'pdf' : 'pdf'"
+          >{{ doc.fichier_pdf ? 'PDF' : 'PDF' }}</span>
           {{ doc.designation }}
           <span class="doc-date">{{ doc.dateCreation }}</span>
         </div>
@@ -109,6 +125,22 @@ const iconMap: Record<string, string> = {
   "documents non valides": "fas fa-times-circle",
 };
 
+const docStructureIconMap: Record<string, string> = {
+  "doc_defin_realis": "fas fa-file-contract",
+  "procedes_tech": "fas fa-cogs",
+  "moyens_meo": "fas fa-tools",
+  "jalons": "fas fa-flag-checkered",
+  // "contexte": "fas fa-info-circle"
+};
+
+const docStructureLabelMap: Record<string, string> = {
+  "doc_defin_realis": "Doc. de définition & réalisation",
+  "procedes_tech": "Procédés & tech. utilisés",
+  "moyens_meo": "Moyens MEO",
+  "jalons": "Jalons (principaux événements)",
+  // "contexte": "Contexte"
+};
+
 const keyLabelMap: Record<string, string> = {
   "types de produits": "Types de produits",
   "produits": "Produits",
@@ -131,10 +163,18 @@ function formatKey(key: string): string {
   return keyLabelMap[key] || key;
 }
 
+function iconForDocStructure(key: string): string {
+  return docStructureIconMap[key] || "fas fa-file";
+}
+function formatDocStructureKey(key: string): string {
+  return docStructureLabelMap[key] || key;
+}
+
 // State
 const statistics = ref<Record<string, number>>({});
 const filteredStatistics = ref<Record<string, number>>({});
 const regularStatistics = ref<Record<string, number>>({});
+const documentStructure = ref<Record<string, number>>({});
 
 const fetchData = async () => {
   loading.value = true;
@@ -167,6 +207,14 @@ const fetchData = async () => {
       ...regular
     } = statistics.value;
     regularStatistics.value = regular;
+    
+    documentStructure.value = {
+      "doc_defin_realis": raw["DOC. DE DEFIN. & DE REALIS."],
+      "procedes_tech": raw["PROCEDES & TECH. Utilisés"],
+      "moyens_meo": raw["MOYENS MEO"],
+      "jalons": raw["JALONS (PRINCIPAUX EVENEMENTS)"],
+      // "contexte": raw["CONTEXTE"]
+    };
   } catch (error) {
     console.error('Error fetching statistics:', error);
   } finally {
@@ -689,6 +737,60 @@ onMounted(async () => {
 .warnings-list { margin: 0.7em 0 0 0.5em; padding-left: 1em;}
 .exp-badge { background: #ff6b6b; color: #fff; border-radius: 0.5em; font-size: 0.85em; padding: 0.1em 0.7em; margin-left: 1.1em;}
 .exp-badge.soon { background: #ffb74d; color: #273; font-weight: bold;}
+
+/* Document Structure Styles */
+.document-structure-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.doc-structure-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, #1e2640 0%, #32477b 100%);
+  padding: 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid #3d65ad85;
+  transition: all 0.2s ease;
+}
+
+.doc-structure-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(42, 245, 243, 0.2);
+}
+
+.doc-structure-icon {
+  background: linear-gradient(135deg, #42a5f5 0%, #1976d2 100%);
+  color: white;
+  border-radius: 0.6rem;
+  padding: 0.8rem;
+  font-size: 1.2rem;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-structure-info {
+  flex: 1;
+}
+
+.doc-structure-label {
+  color: #90caf9;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.doc-structure-value {
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
 @media (max-width: 1200px) {
   .dashboard-header {flex-direction: column;gap: 1.2em;align-items: stretch;}
   .dashboard-title {font-size: 1.1em;}
@@ -697,5 +799,7 @@ onMounted(async () => {
 @media (max-width: 700px) {
   .dashboard-root { padding: 0.4rem 0.02rem;}
   .stat-card.modern { flex-direction: column; align-items: flex-start; padding:0.6em;}
+  .document-structure-grid { grid-template-columns: 1fr; }
+  .doc-structure-card { padding: 0.8rem; }
 }
 </style>
