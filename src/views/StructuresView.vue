@@ -1,6 +1,6 @@
 <template>
   <div class="page-wrapper">
-    <h1>Structures</h1>
+    <h1>Structures Fond documentaire</h1>
 
     <div class="controls">
       <input

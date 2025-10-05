@@ -55,31 +55,31 @@
                   <div v-if="subMenu === 'arboresence'" class="submenu-links submenu-arbo-clean">
                     <router-link to="/produit" class="nav-link sublink2" active-class="active">
                       <span class="icon">📦</span>
-                      <span>Produit</span>
+                      <span>Produits</span>
                     </router-link>
                     <router-link to="/type_produit" class="nav-link sublink2" active-class="active">
                       <span class="icon">🏷️</span>
-                      <span>Type Produit</span>
+                      <span>Types Produits</span>
                     </router-link>
                     <router-link to="/sections" class="nav-link sublink2" active-class="active">
                       <span class="icon">🔲</span>
-                      <span>Sections</span>
+                      <span>Sections de produits</span>
                     </router-link>
                     <router-link v-if="!loading && canViewStructurePages" to="/structures" class="nav-link sublink2" active-class="active">
                       <span class="icon">📁</span>
-                      <span>Structures</span>
+                      <span>Structures Fond Documentaire</span>
                     </router-link>
                     <router-link v-if="!loading && canViewStructurePages" to="/subdivisions_niv1" class="nav-link sublink2" active-class="active">
                       <span class="icon">📄</span>
-                      <span>Subdivisions_Niv1</span>
+                      <span>Classes de documents</span>
                     </router-link>
                     <router-link v-if="!loading && canViewStructurePages" to="/subdivisions_niv2" class="nav-link sublink2" active-class="active">
                       <span class="icon">📄</span>
-                      <span>Subdivisions_Niv2</span>
+                      <span>Types de documents</span>
                     </router-link>
                     <router-link v-if="!loading && canViewStructurePages" to="/subdivisions_niv3" class="nav-link sublink2" active-class="active">
                       <span class="icon">📄</span>
-                      <span>Subdivisions_Niv3</span>
+                      <span>Documents cibles</span>
                     </router-link>
                     
                   </div>

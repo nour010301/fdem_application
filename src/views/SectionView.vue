@@ -1,6 +1,6 @@
 <template>
   <div class="page-wrapper">
-    <h1>Sections</h1>
+    <h1>Sections de produits</h1>
 
     <div class="controls">
       <input

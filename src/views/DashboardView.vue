@@ -80,7 +80,7 @@
     </div>
 
     <!-- Recent Documents Row - Dynamic -->
-    <div class="dashboard-section">
+    <!-- <div class="dashboard-section">
       <h2 class="section-title">Derniers documents ajoutés</h2>
       <div class="recent-docs-list">
         <div
@@ -99,7 +99,7 @@
           Aucun document récent à afficher.
         </div>
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 

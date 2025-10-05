@@ -9,43 +9,43 @@
         <h2>Filtres</h2>
         <div class="filter-box">
           <select v-model="selectedTypeProduit" @change="onTypeProduitChange" :disabled="loadingFilters">
-            <option value="">Type Produit</option>
+            <option value="">Types Produits</option>
             <option v-for="type in typesProduit" :key="type.idTypeProduit" :value="type.idTypeProduit">
               {{ type.designation }}
             </option>
           </select>
           <select v-model="selectedProduit" @change="onProduitChange" :disabled="loadingFilters || !selectedTypeProduit || !filteredProduits.length">
-            <option value="">Produit</option>
+            <option value="">Produits</option>
             <option v-for="prod in filteredProduits" :key="prod.idProduit" :value="prod.idProduit">
               {{ prod.designation }}
             </option>
           </select>
           <select v-model="selectedStructure" @change="onStructureChange" :disabled="loadingFilters || !selectedProduit">
-            <option value="">Structure</option>
+            <option value="">Structures Fond Documentaire</option>
             <option v-for="str in structures" :key="str.idStructure" :value="str.idStructure">
               {{ str.designation || str.nom }}
             </option>
           </select>
           <select v-model="selectedSection" @change="onSectionChange" :disabled="loadingFilters || !selectedStructure">
-            <option value="">Section</option>
+            <option value="">Sections de produits</option>
             <option v-for="s in sections" :key="s.idSectionProduit" :value="s.idSectionProduit">
               {{ s.designation }}
             </option>
           </select>
           <select v-model="selectedSubdivision1" @change="onSubdivision1Change" :disabled="loadingFilters || !selectedSection">
-            <option value="">Subdivision 1</option>
+            <option value="">Classes de documents</option>
             <option v-for="sub1 in subdivisions1" :key="sub1.idSubDivisionNv_1" :value="sub1.idSubDivisionNv_1">
               {{ sub1.nom }}
             </option>
           </select>
           <select v-model="selectedSubdivision2" @change="onSubdivision2Change" :disabled="loadingFilters || !selectedSubdivision1 || !filteredSubdivisions2.length">
-            <option value="">Subdivision 2</option>
+            <option value="">Types de documents</option>
             <option v-for="sub2 in filteredSubdivisions2" :key="sub2.idSubDivisionNv_2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2.idSubDivisionNv_2">
               {{ sub2.idSubDivisionNv_2.nom }}
             </option>
           </select>
           <select v-model="selectedSubdivision3" @change="onSubdivision3Change" :disabled="loadingFilters || !selectedSubdivision2 || !filteredSubdivisions3.length">
-            <option value="">Subdivision 3</option>
+            <option value="">Documents cibles</option>
             <option v-for="sub3 in filteredSubdivisions3" :key="sub3.idSubDivisionNv_3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3.idSubDivisionNv_3">
               {{ sub3.idSubDivisionNv_3.nom }}
             </option>
@@ -129,13 +129,13 @@
             <span v-if="sortColumn === 'idDocument'">{{ sortAsc ? '▲' : '▼' }}</span>
           </th>
           <th>Description</th>
-          <th>Type Produit</th>
-          <th>Produit</th>
-          <th>Structure</th>
-          <th>Section</th>
-          <th>Subdivision 1</th>
-          <th>Subdivision 2</th>
-          <th>Subdivision 3</th>
+          <th>Types Produits</th>
+          <th>Produits</th>
+          <th>Structures Fond Documentaire</th>
+          <th>Sections de produits</th>
+          <th>Classes de documents</th>
+          <th>Types de documents</th>
+          <th>Documents cibles</th>
           <th v-if="canSeeCreatedBy">Créé par</th>
           <th>Fichier</th>
           <th>Plan</th>

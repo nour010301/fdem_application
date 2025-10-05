@@ -46,7 +46,7 @@
           <select id="structure" v-model="selectedStructureId" @change="onStructureChange">
             <option value="" disabled>Choisir une structure</option>
             <option v-for="structure in structures" :key="structure.idStructure" :value="structure.idStructure">
-              {{ structure.designation }}
+              {{ structure.nom }}
             </option>
           </select>
         </div>
@@ -54,7 +54,7 @@
         <!-- STRUCTURE MODE FIELDS -->
         <template v-if="mode === 'structure'">
         <div class="step" v-if="selectedStructureId">
-          <label for="section">Section</label>
+          <label for="section">Sections de produits</label>
           <select id="section" v-model="selectedSectionId" :disabled="!sections.length">
             <option value="" disabled>Choisir une section</option>
             <option v-for="sec in sections" :key="sec.idSectionProduit" :value="sec.idSectionProduit">
@@ -63,7 +63,7 @@
           </select>
         </div>
         <div class="step" v-if="selectedSectionId">
-          <label for="division-nv1">Subdivision 1</label>
+          <label for="division-nv1">Classes de documents</label>
           <select id="division-nv1" v-model="selectedDivisionId" :disabled="!divisionsNv1.length">
             <option value="" disabled>Choisir une division</option>
             <option v-for="div in divisionsNv1" :key="div.idSubDivisionNv_1" :value="div.idSubDivisionNv_1">
@@ -72,7 +72,7 @@
           </select>
         </div>
         <div class="step" v-if="selectedDivisionId && requiresSubDiv2">
-          <label for="subdivision-nv2">Subdivision 2</label>
+          <label for="subdivision-nv2">Types de documents</label>
           <select id="subdivision-nv2" v-model="selectedSubDiv2Id">
             <option value="" disabled>Choisir une sous-division</option>
             <option v-for="item in filteredSubDiv2List" :key="item.idSubDivisionNv_2.idSubDivisionNv_2" :value="item.idSubDivisionNv_2.idSubDivisionNv_2">
@@ -81,7 +81,7 @@
           </select>
         </div>
         <div class="step" v-if="requiresSubDiv2 && selectedSubDiv2Id && requiresSubDiv3">
-          <label for="subdivision-nv3">Subdivision 3</label>
+          <label for="subdivision-nv3">Documents cibles</label>
           <select id="subdivision-nv3" v-model="selectedSubDiv3Id">
             <option value="" disabled>Choisir une sous-division Niv. 3</option>
             <option v-for="item in filteredSubDiv3List" :key="item.idSubDivisionNv_3.idSubDivisionNv_3" :value="item.idSubDivisionNv_3.idSubDivisionNv_3">

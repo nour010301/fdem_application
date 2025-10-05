@@ -1,6 +1,6 @@
 <template>
   <div class="page-wrapper">
-    <h1>Subdivisions Niveau 3</h1>
+    <h1>Documents cibles</h1>
 
     <div class="controls">
       <input
