@@ -28,10 +28,10 @@
               Nom
               <span v-if="sortColumn === 'nom'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
-            <th @click="toggleSort('parent.nom')" class="sortable">
+            <!-- <th @click="toggleSort('parent.nom')" class="sortable">
               SubDiv Niv 2
               <span v-if="sortColumn === 'parent.nom'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
+            </th> -->
             <th @click="toggleSort('designation')" class="sortable">
               Désignation
               <span v-if="sortColumn === 'designation'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -47,7 +47,7 @@
           <tr v-for="item in paginatedSubdivs" :key="item.idSubDivisionNv_3">
             <!-- <td>{{ item.idSubDivisionNv_3 }}</td> -->
             <td>{{ item.nom }}</td>
-            <td>{{ item.parent?.nom || '—' }}</td>
+            <!-- <td>{{ item.parent?.nom || '—' }}</td> -->
             <td>{{ item.designation || '—' }}</td>
             <td>{{ item.subDiv ? 'Oui' : 'Non' }}</td>
             <td>

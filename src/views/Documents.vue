@@ -23,7 +23,7 @@
           <select v-model="selectedStructure" @change="onStructureChange" :disabled="loadingFilters || !selectedProduit">
             <option value="">Structures Fond Documentaire</option>
             <option v-for="str in structures" :key="str.idStructure" :value="str.idStructure">
-              {{ str.designation || str.nom }}
+              {{ str.nom }}
             </option>
           </select>
           <select v-model="selectedSection" @change="onSectionChange" :disabled="loadingFilters || !selectedStructure">

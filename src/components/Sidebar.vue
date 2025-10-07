@@ -53,21 +53,21 @@
                 <transition name="fade">
                   <!-- This panel does NOT have the arrow anymore -->
                   <div v-if="subMenu === 'arboresence'" class="submenu-links submenu-arbo-clean">
-                    <router-link to="/produit" class="nav-link sublink2" active-class="active">
-                      <span class="icon">📦</span>
-                      <span>Produits</span>
-                    </router-link>
                     <router-link to="/type_produit" class="nav-link sublink2" active-class="active">
                       <span class="icon">🏷️</span>
                       <span>Types Produits</span>
                     </router-link>
-                    <router-link to="/sections" class="nav-link sublink2" active-class="active">
-                      <span class="icon">🔲</span>
-                      <span>Sections de produits</span>
+                    <router-link to="/produit" class="nav-link sublink2" active-class="active">
+                      <span class="icon">📦</span>
+                      <span>Produits</span>
                     </router-link>
                     <router-link v-if="!loading && canViewStructurePages" to="/structures" class="nav-link sublink2" active-class="active">
                       <span class="icon">📁</span>
                       <span>Structures Fond Documentaire</span>
+                    </router-link>
+                    <router-link to="/sections" class="nav-link sublink2" active-class="active">
+                      <span class="icon">🔲</span>
+                      <span>Sections de produits</span>
                     </router-link>
                     <router-link v-if="!loading && canViewStructurePages" to="/subdivisions_niv1" class="nav-link sublink2" active-class="active">
                       <span class="icon">📄</span>
