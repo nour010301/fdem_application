@@ -13,6 +13,7 @@ import DirecteurView from '../views/DirecteurView.vue'
 import ProjetProduitView from '../views/ProjetProduitView.vue'
 import MaitreOeuvreView from '../views/MaitreOeuvreView.vue'
 import MaitreOuvrageView from '../views/MaitreOuvrageView.vue'
+import PartenaireView from '../views/PartenaireView.vue'
 import SoustraitantsView from '../views/SoustraitantsView.vue'
 import ParametreView from '../views/ParametreView.vue'
 import ProduitView from '../views/ProduitView.vue'
@@ -25,6 +26,9 @@ import SubDivisionNv_3View from '../views/SubDivisionNv_3View.vue'
 import SubDivisionNv_4View from '../views/SubDivisionNv_4View.vue'
 import UsersView from '../views/UsersView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import HierarchicalStatsView from '../views/HierarchicalStatsView.vue'
+import PAQView from '../views/PAQView.vue'
+import SecteursView from '../views/SecteursView.vue'
 import axiosInstance from '../axios.ts'
 
 const routes: Array<RouteRecordRaw> = [
@@ -110,13 +114,19 @@ const routes: Array<RouteRecordRaw> = [
         path: '/maitre-oeuvre-list',
         name: 'maitre-oeuvre-list',
         component: MaitreOeuvreView,
-        meta: { requiresAuth: true, title: 'Maître Oeuvre List' },
+        meta: { requiresAuth: true, title: 'Maître Oeuvre(BCS) List' },
       },
       {
         path: '/maitre-ouvrage-list',
         name: 'maitre-ouvrage-list',
         component: MaitreOuvrageView,
         meta: { requiresAuth: true, title: 'Maître Ouvrage List' },
+      },
+      {
+        path: '/partenaires',
+        name: 'partenaires',
+        component: PartenaireView,
+        meta: { requiresAuth: true, title: 'Partenaires' },
       },
       {
         path: '/soustraitants',
@@ -189,6 +199,24 @@ const routes: Array<RouteRecordRaw> = [
         name: 'profile',
         component: ProfileView,
         meta: { requiresAuth: true, title: 'Profile' },
+      },
+      {
+        path: '/hierarchical-stats',
+        name: 'hierarchical-stats',
+        component: HierarchicalStatsView,
+        meta: { requiresAuth: true, title: 'Statistiques hiérarchiques' },
+      },
+      {
+        path: '/paqs',
+        name: 'paqs',
+        component: PAQView,
+        meta: { requiresAuth: true, title: 'PAQs' },
+      },
+      {
+        path: '/secteurs',
+        name: 'secteurs',
+        component: SecteursView,
+        meta: { requiresAuth: true, title: 'Secteurs d\'Activités' },
       },
     ],
   },

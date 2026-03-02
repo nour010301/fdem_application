@@ -22,6 +22,10 @@
         <span class="icon">📄</span>
         <span>Recherche</span>
       </a>
+      <router-link to="/hierarchical-stats" class="nav-link" active-class="active">
+        <span class="icon">📊</span>
+        <span>Statistiques hiérarchiques</span>
+      </router-link>
 
       <!-- BIBLIOTHEQUE -->
       <div class="bibliotheque-group">
@@ -108,7 +112,7 @@
                     </router-link>
                     <router-link to="/bur-etude-list" class="nav-link sublink2" active-class="active">
                       <span class="icon">🏢</span>
-                      <span>Bureau d’étude</span>
+                      <span>Bureaux d’études</span>
                     </router-link>
                     <router-link to="/list-fournisseur" class="nav-link sublink2" active-class="active">
                       <span class="icon">🚚</span>
@@ -116,20 +120,32 @@
                     </router-link>
                     <router-link to="/list-directeur" class="nav-link sublink2" active-class="active">
                       <span class="icon">👔</span>
-                      <span>Directeurs</span>
+                      <span>Directeurs de Projets</span>
                     </router-link>
                     <router-link to="/maitre-oeuvre-list" class="nav-link sublink2" active-class="active">
                       <span class="icon">🛠️</span>
-                      <span>Maîtres d’œuvre</span>
+                      <span>Maîtres d’œuvres(BCS)</span>
                     </router-link>
                     <router-link to="/maitre-ouvrage-list" class="nav-link sublink2" active-class="active">
                       <span class="icon">🏗️</span>
-                      <span>Maîtres d’ouvrage</span>
+                      <span>Maîtres d’ouvrages</span>
                     </router-link>
+                    <!-- <router-link to="/partenaires" class="nav-link sublink2" active-class="active">
+                      <span class="icon">🤝</span>
+                      <span>Partenaires</span>
+                    </router-link> -->
                     <router-link to="/soustraitants" class="nav-link sublink2" active-class="active">
                       <span class="icon">🤝</span>
                       <span>Sous-traitants</span>
                     </router-link>
+                    <router-link to="/secteurs" class="nav-link sublink2" active-class="active">
+                      <span class="icon">🏭</span>
+                      <span>Secteurs d'activités</span>
+                    </router-link>
+                    <!-- <router-link to="/paqs" class="nav-link sublink2" active-class="active">
+                      <span class="icon">📋</span>
+                      <span>PAQs</span>
+                    </router-link> -->
                   </div>
                 </transition>
               </div>
@@ -187,7 +203,7 @@ const bibliothequeRoutes = [
   '/produit', '/type_produit', '/sections', '/structures', 
   '/subdivisions_niv1', '/subdivisions_niv2', '/subdivisions_niv3',
   '/bur-etude-list', '/list-fournisseur', '/list-directeur', 
-  '/list-projet-produit', '/maitre-oeuvre-list', '/maitre-ouvrage-list', '/soustraitants'
+  '/list-projet-produit', '/maitre-oeuvre-list', '/maitre-ouvrage-list', '/partenaires', '/soustraitants', '/paqs'
 ]
 
 const arborescenceRoutes = [
@@ -197,7 +213,7 @@ const arborescenceRoutes = [
 
 const contextRoutes = [
   '/bur-etude-list', '/list-fournisseur', '/list-directeur', 
-  '/list-projet-produit', '/maitre-oeuvre-list', '/maitre-ouvrage-list', '/soustraitants'
+  '/list-projet-produit', '/maitre-oeuvre-list', '/maitre-ouvrage-list', '/partenaires', '/soustraitants', '/secteurs', '/paqs'
 ]
 
 // Computed properties for active states
@@ -245,7 +261,7 @@ onMounted(async () => {
   left: 0;
   height: 100vh;
   width: min(270px, 25vw);
-  max-width: 300px;
+  max-width: 360px;
   background: linear-gradient(135deg, #16213e 70%, #1a237e 100%);
   color: #fff;
   display: flex;

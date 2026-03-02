@@ -1,5 +1,6 @@
 
 <template>
+  
   <div class="add-doc-root">
     <!-- Toast Notifications -->
     <div class="toast-container">
@@ -24,70 +25,219 @@
       <!-- INITIAL FORM FIELDS -->
       <form v-if="mode !== 'contexte'" class="structure-step-form" @submit.prevent="submitForm">
         <div class="step">
-          <label for="type-produit">Types de produits</label>
-          <select id="type-produit" v-model="selectedTypeId">
-            <option value="" disabled>Choisir un type</option>
-            <option v-for="type in typeProduits" :key="type.idTypeProduit" :value="type.idTypeProduit">
-              {{ type.designation }}
-            </option>
-          </select>
+          <div class="form-row">
+            <label for="type-produit">Types de produits</label>
+            <span class="search-icon" @click="toggleSearch('type')">🔍</span>
+            <input 
+              v-show="searchActive.type"
+              type="text" 
+              v-model="searchTerms.type"
+              placeholder="Rechercher un type..."
+              class="search-input"
+              @input="openDropdown('type')"
+              @focus="openDropdown('type')"
+              ref="typeSearch"
+            />
+            <div class="select-wrapper">
+              <select 
+                id="type-produit" 
+                v-model="selectedTypeId"
+                :class="{ 'dropdown-open': dropdownOpen.type }"
+                @click="dropdownOpen.type = !dropdownOpen.type"
+              >
+                <option value="" disabled>Choisir un type</option>
+                <option v-for="type in filteredTypeProduits" :key="type.idTypeProduit" :value="type.idTypeProduit">
+                  {{ type.designation }}{{ getCount(type.designation) > 0 ? ` (${getCount(type.designation)} docs)` : '' }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="step" v-if="selectedTypeId">
-          <label for="produit">Produits</label>
-          <select id="produit" v-model="selectedProduitId" :disabled="!filteredProduits.length">
-            <option value="" disabled>Choisir un produit</option>
-            <option v-for="prod in filteredProduits" :key="prod.idProduit" :value="prod.idProduit">
-              {{ prod.designation }}
-            </option>
-          </select>
+          <div class="form-row">
+            <label for="produit">Produits</label>
+            <span class="search-icon" @click="toggleSearch('produit')">🔍</span>
+            <input 
+              v-show="searchActive.produit"
+              type="text" 
+              v-model="searchTerms.produit"
+              placeholder="Rechercher un produit..."
+              class="search-input"
+              :disabled="!filteredProduits.length"
+              @input="openDropdown('produit')"
+              @focus="openDropdown('produit')"
+              ref="produitSearch"
+            />
+            <div class="select-wrapper">
+              <select 
+                id="produit" 
+                v-model="selectedProduitId" 
+                :disabled="!filteredProduits.length"
+                :class="{ 'dropdown-open': dropdownOpen.produit }"
+                @click="dropdownOpen.produit = !dropdownOpen.produit"
+              >
+                <option value="" disabled>Choisir un produit</option>
+                <option v-for="prod in filteredProduitsSearch" :key="prod.idProduit" :value="prod.idProduit">
+                  {{ prod.designation }}{{ getCount(getTypeDesignation(selectedTypeId), prod.designation) > 0 ? ` (${getCount(getTypeDesignation(selectedTypeId), prod.designation)} docs)` : '' }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="step" v-if="selectedProduitId">
-          <label for="structure">Structure fond documentaire</label>
-          <select id="structure" v-model="selectedStructureId" @change="onStructureChange">
-            <option value="" disabled>Choisir une structure</option>
-            <option v-for="structure in structures" :key="structure.idStructure" :value="structure.idStructure">
-              {{ structure.nom }}
-            </option>
-          </select>
+          <div class="form-row">
+            <label for="structure">Structure fond documentaire</label>
+            <span class="search-icon" @click="toggleSearch('structure')">🔍</span>
+            <input 
+              v-show="searchActive.structure"
+              type="text" 
+              v-model="searchTerms.structure"
+              placeholder="Rechercher une structure..."
+              class="search-input"
+              @input="openDropdown('structure')"
+              @focus="openDropdown('structure')"
+              ref="structureSearch"
+            />
+            <div class="select-wrapper">
+              <select 
+                id="structure" 
+                v-model="selectedStructureId" 
+                @change="onStructureChange"
+                :class="{ 'dropdown-open': dropdownOpen.structure }"
+                @click="dropdownOpen.structure = !dropdownOpen.structure"
+              >
+                <option value="" disabled>Choisir une structure</option>
+                <option v-for="structure in filteredStructuresSearch" :key="structure.idStructure" :value="structure.idStructure">
+                  {{ structure.nom }}{{ getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), structure.nom) > 0 ? ` (${getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), structure.nom)} docs)` : '' }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <!-- STRUCTURE MODE FIELDS -->
         <template v-if="mode === 'structure'">
-        <div class="step" v-if="selectedStructureId">
-          <label for="section">Sections de produits</label>
-          <select id="section" v-model="selectedSectionId" :disabled="!sections.length">
-            <option value="" disabled>Choisir une section</option>
-            <option v-for="sec in sections" :key="sec.idSectionProduit" :value="sec.idSectionProduit">
-              {{ sec.designation }}
-            </option>
-          </select>
+        <div class="step" v-if="selectedStructureId && !selectedStructureHasDocVer1">
+          <div class="form-row">
+            <label for="section">Sections de produits</label>
+            <span class="search-icon" @click="toggleSearch('section')">🔍</span>
+            <input 
+              v-show="searchActive.section"
+              type="text" 
+              v-model="searchTerms.section"
+              placeholder="Rechercher une section..."
+              class="search-input"
+              :disabled="!sections.length"
+              @input="openDropdown('section')"
+              @focus="openDropdown('section')"
+              ref="sectionSearch"
+            />
+            <div class="select-wrapper">
+              <select 
+                id="section" 
+                v-model="selectedSectionId" 
+                :disabled="!sections.length"
+                :class="{ 'dropdown-open': dropdownOpen.section }"
+                @click="dropdownOpen.section = !dropdownOpen.section"
+              >
+                <option value="" disabled>Choisir une section</option>
+                <option v-for="sec in filteredSectionsSearch" :key="sec.idSectionProduit" :value="sec.idSectionProduit">
+                  {{ sec.nom }}{{ getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), getStructureDesignation(selectedStructureId), sec.nom) > 0 ? ` (${getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), getStructureDesignation(selectedStructureId), sec.nom)} docs)` : '' }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="step" v-if="selectedSectionId">
-          <label for="division-nv1">Classes de documents</label>
-          <select id="division-nv1" v-model="selectedDivisionId" :disabled="!divisionsNv1.length">
-            <option value="" disabled>Choisir une division</option>
-            <option v-for="div in divisionsNv1" :key="div.idSubDivisionNv_1" :value="div.idSubDivisionNv_1">
-              {{ div.nom }}
-            </option>
-          </select>
+          <div class="form-row">
+            <label for="division-nv1">Classes de documents</label>
+            <span class="search-icon" @click="toggleSearch('division')">🔍</span>
+            <input 
+              v-show="searchActive.division"
+              type="text" 
+              v-model="searchTerms.division"
+              placeholder="Rechercher une division..."
+              class="search-input"
+              :disabled="!divisionsNv1.length"
+              @input="openDropdown('division')"
+              @focus="openDropdown('division')"
+              ref="divisionSearch"
+            />
+            <div class="select-wrapper">
+              <select 
+                id="division-nv1" 
+                v-model="selectedDivisionId" 
+                :disabled="!divisionsNv1.length"
+                :class="{ 'dropdown-open': dropdownOpen.division }"
+                @click="dropdownOpen.division = !dropdownOpen.division"
+              >
+                <option value="" disabled>Choisir une division</option>
+                <option v-for="div in filteredDivisionsSearch" :key="div.idSubDivisionNv_1" :value="div.idSubDivisionNv_1">
+                  {{ div.nom }}{{ getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), getStructureDesignation(selectedStructureId), getSectionDesignation(selectedSectionId), div.nom) > 0 ? ` (${getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), getStructureDesignation(selectedStructureId), getSectionDesignation(selectedSectionId), div.nom)} docs)` : '' }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="step" v-if="selectedDivisionId && requiresSubDiv2">
-          <label for="subdivision-nv2">Types de documents</label>
-          <select id="subdivision-nv2" v-model="selectedSubDiv2Id">
-            <option value="" disabled>Choisir une sous-division</option>
-            <option v-for="item in filteredSubDiv2List" :key="item.idSubDivisionNv_2.idSubDivisionNv_2" :value="item.idSubDivisionNv_2.idSubDivisionNv_2">
-              {{ item.idSubDivisionNv_2.nom }}
-            </option>
-          </select>
+          <div class="form-row">
+            <label for="subdivision-nv2">Types de documents</label>
+            <span class="search-icon" @click="toggleSearch('subDiv2')">🔍</span>
+            <input 
+              v-show="searchActive.subDiv2"
+              type="text" 
+              v-model="searchTerms.subDiv2"
+              placeholder="Rechercher un type de document..."
+              class="search-input"
+              :disabled="!filteredSubDiv2List.length"
+              @input="openDropdown('subDiv2')"
+              @focus="openDropdown('subDiv2')"
+              ref="subDiv2Search"
+            />
+            <div class="select-wrapper">
+              <select 
+                id="subdivision-nv2" 
+                v-model="selectedSubDiv2Id"
+                :class="{ 'dropdown-open': dropdownOpen.subDiv2 }"
+                @click="dropdownOpen.subDiv2 = !dropdownOpen.subDiv2"
+              >
+                <option value="" disabled>Choisir une sous-division</option>
+                <option v-for="item in filteredSubDiv2Search" :key="item.idSubDivisionNv_2.idSubDivisionNv_2" :value="item.idSubDivisionNv_2.idSubDivisionNv_2">
+                  {{ item.idSubDivisionNv_2.nom }}{{ getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), getStructureDesignation(selectedStructureId), getSectionDesignation(selectedSectionId), getDivisionDesignation(selectedDivisionId), item.idSubDivisionNv_2.nom) > 0 ? ` (${getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), getStructureDesignation(selectedStructureId), getSectionDesignation(selectedSectionId), getDivisionDesignation(selectedDivisionId), item.idSubDivisionNv_2.nom)} docs)` : '' }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="step" v-if="requiresSubDiv2 && selectedSubDiv2Id && requiresSubDiv3">
-          <label for="subdivision-nv3">Documents cibles</label>
-          <select id="subdivision-nv3" v-model="selectedSubDiv3Id">
-            <option value="" disabled>Choisir une sous-division Niv. 3</option>
-            <option v-for="item in filteredSubDiv3List" :key="item.idSubDivisionNv_3.idSubDivisionNv_3" :value="item.idSubDivisionNv_3.idSubDivisionNv_3">
-              {{ item.idSubDivisionNv_3.nom }}
-            </option>
-          </select>
+          <div class="form-row">
+            <label for="subdivision-nv3">Documents cibles</label>
+            <span class="search-icon" @click="toggleSearch('subDiv3')">🔍</span>
+            <input 
+              v-show="searchActive.subDiv3"
+              type="text" 
+              v-model="searchTerms.subDiv3"
+              placeholder="Rechercher un document cible..."
+              class="search-input"
+              :disabled="!filteredSubDiv3List.length"
+              @input="openDropdown('subDiv3')"
+              @focus="openDropdown('subDiv3')"
+              ref="subDiv3Search"
+            />
+            <div class="select-wrapper">
+              <select 
+                id="subdivision-nv3" 
+                v-model="selectedSubDiv3Id"
+                :class="{ 'dropdown-open': dropdownOpen.subDiv3 }"
+                @click="dropdownOpen.subDiv3 = !dropdownOpen.subDiv3"
+              >
+              <option value="" disabled>Choisir une sous-division Niv. 3</option>
+              <option v-for="item in filteredSubDiv3Search" :key="item.idSubDivisionNv_3.idSubDivisionNv_3" :value="item.idSubDivisionNv_3.idSubDivisionNv_3">
+                {{ item.idSubDivisionNv_3.nom }}{{ getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), getStructureDesignation(selectedStructureId), getSectionDesignation(selectedSectionId), getDivisionDesignation(selectedDivisionId), getSubDiv2Designation(selectedSubDiv2Id), item.idSubDivisionNv_3.nom) > 0 ? ` (${getCount(getTypeDesignation(selectedTypeId), getProduitDesignation(selectedProduitId), getStructureDesignation(selectedStructureId), getSectionDesignation(selectedSectionId), getDivisionDesignation(selectedDivisionId), getSubDiv2Designation(selectedSubDiv2Id), item.idSubDivisionNv_3.nom)} docs)` : '' }}
+              </option>
+            </select>
+            </div>
+          </div>
         </div>
         <!-- <div class="step" v-if="requiresSubDiv2 && selectedSubDiv3Id && filteredSubDiv4List.length > 0">
           <label for="subdivision-nv4">Subdivision Niveau 4</label>
@@ -104,12 +254,12 @@
 
         <div
           class="button-group responsive-buttons"
-          v-if="isSubDivAllowed && (
+          v-if="selectedStructureHasDocVer1 || (isSubDivAllowed && (
             (requiresSubDiv2 && selectedSubDiv2Id && filteredSubDiv3List.length === 0) ||
             (!requiresSubDiv2 && selectedDivisionId) ||
             (requiresSubDiv2 && selectedSubDiv3Id) ||
             (requiresSubDiv2 && selectedSubDiv4Id)
-          )"
+          ))"
         >
           <button v-if="userStore.userRole.value !== userStore.ROLES.CONSULTATION" class="save-btn" type="button" @click="openStructureDocContent" :class="{ 'disabled': !canAddDocuments || isCreatingDocument }" :disabled="!canAddDocuments || isCreatingDocument">
             <span v-if="isCreatingDocument">{{ creationProgress || 'Création en cours...' }}</span>
@@ -207,7 +357,7 @@
               
               <!-- Pagination Info -->
               <div v-if="filteredDocList.length > 0" class="pagination-info">
-                Affichage de {{ paginationInfo.start }} à {{ paginationInfo.end }} sur {{ paginationInfo.total }} documents
+                Affichage de {{ (currentPage - 1) * pageSize + 1 }} à {{ Math.min(currentPage * pageSize, totalDocuments) }} sur {{ totalDocuments }} documents
               </div>
               
               <div class="table-container">
@@ -295,41 +445,53 @@
               </div>
               
               <!-- Pagination Controls - Outside scrollable container -->
-              <div v-if="totalPages > 1" class="pagination-controls">
-                <button 
-                  @click="previousPage" 
-                  :disabled="currentPage === 1" 
-                  class="pagination-btn"
-                >
-                  ← Précédent
-                </button>
-                
-                <span class="pagination-pages">
+              <div v-if="totalPages > 1" class="pagination-container">
+                <div class="pagination-controls">
                   <button 
-                    v-for="page in Math.min(5, totalPages)" 
-                    :key="page" 
-                    @click="goToPage(page)" 
-                    :class="['pagination-page', { active: currentPage === page }]"
+                    @click="previousPageWithParams" 
+                    :disabled="!hasPrevious" 
+                    class="pagination-btn"
                   >
-                    {{ page }}
+                    ← Précédent
                   </button>
-                  <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                  
+                  <span class="pagination-pages">
+                    <button 
+                      v-for="page in Math.min(5, totalPages)" 
+                      :key="page" 
+                      @click="goToPageWithParams(page)" 
+                      :class="['pagination-page', { active: currentPage === page }]"
+                    >
+                      {{ page }}
+                    </button>
+                    <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                    <button 
+                      v-if="totalPages > 5 && currentPage < totalPages - 2" 
+                      @click="goToPageWithParams(totalPages)" 
+                      :class="['pagination-page', { active: currentPage === totalPages }]"
+                    >
+                      {{ totalPages }}
+                    </button>
+                  </span>
+                  
                   <button 
-                    v-if="totalPages > 5 && currentPage < totalPages - 2" 
-                    @click="goToPage(totalPages)" 
-                    :class="['pagination-page', { active: currentPage === totalPages }]"
+                    @click="nextPageWithParams" 
+                    :disabled="!hasNext" 
+                    class="pagination-btn"
                   >
-                    {{ totalPages }}
+                    Suivant →
                   </button>
-                </span>
+                </div>
                 
-                <button 
-                  @click="nextPage" 
-                  :disabled="currentPage === totalPages" 
-                  class="pagination-btn"
-                >
-                  Suivant →
-                </button>
+                <div class="page-size-selector">
+                  <label>Éléments par page:</label>
+                  <select :value="pageSize" @change="changePageSizeWithParams(($event.target as HTMLSelectElement).value)">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -357,7 +519,7 @@
               
               <!-- Pagination Info -->
               <div v-if="filteredDocList.length > 0" class="pagination-info">
-                Affichage de {{ paginationInfo.start }} à {{ paginationInfo.end }} sur {{ paginationInfo.total }} documents
+                Affichage de {{ (currentPage - 1) * pageSize + 1 }} à {{ Math.min(currentPage * pageSize, totalDocuments) }} sur {{ totalDocuments }} documents
               </div>
               
               <div class="table-container">
@@ -422,41 +584,53 @@
               </div>
               
               <!-- Pagination Controls - Outside scrollable container -->
-              <div v-if="totalPages > 1" class="pagination-controls">
-                <button 
-                  @click="previousPage" 
-                  :disabled="currentPage === 1" 
-                  class="pagination-btn"
-                >
-                  ← Précédent
-                </button>
-                
-                <span class="pagination-pages">
+              <div v-if="totalPages > 1" class="pagination-container">
+                <div class="pagination-controls">
                   <button 
-                    v-for="page in Math.min(5, totalPages)" 
-                    :key="page" 
-                    @click="goToPage(page)" 
-                    :class="['pagination-page', { active: currentPage === page }]"
+                    @click="previousPageWithParams" 
+                    :disabled="!hasPrevious" 
+                    class="pagination-btn"
                   >
-                    {{ page }}
+                    ← Précédent
                   </button>
-                  <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                  
+                  <span class="pagination-pages">
+                    <button 
+                      v-for="page in Math.min(5, totalPages)" 
+                      :key="page" 
+                      @click="goToPageWithParams(page)" 
+                      :class="['pagination-page', { active: currentPage === page }]"
+                    >
+                      {{ page }}
+                    </button>
+                    <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                    <button 
+                      v-if="totalPages > 5 && currentPage < totalPages - 2" 
+                      @click="goToPageWithParams(totalPages)" 
+                      :class="['pagination-page', { active: currentPage === totalPages }]"
+                    >
+                      {{ totalPages }}
+                    </button>
+                  </span>
+                  
                   <button 
-                    v-if="totalPages > 5 && currentPage < totalPages - 2" 
-                    @click="goToPage(totalPages)" 
-                    :class="['pagination-page', { active: currentPage === totalPages }]"
+                    @click="nextPageWithParams" 
+                    :disabled="!hasNext" 
+                    class="pagination-btn"
                   >
-                    {{ totalPages }}
+                    Suivant →
                   </button>
-                </span>
+                </div>
                 
-                <button 
-                  @click="nextPage" 
-                  :disabled="currentPage === totalPages" 
-                  class="pagination-btn"
-                >
-                  Suivant →
-                </button>
+                <div class="page-size-selector">
+                  <label>Éléments par page:</label>
+                  <select :value="pageSize" @change="changePageSizeWithParams(($event.target as HTMLSelectElement).value)">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -484,7 +658,7 @@
               
               <!-- Pagination Info -->
               <div v-if="filteredDocList.length > 0" class="pagination-info">
-                Affichage de {{ paginationInfo.start }} à {{ paginationInfo.end }} sur {{ paginationInfo.total }} documents
+                Affichage de {{ (currentPage - 1) * pageSize + 1 }} à {{ Math.min(currentPage * pageSize, totalDocuments) }} sur {{ totalDocuments }} documents
               </div>
               
               <div class="table-container">
@@ -584,41 +758,53 @@
               </div>
               
               <!-- Pagination Controls - Outside scrollable container -->
-              <div v-if="totalPages > 1" class="pagination-controls">
-                <button 
-                  @click="previousPage" 
-                  :disabled="currentPage === 1" 
-                  class="pagination-btn"
-                >
-                  ← Précédent
-                </button>
-                
-                <span class="pagination-pages">
+              <div v-if="totalPages > 1" class="pagination-container">
+                <div class="pagination-controls">
                   <button 
-                    v-for="page in Math.min(5, totalPages)" 
-                    :key="page" 
-                    @click="goToPage(page)" 
-                    :class="['pagination-page', { active: currentPage === page }]"
+                    @click="previousPageWithParams" 
+                    :disabled="!hasPrevious" 
+                    class="pagination-btn"
                   >
-                    {{ page }}
+                    ← Précédent
                   </button>
-                  <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                  
+                  <span class="pagination-pages">
+                    <button 
+                      v-for="page in Math.min(5, totalPages)" 
+                      :key="page" 
+                      @click="goToPageWithParams(page)" 
+                      :class="['pagination-page', { active: currentPage === page }]"
+                    >
+                      {{ page }}
+                    </button>
+                    <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                    <button 
+                      v-if="totalPages > 5 && currentPage < totalPages - 2" 
+                      @click="goToPageWithParams(totalPages)" 
+                      :class="['pagination-page', { active: currentPage === totalPages }]"
+                    >
+                      {{ totalPages }}
+                    </button>
+                  </span>
+                  
                   <button 
-                    v-if="totalPages > 5 && currentPage < totalPages - 2" 
-                    @click="goToPage(totalPages)" 
-                    :class="['pagination-page', { active: currentPage === totalPages }]"
+                    @click="nextPageWithParams" 
+                    :disabled="!hasNext" 
+                    class="pagination-btn"
                   >
-                    {{ totalPages }}
+                    Suivant →
                   </button>
-                </span>
+                </div>
                 
-                <button 
-                  @click="nextPage" 
-                  :disabled="currentPage === totalPages" 
-                  class="pagination-btn"
-                >
-                  Suivant →
-                </button>
+                <div class="page-size-selector">
+                  <label>Éléments par page:</label>
+                  <select :value="pageSize" @change="changePageSizeWithParams(($event.target as HTMLSelectElement).value)">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -736,41 +922,53 @@
               </div>
               
               <!-- Pagination Controls - Outside scrollable container -->
-              <div v-if="validationTotalPages > 1" class="pagination-controls">
-                <button 
-                  @click="previousPage" 
-                  :disabled="currentPage === 1" 
-                  class="pagination-btn"
-                >
-                  ← Précédent
-                </button>
-                
-                <span class="pagination-pages">
+              <div v-if="validationTotalPages > 1" class="pagination-container">
+                <div class="pagination-controls">
                   <button 
-                    v-for="page in Math.min(5, validationTotalPages)" 
-                    :key="page" 
-                    @click="goToPage(page)" 
-                    :class="['pagination-page', { active: currentPage === page }]"
+                    @click="previousPageWithParams" 
+                    :disabled="!hasPrevious" 
+                    class="pagination-btn"
                   >
-                    {{ page }}
+                    ← Précédent
                   </button>
-                  <span v-if="validationTotalPages > 5" class="pagination-ellipsis">...</span>
+                  
+                  <span class="pagination-pages">
+                    <button 
+                      v-for="page in Math.min(5, validationTotalPages)" 
+                      :key="page" 
+                      @click="goToPageWithParams(page)" 
+                      :class="['pagination-page', { active: currentPage === page }]"
+                    >
+                      {{ page }}
+                    </button>
+                    <span v-if="validationTotalPages > 5" class="pagination-ellipsis">...</span>
+                    <button 
+                      v-if="validationTotalPages > 5 && currentPage < validationTotalPages - 2" 
+                      @click="goToPageWithParams(validationTotalPages)" 
+                      :class="['pagination-page', { active: currentPage === validationTotalPages }]"
+                    >
+                      {{ validationTotalPages }}
+                    </button>
+                  </span>
+                  
                   <button 
-                    v-if="validationTotalPages > 5 && currentPage < validationTotalPages - 2" 
-                    @click="goToPage(validationTotalPages)" 
-                    :class="['pagination-page', { active: currentPage === validationTotalPages }]"
+                    @click="nextPageWithParams" 
+                    :disabled="!hasNext" 
+                    class="pagination-btn"
                   >
-                    {{ validationTotalPages }}
+                    Suivant →
                   </button>
-                </span>
+                </div>
                 
-                <button 
-                  @click="nextPage" 
-                  :disabled="currentPage === validationTotalPages" 
-                  class="pagination-btn"
-                >
-                  Suivant →
-                </button>
+                <div class="page-size-selector">
+                  <label>Éléments par page:</label>
+                  <select :value="pageSize" @change="changePageSizeWithParams(($event.target as HTMLSelectElement).value)">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -798,7 +996,7 @@
               
               <!-- Pagination Info -->
               <div v-if="filteredDocList.length > 0" class="pagination-info">
-                Affichage de {{ paginationInfo.start }} à {{ paginationInfo.end }} sur {{ paginationInfo.total }} documents
+                Affichage de {{ (currentPage - 1) * pageSize + 1 }} à {{ Math.min(currentPage * pageSize, totalDocuments) }} sur {{ totalDocuments }} documents
               </div>
               
               <div class="table-container">
@@ -815,7 +1013,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="document in paginatedDocList" :key="document.idDocument">
+                    <tr v-for="document in paginatedDocList.filter(doc => !doc.valide)" :key="document.idDocument">
                       <td class="description-cell" :title="document.designation || document.nomFichier || ''">
                         <div class="description-content">
                           <span>{{ getDescriptionDisplay(document) }}</span>
@@ -892,41 +1090,53 @@
               </div>
               
               <!-- Pagination Controls - Outside scrollable container -->
-              <div v-if="totalPages > 1" class="pagination-controls">
-                <button 
-                  @click="previousPage" 
-                  :disabled="currentPage === 1" 
-                  class="pagination-btn"
-                >
-                  ← Précédent
-                </button>
-                
-                <span class="pagination-pages">
+              <div v-if="totalPages > 1" class="pagination-container">
+                <div class="pagination-controls">
                   <button 
-                    v-for="page in Math.min(5, totalPages)" 
-                    :key="page" 
-                    @click="goToPage(page)" 
-                    :class="['pagination-page', { active: currentPage === page }]"
+                    @click="previousPageWithParams" 
+                    :disabled="!hasPrevious" 
+                    class="pagination-btn"
                   >
-                    {{ page }}
+                    ← Précédent
                   </button>
-                  <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                  
+                  <span class="pagination-pages">
+                    <button 
+                      v-for="page in Math.min(5, totalPages)" 
+                      :key="page" 
+                      @click="goToPageWithParams(page)" 
+                      :class="['pagination-page', { active: currentPage === page }]"
+                    >
+                      {{ page }}
+                    </button>
+                    <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                    <button 
+                      v-if="totalPages > 5 && currentPage < totalPages - 2" 
+                      @click="goToPageWithParams(totalPages)" 
+                      :class="['pagination-page', { active: currentPage === totalPages }]"
+                    >
+                      {{ totalPages }}
+                    </button>
+                  </span>
+                  
                   <button 
-                    v-if="totalPages > 5 && currentPage < totalPages - 2" 
-                    @click="goToPage(totalPages)" 
-                    :class="['pagination-page', { active: currentPage === totalPages }]"
+                    @click="nextPageWithParams" 
+                    :disabled="!hasNext" 
+                    class="pagination-btn"
                   >
-                    {{ totalPages }}
+                    Suivant →
                   </button>
-                </span>
+                </div>
                 
-                <button 
-                  @click="nextPage" 
-                  :disabled="currentPage === totalPages" 
-                  class="pagination-btn"
-                >
-                  Suivant →
-                </button>
+                <div class="page-size-selector">
+                  <label>Éléments par page:</label>
+                  <select :value="pageSize" @change="changePageSizeWithParams(($event.target as HTMLSelectElement).value)">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -953,6 +1163,7 @@
           <!-- CONTEXTE -->
           <template v-if="selectedBureauxEtudes.length > 0
             || selectedFournisseurs.length > 0
+            || selectedPartenaire.length > 0
             || selectedMaitresOeuvre.length > 0
             || selectedMaitresOuvrage.length > 0
             || selectedSoustraitants.length > 0
@@ -999,6 +1210,10 @@
                     <span class="arb-label">Bureaux Études:</span>
                     <span class="arb-value">{{ selectedBureauEtudeNoms.join(', ') }}<span v-if="hasMoreBET" class="more-indicator"> (+plus...)</span></span>
                   </div>
+                  <div v-if="selectedPartenaireNoms.length" class="arb-line" style="display: none;">
+                    <span class="arb-label">Partenaires:</span>
+                    <span class="arb-value">{{ selectedPartenaireNoms.join(', ') }}<span v-if="hasMorePartenaires" class="more-indicator"> (+plus...)</span></span>
+                  </div>
                   <div v-if="selectedDirectionsProjets.length" class="arb-line">
                     <span class="arb-label">Directeurs:</span>
                     <span class="arb-value">{{ selectedDirectionsProjets.map(d => d.nomPrenomDirecteur || `${d.nom} ${d.prenom}`).join(', ') }}<span v-if="hasMoreDirecteurs" class="more-indicator"> (+plus...)</span></span>
@@ -1032,7 +1247,10 @@
                   <tr>
                     <th v-for="header in contextAjouter.columns" :key="header">{{ header }}</th>
                     <th>Action</th>
-                    <th v-if="contextAjouter.entityKey !== 'direction_projet'">Fiche Technique</th>
+                    <th v-if="contextAjouter.entityKey !== 'direction_projet' && contextAjouter.entityKey !== 'paq'">Fichier Document</th>
+                    <th v-if="contextAjouter.entityKey === 'projet'">Fichier PAQ</th>
+                    <th v-if="contextAjouter.entityKey === 'projet'">Fichier EGG</th>
+                    <th v-if="contextAjouter.entityKey === 'projet'">Vidéo</th>
                     <th v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
                   </tr>
                 </thead>
@@ -1042,7 +1260,35 @@
                     :key="item[contextAjouter.idCol]"
                     :class="{ selected: isAlreadySelected(contextAjouter.entityKey, item) }"
                   >
-                    <td v-for="col in contextAjouter.columnKeys" :key="col">{{ item[col] }}</td>
+                    <td v-for="col in contextAjouter.columnKeys" :key="col">
+                      <span v-if="contextAjouter.entityKey === 'direction_projet' && col === 'periods'">
+                        <div v-if="isAlreadySelected(contextAjouter.entityKey, item) && getSelectedDirectorPeriods(item).length > 0" class="director-periods-dropdown">
+                          <div class="dropdown">
+                            <button class="dropdown-btn periods-dropdown-btn" @click="togglePeriodsDropdown(item.idDirecteur)">
+                              {{ getSelectedDirectorPeriods(item).length }} période(s)
+                              <span class="dropdown-arrow">▼</span>
+                            </button>
+                            <div class="dropdown-content periods-dropdown-content" v-if="activePeriodsDropdown === item.idDirecteur">
+                              <div v-for="(period, index) in getSelectedDirectorPeriods(item)" :key="index" class="dropdown-item period-dropdown-item">
+                                <div><strong>Période {{ index + 1 }}</strong></div>
+                                <div class="period-dates">
+                                  <small>Du: {{ formatDate(period.date_deb) || 'Non défini' }}</small><br>
+                                  <small>Au: {{ formatDate(period.date_fin) || 'Non défini' }}</small>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <span v-else>-</span>
+                      </span>
+                      <span v-else-if="contextAjouter.entityKey === 'direction_projet' && (col === 'date_deb' || col === 'date_fin')">
+                        {{ getDirectorDateValue(item, col) }}
+                      </span>
+                      <span v-else-if="col === 'secteurs_activite'">
+                        {{ mapSecteurIds(item[col]) }}
+                      </span>
+                      <span v-else>{{ item[col] }}</span>
+                    </td>
                     <td>
                       <!-- Show Enlever button if already selected -->
                       <button
@@ -1057,6 +1303,13 @@
                         @click="contextAjouter.entityKey === 'direction_projet' ? openDateModal(item) : addToSelected(contextAjouter.entityKey, item)"
                         :disabled="!getEntityConfig(contextAjouter.entityKey)?.allowMultiple && contextAjouter.selected.length >= 1"
                       >Ajouter</button>
+                      <!-- Add Period button for already selected directors -->
+                      <button
+                        v-if="isAlreadySelected(contextAjouter.entityKey, item) && contextAjouter.entityKey === 'direction_projet'"
+                        class="add-period-btn"
+                        @click="openDateModal(item)"
+                        title="Ajouter une nouvelle période"
+                      >+ Période</button>
                       <!-- Add Director button for selected items -->
                       <button
                         v-if="isAlreadySelected(contextAjouter.entityKey, item) && (contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes')"
@@ -1064,24 +1317,92 @@
                         @click="openDirecteurModal(item)"
                       >Ajouter Directeur</button>
                     </td>
-                    <td v-if="contextAjouter.entityKey !== 'direction_projet'">
-                      <div v-if="isAlreadySelected(contextAjouter.entityKey, item)" class="fiche-technique-container">
-                        <button
-                          v-if="!item.hasFichier"
-                          class="fiche-technique-btn"
-                          @click="openFicheTechniqueModal(contextAjouter.entityKey, item)"
-                        >Ajouter Fiche Technique</button>
-                        <div v-else class="fiche-technique-uploaded">
-                          <span class="uploaded-indicator">✓ Ajoutée</span>
-                          <button
-                            class="fiche-technique-btn-modify"
-                            @click="openFicheTechniqueModal(contextAjouter.entityKey, item)"
-                            title="Modifier la fiche technique"
-                          >✏️</button>
+                    <td v-if="contextAjouter.entityKey !== 'direction_projet' && contextAjouter.entityKey !== 'paq'">
+                      <div class="document-file-container">
+                        <div v-if="item.nomFichier" class="document-actions">
+                          <button @click="viewEntityDocument(contextAjouter.entityKey, item)" class="action-btn view-btn" :disabled="(loadingViewDocument as Record<string, boolean>)[getEntityDocumentId(contextAjouter.entityKey, item)]">
+                            <span v-if="(loadingViewDocument as Record<string, boolean>)[getEntityDocumentId(contextAjouter.entityKey, item)]">...</span>
+                            <span v-else>📄 Consulter</span>
+                          </button>
+                          <button v-if="(loadingViewDocument as Record<string, boolean>)[getEntityDocumentId(contextAjouter.entityKey, item)]" @click="cancelEntityDocumentView(contextAjouter.entityKey, item)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
                         </div>
+                        <span v-else class="no-file">Aucun fichier</span>
                       </div>
-                      <span v-else>-</span>
                     </td>
+                    <!-- PAQ File Column for projet entity -->
+                    <td v-if="contextAjouter.entityKey === 'projet'">
+                      <div class="document-file-container">
+                        <div v-if="item.nomFichierPAQ" class="document-actions">
+                          <button @click="viewProjetPAQFile(item.code)" class="action-btn view-btn" :disabled="(loadingViewDocument as Record<string, boolean>)[`paq_${item.code}`]">
+                            <span v-if="(loadingViewDocument as Record<string, boolean>)[`paq_${item.code}`]">...</span>
+                            <span v-else>📄 PAQ</span>
+                          </button>
+                          <button v-if="(loadingViewDocument as Record<string, boolean>)[`paq_${item.code}`]" @click="cancelProjetPAQView(item.code)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">Aucun fichier PAQ</span>
+                      </div>
+                    </td>
+                    <!-- EGG File Column for projet entity -->
+                    <td v-if="contextAjouter.entityKey === 'projet'">
+                      <div class="document-file-container">
+                        <div v-if="item.nomFichierEGG" class="document-actions">
+                          <button @click="viewProjetEGGFile(item.code)" class="action-btn view-btn" :disabled="(loadingViewDocument as Record<string, boolean>)[`egg_${item.code}`]">
+                            <span v-if="(loadingViewDocument as Record<string, boolean>)[`egg_${item.code}`]">...</span>
+                            <span v-else>📄 EGG</span>
+                          </button>
+                          <button v-if="(loadingViewDocument as Record<string, boolean>)[`egg_${item.code}`]" @click="cancelProjetEGGView(item.code)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">Aucun fichier EGG</span>
+                      </div>
+                    </td>
+                    <!-- Video Column for projet entity -->
+                    <!-- <td v-if="contextAjouter.entityKey === 'projet'">
+                      <div class="document-file-container">
+                        <div v-if="item.video" class="document-actions">
+                          <button @click="viewProjetVideo(item.code, item.video)" class="action-btn view-btn" :disabled="(loadingViewDocument as Record<string, boolean>)[`video_${item.code}`]">
+                            <span v-if="(loadingViewDocument as Record<string, boolean>)[`video_${item.code}`]">...</span>
+                            <span v-else>▶️ Voir</span>
+                          </button>
+                        
+                          <button @click="openProjetVideoUploadModal(item)" class="action-btn edit-video-btn" title="Modifier la vidéo">
+                            ✏️
+                          </button>
+                        </div>
+                        <div v-else-if="isAlreadySelected(contextAjouter.entityKey, item)" class="document-actions">
+                          <button @click="openProjetVideoUploadModal(item)" class="action-btn add-btn">
+                            📹 Ajouter Vidéo
+                          </button>
+                        </div>
+                        <span v-else class="no-file">-</span>
+                      </div>
+                    </td> -->
+                    <!-- Video Column for projet entity -->
+<td v-if="contextAjouter.entityKey === 'projet'">
+  <div class="document-file-container">
+    <div v-if="item.video" class="document-actions">
+      <button @click="viewProjetVideo(item.code, item.video)" class="action-btn view-btn" :disabled="(loadingViewDocument as Record<string, boolean>)[`video_${item.code}`]">
+        <span v-if="(loadingViewDocument as Record<string, boolean>)[`video_${item.code}`]">...</span>
+        <span v-else>▶️ Voir</span>
+      </button>
+      <button @click="openProjetVideoUploadModal(item)" class="action-btn edit-video-btn" title="Modifier la vidéo">
+        ✏️
+      </button>
+    </div>
+    <div v-else-if="isAlreadySelected(contextAjouter.entityKey, item)" class="document-actions">
+      <button @click="openProjetVideoUploadModal(item)" class="action-btn add-btn">
+        📹 Ajouter Vidéo
+      </button>
+    </div>
+    <span v-else class="no-file">-</span>
+  </div>
+</td>
+
                     <td v-if="contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes'">
                       <div v-if="isAlreadySelected(contextAjouter.entityKey, item)" class="dropdown">
                         <button class="dropdown-btn" @click="loadDirecteurs(contextAjouter.entityKey, item)">
@@ -1103,7 +1424,7 @@
                     </td>
                   </tr>
                   <tr v-if="!filteredContextAjouterItems.length">
-                    <td :colspan="(contextAjouter.entityKey === 'maitre_ouvrage' || contextAjouter.entityKey === 'maitre_oeuvre' || contextAjouter.entityKey === 'bet_soustraitants_etudes' ? contextAjouter.columns.length + 3 : contextAjouter.columns.length + 2) - (contextAjouter.entityKey === 'direction_projet' ? 1 : 0)" class="no-data">
+                    <td :colspan="getContextAjouterColspan()" class="no-data">
                       {{ contextAjouterSearchQuery ? `Aucun résultat pour "${contextAjouterSearchQuery}"` : 'Aucun élément à afficher.' }}
                     </td>
                   </tr>
@@ -1135,23 +1456,117 @@
                 <thead>
                   <tr>
                     <th v-for="col in contextConsulter.columns" :key="col">{{ col }}</th>
-                    <th v-if="contextConsulter.entityKey !== 'direction_projet'">Fiche Technique</th>
+                    <th v-if="contextConsulter.entityKey !== 'direction_projet' && contextConsulter.entityKey !== 'paq'">Fichier Document</th>
+                    <th v-if="contextConsulter.entityKey === 'projet'">Fichier PAQ</th>
+                    <th v-if="contextConsulter.entityKey === 'projet'">Fichier EGG</th>
+                    <th v-if="contextConsulter.entityKey === 'projet'">Vidéo</th>
+                    <th v-if="contextConsulter.entityKey === 'paq'">Actions</th>
                     <th v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">Directeurs</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in filteredContextConsulterItems" :key="row[contextConsulter.columnKeys[0]]">
-                    <td v-for="colKey in contextConsulter.columnKeys" :key="colKey">{{ row[colKey] ?? '-' }}</td>
-                    <td v-if="contextConsulter.entityKey !== 'direction_projet'">
-                      <div class="fiche-technique-container">
-                        <button
-                          v-if="row.hasFichier"
-                          class="view-fiche-btn"
-                          @click="viewFicheTechnique(contextConsulter.entityKey, row)"
-                        >Voir Fiche</button>
-                        <span v-else>-</span>
+                  <tr v-for="(row, ) in filteredContextConsulterItems" :key="contextConsulter.entityKey === 'direction_projet' ? row.idDirecteur : row[contextConsulter.columnKeys[0]]">
+                    <td v-for="colKey in contextConsulter.columnKeys" :key="colKey">
+                      <span v-if="contextConsulter.entityKey === 'direction_projet' && colKey === 'nomPrenomDirecteur'">
+                        {{ row.nomPrenomDirecteur }}
+                      </span>
+                      <span v-else-if="contextConsulter.entityKey === 'direction_projet' && colKey === 'periods'">
+                        <div v-if="row.periodes && row.periodes.length > 0" class="director-periods-dropdown">
+                          <div class="dropdown">
+                            <button class="dropdown-btn periods-dropdown-btn" @click="togglePeriodsDropdownConsulter(row.idDirecteur)">
+                              {{ row.periodes.length }} période(s)
+                              <span class="dropdown-arrow">▼</span>
+                            </button>
+                            <div class="dropdown-content periods-dropdown-content" v-if="activePeriodsDropdownConsulter === row.idDirecteur">
+                              <div v-for="(period, periodIndex) in row.periodes" :key="periodIndex" class="dropdown-item period-dropdown-item">
+                                <div><strong>Période {{ Number(periodIndex) + 1 }}</strong></div>
+                                <div class="period-dates">
+                                  <small>Du: {{ formatDate(period.date_deb) || 'Non défini' }}</small><br>
+                                  <small>Au: {{ formatDate(period.date_fin) || 'Non défini' }}</small>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <span v-else>Aucune période</span>
+                      </span>
+                      <span v-else-if="colKey === 'secteurs_activite'">
+                        {{ mapSecteurIds(row[colKey]) }}
+                      </span>
+                      <span v-else>{{ row[colKey] ?? '-' }}</span>
+                    </td>
+                    <td v-if="contextConsulter.entityKey !== 'direction_projet' && contextConsulter.entityKey !== 'paq'">
+                      <div class="document-file-container">
+                        <div v-if="row.nomfichier || row.nomFichier || row.fichier || row.file || row.document" class="document-actions">
+                          <button @click="viewEntityDocument(contextConsulter.entityKey, row)" class="action-btn view-btn" :disabled="(loadingViewDocument as Record<string, boolean>)[getEntityDocumentId(contextConsulter.entityKey, row)]">
+                            <span v-if="(loadingViewDocument as Record<string, boolean>)[getEntityDocumentId(contextConsulter.entityKey, row)]">...</span>
+                            <span v-else>📄 Consulter</span>
+                          </button>
+                          <button v-if="(loadingViewDocument as Record<string, boolean>)[getEntityDocumentId(contextConsulter.entityKey, row)]" @click="cancelEntityDocumentView(contextConsulter.entityKey, row)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">Aucun fichier</span>
                       </div>
                     </td>
+                    <!-- PAQ File Column for projet entity -->
+                    <td v-if="contextConsulter.entityKey === 'projet'">
+                      <div class="document-file-container">
+                        <div v-if="row.nomfichierPAQ" class="document-actions">
+                          <button @click="viewProjetPAQFile(row.code)" class="action-btn view-btn" :disabled="(loadingViewDocument as Record<string, boolean>)[`paq_${row.code}`]">
+                            <span v-if="(loadingViewDocument as Record<string, boolean>)[`paq_${row.code}`]">...</span>
+                            <span v-else>📄 PAQ</span>
+                          </button>
+                          <button v-if="(loadingViewDocument as Record<string, boolean>)[`paq_${row.code}`]" @click="cancelProjetPAQView(row.code)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">Aucun fichier PAQ</span>
+                      </div>
+                    </td>
+                    <!-- EGG File Column for projet entity -->
+                    <td v-if="contextConsulter.entityKey === 'projet'">
+                      <div class="document-file-container">
+                        <div v-if="row.nomfichierEGG" class="document-actions">
+                          <button @click="viewProjetEGGFile(row.code)" class="action-btn view-btn" :disabled="(loadingViewDocument as Record<string, boolean>)[`egg_${row.code}`]">
+                            <span v-if="(loadingViewDocument as Record<string, boolean>)[`egg_${row.code}`]">...</span>
+                            <span v-else>📄 EGG</span>
+                          </button>
+                          <button v-if="(loadingViewDocument as Record<string, boolean>)[`egg_${row.code}`]" @click="cancelProjetEGGView(row.code)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">Aucun fichier EGG</span>
+                      </div>
+                    </td>
+                    <!-- Video Column for projet entity -->
+                    <td v-if="contextConsulter.entityKey === 'projet'">
+                      <div class="document-file-container">
+                        <div v-if="row.video" class="document-actions">
+                          <button @click="viewProjetVideo(row.code, row.video)" class="action-btn view-btn" :disabled="(loadingViewDocument as Record<string, boolean>)[`video_${row.code}`]">
+                            <span v-if="(loadingViewDocument as Record<string, boolean>)[`video_${row.code}`]">...</span>
+                            <span v-else>▶️ Voir</span>
+                          </button>
+                          <button v-if="(loadingViewDocument as Record<string, boolean>)[`video_${row.code}`]" @click="cancelProjetVideoView(row.code)" class="action-btn cancel-doc-btn">
+                            ✕
+                          </button>
+                        </div>
+                        <span v-else class="no-file">Aucune vidéo</span>
+                      </div>
+                    </td>
+                    <!-- <td v-if="contextConsulter.entityKey === 'paq'">
+                      <div v-if="row.nomFichier" class="document-actions">
+                        
+                        <button @click="viewPAQFile(row.idPAQ)" class="action-btn view-btn" :disabled="(loadingViewDocument as any)[`paq_${row.idPAQ}`]">
+                          <span v-if="(loadingViewDocument as any)[`paq_${row.idPAQ}`]">...</span>
+                          <span v-else>👁️ Consulter</span>
+                        </button>
+                        <button v-if="(loadingViewDocument as any)[`paq_${row.idPAQ}`]" @click="cancelPAQDocumentView(row.idPAQ)" class="action-btn cancel-doc-btn">
+                          ✕
+                        </button>
+                      </div>
+                      <span v-else class="no-file">-</span>
+                    </td> -->
                     <td v-if="contextConsulter.entityKey === 'maitre_ouvrage' || contextConsulter.entityKey === 'maitre_oeuvre' || contextConsulter.entityKey === 'bet_soustraitants_etudes'">
                       <div class="dropdown">
                         <button class="dropdown-btn" @click="loadDirecteursConsulter(contextConsulter.entityKey, row)">
@@ -1193,7 +1608,7 @@
           <div v-else>
             <div v-if="docModalError" class="error">{{ docModalError }}</div> 
             <!-- Form for Create Mode -->
-            <div v-if="isSubDivAllowed" class="section">
+            <div v-if="selectedStructureHasDocVer1 || isSubDivAllowed" class="section">
               <!-- <h4>Créer un nouveau document</h4> -->
               <div class="step" id="nonFichier">
                 <label for="nonFichier">Description</label>
@@ -1566,7 +1981,7 @@
             </div>
             <div style="margin-bottom: 1em;">
               <label for="date_debut_projet">Date de Début:</label>
-              <input type="date" id="date_debut_projet" v-model="dateModal.date_debut" required>
+              <input type="date" id="date_debut_projet" v-model="dateModal.date_debut">
             </div>
             <div style="margin-bottom: 1em;">
               <label for="date_fin_projet">Date de Fin:</label>
@@ -1937,37 +2352,7 @@
       </div>
     </div>
 
-    <!-- Fiche Technique Modal -->
-    <div v-if="ficheTechniqueModal.visible" class="doc-modal-backdrop">
-      <div class="doc-modal" style="min-width: 400px; max-width: 500px; min-height: auto;">
-        <div class="doc-modal-header">
-          <h3>{{ getFicheTechniqueStatus(ficheTechniqueModal.entityKey, { [getFicheTechniqueIdProperty(ficheTechniqueModal.entityKey)]: ficheTechniqueModal.entityId }) ? 'Modifier' : 'Ajouter' }} Fiche Technique</h3>
-          <button @click="closeFicheTechniqueModal" class="close-modal">&times;</button>
-        </div>
-        <div class="doc-modal-body">
-          <div style="margin-bottom: 1em;">
-            <label for="fiche-technique-file">Sélectionner un fichier PDF:</label>
-            <input 
-              id="fiche-technique-file" 
-              type="file" 
-              accept=".pdf" 
-              @change="onFicheTechniqueFileChange" 
-              style="width: 100%; padding: 0.5em; margin-top: 0.5em; border: 1px solid #ccc; border-radius: 4px;"
-            />
-          </div>
-          <div v-if="ficheTechniqueModal.selectedFile" style="margin-bottom: 1em; padding: 0.5em; background: rgba(67, 233, 123, 0.1); border-radius: 4px;">
-            <strong>Fichier sélectionné:</strong> {{ ficheTechniqueModal.selectedFile.name }}
-          </div>
-        </div>
-        <div class="doc-modal-footer" style="text-align: right; padding-top: 1em; border-top: 1px solid #232f4b;">
-          <button @click="closeFicheTechniqueModal" class="view-button" style="margin-right: 1em;" :disabled="ficheTechniqueModal.uploading">Annuler</button>
-          <button @click="uploadFicheTechnique" class="save-btn" :disabled="!ficheTechniqueModal.selectedFile || ficheTechniqueModal.uploading">
-            <span v-if="ficheTechniqueModal.uploading">Envoi en cours...</span>
-            <span v-else>{{ getFicheTechniqueStatus(ficheTechniqueModal.entityKey, { [getFicheTechniqueIdProperty(ficheTechniqueModal.entityKey)]: ficheTechniqueModal.entityId }) ? 'Modifier' : 'Ajouter' }} Fiche Technique</span>
-          </button>
-        </div>
-      </div>
-    </div>
+
 
     <!-- UPDATE MODAL -->
     <div v-if="documentToUpdate" class="doc-modal-backdrop">
@@ -1981,7 +2366,7 @@
           <div class="form-grid">
             <div class="form-group">
               <label>Désignation</label>
-              <input v-model="documentToUpdate.designation" placeholder="Désignation du document" />
+              <input v-model="documentToUpdate.designation" :placeholder="documentToUpdate.designation || documentToUpdate.nomFichier || 'Désignation du document'" />
             </div>
             
             <div class="form-group" v-if="false">
@@ -2159,7 +2544,7 @@
               <select v-model="documentToMove.idSection">
                 <option value="">Sélectionner une section</option>
                 <option v-for="s in sections" :key="s.idSectionProduit" :value="s.idSectionProduit">
-                  {{ s.designation }}
+                  {{ s.nom }}
                 </option>
               </select>
             </div>
@@ -2205,22 +2590,90 @@
 
     <!-- Validation Confirmation Modal -->
     <div v-if="showValidationConfirmModal" class="doc-modal-backdrop">
-      <div class="doc-modal" style="min-width:380px;">
+      <div class="doc-modal" :style="validationStep === 'preview' ? 'min-width: 80vw; min-height: 80vh;' : 'min-width:380px;'">
         <div class="doc-modal-header">
-          <h3>Confirmation de validation</h3>
+          <h3>{{ validationStep === 'preview' ? 'Aperçu du document' : 'Confirmation de validation' }}</h3>
           <button @click="closeValidationModal" class="close-modal">&times;</button>
         </div>
-        <div class="doc-modal-body">
-          <p>Êtes-vous sûr de vouloir valider ce document ?</p>
-          <div class="document-info">
-            <strong>{{ documentToValidate?.designation || documentToValidate?.nomFichier || 'Document sans nom' }}</strong>
+        <div class="doc-modal-body" :style="validationStep === 'preview' ? 'height: 70vh; overflow-y: auto;' : ''">
+          <!-- Step 1: PDF Preview -->
+          <div v-if="validationStep === 'preview'">
+            <div class="document-info" style="margin-bottom: 1em;">
+              <strong>{{ documentToValidate?.designation || documentToValidate?.nomFichier || 'Document sans nom' }}</strong>
+            </div>
+            <div v-if="documentToValidate?.nomFichier && documentToValidate?.fichier" style="height: 60vh; border: 1px solid #ddd; border-radius: 4px; overflow-y: auto;">
+              <PdfViewer
+                :pdfUrl="documentToValidate.fichier"
+                :canDownload="false"
+                :canPrint="false"
+                :documentId="documentToValidate.idDocument"
+              />
+            </div>
+            <div v-else-if="documentToValidate?.nomFichier && !documentToValidate?.fichier" style="text-align: center; padding: 2em; color: #666;">
+              <p>Chargement du document en cours...</p>
+            </div>
+            <div v-else style="text-align: center; padding: 2em; color: #666;">
+              <p>Aucun fichier PDF disponible pour l'aperçu</p>
+            </div>
+          </div>
+          
+          <!-- Step 2: Confirmation -->
+          <div v-if="validationStep === 'confirm'">
+            <p>Êtes-vous sûr de vouloir valider ce document ?</p>
+            <div class="document-info">
+              <strong>{{ documentToValidate?.designation || documentToValidate?.nomFichier || 'Document sans nom' }}</strong>
+            </div>
           </div>
         </div>
         <div class="doc-modal-footer" style="text-align:right">
           <button @click="closeValidationModal" class="view-button">Annuler</button>
-          <button @click="confirmValidation" class="save-btn" style="margin-left:0.7em;" :disabled="validatingDocument">
+          <button v-if="validationStep === 'preview'" @click="validationStep = 'confirm'" class="save-btn" style="margin-left:0.7em;">
+            Continuer
+          </button>
+          <button v-if="validationStep === 'confirm'" @click="validationStep = 'preview'" class="view-button" style="margin-left:0.7em;">
+            Retour
+          </button>
+          <button v-if="validationStep === 'confirm'" @click="confirmValidation" class="save-btn" style="margin-left:0.7em;" :disabled="validatingDocument">
             <span v-if="validatingDocument">Validation en cours...</span>
             <span v-else>Valider</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video Upload Modal for Projet -->
+    <div v-if="showProjetVideoModal" class="doc-modal-backdrop">
+      <div class="doc-modal" style="min-width:400px;">
+        <div class="doc-modal-header">
+          <h3>{{ selectedProjetForVideo?.video ? 'Modifier' : 'Ajouter' }} Vidéo - Projet {{ selectedProjetForVideo?.code }}</h3>
+          <button @click="closeProjetVideoModal" class="close-modal">&times;</button>
+        </div>
+        <div class="doc-modal-body">
+          <div v-if="selectedProjetForVideo?.video" class="current-video-info">
+            <p><strong>Vidéo actuelle:</strong></p>
+            <div class="video-preview">
+              <video controls style="max-width: 100%; height: 200px;">
+                <source :src="selectedProjetForVideo.video" type="video/mp4">
+                Votre navigateur ne supporte pas la lecture vidéo.
+              </video>
+            </div>
+          </div>
+          
+          <div class="step upload-option">
+            <label for="projet-video-upload" class="file-upload-label">{{ selectedProjetForVideo?.video ? 'Remplacer par une nouvelle vidéo' : 'Sélectionner une vidéo' }}</label>
+            <input id="projet-video-upload" type="file" accept=".mp4,.mov,.avi,.mkv,.webm" @change="onProjetVideoChange" />
+            <div v-if="selectedProjetVideo || isCompressingProjetVideo" class="file-info">
+              <span v-if="isCompressingProjetVideo" class="file-selected-text">{{ projetVideoCompressionProgress }}</span>
+              <span v-else class="file-selected-text">Vidéo sélectionnée: {{ selectedProjetVideo?.name }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="doc-modal-footer" style="text-align:right">
+          <button @click="closeProjetVideoModal" class="view-button">Annuler</button>
+          <button @click="uploadProjetVideo" class="save-btn" style="margin-left:0.7em;" :disabled="!selectedProjetVideo || isUploadingProjetVideo || isCompressingProjetVideo">
+            <span v-if="isUploadingProjetVideo">{{ projetVideoUploadProgress || 'Upload en cours...' }}</span>
+            <span v-else-if="isCompressingProjetVideo">Compression...</span>
+            <span v-else>{{ selectedProjetForVideo?.video ? 'Modifier' : 'Ajouter' }}</span>
           </button>
         </div>
       </div>
@@ -2230,6 +2683,97 @@
 </template>
 
 <style scoped>
+/* Step Layout */
+.step {
+  background-color: #4ade80;
+}
+
+/* Form Row Layout */
+.form-row {
+  display: grid;
+  grid-template-columns: 150px auto minmax(300px, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.form-row label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.select-wrapper {
+  width: 100%;
+  min-width: 300px;
+}
+
+.select-wrapper select {
+  width: 100%;
+}
+
+.search-icon {
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #43E97B;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  user-select: none;
+  justify-self: center;
+}
+
+.search-icon:hover {
+  background: rgba(67, 233, 123, 0.1);
+  transform: scale(1.1);
+}
+
+.search-input {
+  min-width: 200px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: white;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #43E97B;
+  box-shadow: 0 0 0 2px rgba(67, 233, 123, 0.2);
+}
+
+.search-input:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+/* Dropdown styles - back to original design */
+select {
+  width: 100%;
+  min-width: 300px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+select.dropdown-open {
+  border-color: #43E97B;
+  box-shadow: 0 4px 12px rgba(67, 233, 123, 0.3);
+  transform: translateY(-1px);
+}
+
+select:focus {
+  outline: none;
+  border-color: #43E97B;
+  box-shadow: 0 0 0 2px rgba(67, 233, 123, 0.2);
+}
+
 /* Delete Modal Styles */
 .delete-modal-backdrop {
   position: fixed;
@@ -3089,13 +3633,13 @@
 /* Pagination Styles */
 .pagination-info {
   font-size: 0.9rem;
-  color: #6b7280;
+  color: #bbdefb;
   margin: 10px 0;
   text-align: center;
   padding: 8px;
-  background: rgba(67, 233, 123, 0.1);
+  background: rgba(67, 233, 123, 0.15);
   border-radius: 4px;
-  border: 1px solid rgba(67, 233, 123, 0.2);
+  border: 1px solid rgba(67, 233, 123, 0.3);
 }
 
 .pagination-controls {
@@ -3103,10 +3647,6 @@
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 16px 0;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 8px;
 }
 
 .pagination-btn {
@@ -3129,7 +3669,8 @@
 }
 
 .pagination-btn:disabled {
-  background: #9ca3af;
+  background: #4a5568;
+  color: #a0aec0;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -3143,9 +3684,9 @@
 }
 
 .pagination-page {
-  background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background: rgba(22, 33, 62, 0.8);
+  color: #e3eafc;
+  border: 1px solid #232f4b;
   padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
@@ -3153,11 +3694,13 @@
   font-weight: 500;
   transition: all 0.2s ease;
   min-width: 36px;
+  text-align: center;
 }
 
 .pagination-page:hover {
-  background: #f3f4f6;
+  background: rgba(67, 233, 123, 0.2);
   border-color: #43E97B;
+  color: #43E97B;
 }
 
 .pagination-page.active {
@@ -3168,9 +3711,187 @@
 }
 
 .pagination-ellipsis {
-  color: #6b7280;
+  color: #bbdefb;
   padding: 0 8px;
   font-weight: bold;
+}
+
+/* Pagination Container Styles */
+.pagination-container {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(22, 33, 62, 0.6);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(67, 233, 123, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #bbdefb;
+}
+
+.page-size-selector label {
+  color: #bbdefb;
+  font-weight: 500;
+}
+
+.page-size-selector select {
+  padding: 4px 8px;
+  border: 1px solid #232f4b;
+  border-radius: 4px;
+  background: rgba(22, 33, 62, 0.8);
+  color: #e3eafc;
+  cursor: pointer;
+}
+
+.page-size-selector select:focus {
+  outline: none;
+  border-color: #43E97B;
+  box-shadow: 0 0 0 2px rgba(67, 233, 123, 0.2);
+}
+
+/* Director Periods Styles */
+.director-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.period-item {
+  font-size: 0.8rem;
+  color: #374151;
+  padding: 2px 6px;
+  background: rgba(67, 233, 123, 0.1);
+  border-radius: 3px;
+  border: 1px solid rgba(67, 233, 123, 0.3);
+}
+
+.periods-count {
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* Director Periods Dropdown Styles */
+.director-periods-dropdown {
+  position: relative;
+}
+
+.periods-dropdown-btn {
+  background: #f8f9fa;
+  color: #495057;
+  border: 1px solid #dee2e6;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.periods-dropdown-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+  color: #212529;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.periods-dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 220px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.period-dropdown-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  color: white;
+  background: #495057;
+}
+
+.period-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.period-dropdown-item:hover {
+  background: #6c757d;
+}
+
+.period-dates {
+  margin-top: 6px;
+}
+
+.period-dates small {
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.add-period-btn {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+  margin-left: 4px;
+}
+
+.add-period-btn:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
+}
+
+.add-period-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Director Consultation Styles */
+.director-first-period {
+  border-top: 2px solid #43E97B;
+}
+
+.director-additional-period {
+  background: rgba(67, 233, 123, 0.05);
+  border-left: 3px solid #43E97B;
+}
+
+.director-additional-period td:first-child {
+  padding-left: 20px;
+  font-style: italic;
+  color: #666;
+  font-size: 0.9rem;
 }
 
 /* Mobile responsiveness for pagination */
@@ -3193,11 +3914,35 @@
   .pagination-info {
     font-size: 0.8rem;
   }
+  
+  .pagination-container {
+    padding: 0.8rem;
+  }
+  
+  .page-size-selector {
+    flex-direction: column;
+    gap: 0.3rem;
+    text-align: center;
+  }
+  
+  .director-periods {
+    gap: 2px;
+  }
+  
+  .period-item {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+  
+  .add-period-btn {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
 }
 </style>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed, nextTick } from 'vue'
 import "vue-multiselect/dist/vue-multiselect.css";
 import axiosInstance from '../axios'
 import PdfViewer from '../components/PdfViewer.vue'
@@ -3206,6 +3951,8 @@ import VideoViewer from '../components/VideoViewer.vue'
 import { useUserStore } from '../store/userStore'
 import { logUserAction, LOG_ACTIONS } from '../services/logService'
 import JSZip from 'jszip'
+import { useHierarchicalCounts } from '../composables/useHierarchicalCounts'
+import { useDocumentsPagination } from '../composables/useDocumentsPagination'
 
 
 // const API_BASE = 'http://10.10.150.75:8000/api'
@@ -3224,6 +3971,32 @@ interface Document {
 // User store for role-based access control
 const userStore = useUserStore()
 const selectedDocument = ref<Document | null>(null)
+
+// Sectors data for mapping IDs to names
+const secteurs = ref<any[]>([])
+
+// Hierarchical counts composable
+const { fetchHierarchicalData, getCount } = useHierarchicalCounts()
+
+
+// Documents pagination composable
+const {
+  documents,
+  currentPage,
+  pageSize,
+  totalDocuments,
+  totalPages,
+  hasNext,
+  hasPrevious,
+  loading: paginationLoading,
+  error: paginationError,
+  // pagination,
+  fetchDocuments,
+  nextPage,
+  previousPage,
+  goToPage,
+  changePageSize
+} = useDocumentsPagination()
 const loadingViewDocument = ref<Record<number, boolean>>({})
 const documentAbortControllers = ref<Record<number, AbortController>>({})
 const isAnyDocumentLoading = computed(() => Object.values(loadingViewDocument.value).some(loading => loading))
@@ -3335,6 +4108,15 @@ const graphicsFolderInput = ref<HTMLInputElement>()
 const selectedPhotos = ref<File[]>([])
 const photosInput = ref<HTMLInputElement>()
 
+// Video upload for projet entity
+const showProjetVideoModal = ref(false)
+const selectedProjetForVideo = ref<any>(null)
+const selectedProjetVideo = ref<File | null>(null)
+const isCompressingProjetVideo = ref(false)
+const projetVideoCompressionProgress = ref('')
+const isUploadingProjetVideo = ref(false)
+const projetVideoUploadProgress = ref('')
+
 // Toggle states for file lists
 const showPdfDetails = ref(false)
 const showPlanDetails = ref(false)
@@ -3359,20 +4141,23 @@ const isUploadingPlan = ref(false)
 // Initial fetch
 onMounted(async () => {
   await userStore.fetchUserProfile()
+  await fetchHierarchicalData()
   try {
-    const [typesRes, structuresRes, subDivsRes, subDivs3Res, subDivs4Res] = await Promise.all([
+    const [typesRes, structuresRes, subDivsRes, subDivs3Res, subDivs4Res, secteursRes] = await Promise.all([
       // axios.get(`${API_BASE}/types/`),
       axiosInstance.get(`types/`),
       axiosInstance.get(`structures/`),
       axiosInstance.get(`subdiv1et2/`),
       axiosInstance.get(`subdiv2et3/`),
-      axiosInstance.get(`subdiv3et4/`)
+      axiosInstance.get(`subdiv3et4/`),
+      axiosInstance.get(`secteurs/`)
     ])
     typeProduits.value = typesRes.data.sort((a: any, b: any) => (a.designation || '').toString().toLowerCase().localeCompare((b.designation || '').toString().toLowerCase()))
-    structures.value = structuresRes.data.sort((a: any, b: any) => (a.designation || '').toString().toLowerCase().localeCompare((b.designation || '').toString().toLowerCase()))
-    allSubDivs1Et2.value = subDivsRes.data.sort((a: any, b: any) => (a.idSubDivisionNv_2?.nom || '').toString().toLowerCase().localeCompare((b.idSubDivisionNv_2?.nom || '').toString().toLowerCase()))
-    allSubDivs2Et3.value = subDivs3Res.data.sort((a: any, b: any) => (a.idSubDivisionNv_3?.nom || '').toString().toLowerCase().localeCompare((b.idSubDivisionNv_3?.nom || '').toString().toLowerCase()))
-    allSubDivs3Et4.value = subDivs4Res.data.sort((a: any, b: any) => (a.idSubDivisionNv_4?.nom || '').toString().toLowerCase().localeCompare((b.idSubDivisionNv_4?.nom || '').toString().toLowerCase()))
+    structures.value = structuresRes.data.sort((a: any, b: any) => (a.ordre || 0) - (b.ordre || 0))
+    allSubDivs1Et2.value = subDivsRes.data.sort((a: any, b: any) => (a.idSubDivisionNv_2?.ordre || 0) - (b.idSubDivisionNv_2?.ordre || 0))
+    allSubDivs2Et3.value = subDivs3Res.data.sort((a: any, b: any) => (a.idSubDivisionNv_3?.ordre || 0) - (b.idSubDivisionNv_3?.ordre || 0))
+    allSubDivs3Et4.value = subDivs4Res.data.sort((a: any, b: any) => (a.idSubDivisionNv_4?.ordre || 0) - (b.idSubDivisionNv_4?.ordre || 0))
+    secteurs.value = secteursRes.data
   } catch (error) {
     console.error('Erreur lors du chargement initial', error)
   }
@@ -3394,7 +4179,7 @@ watch(selectedTypeId, async (newTypeId) => {
         axiosInstance.get(`sections/by-type/${newTypeId}/`)
       ])
       produits.value = produitsRes.data.sort((a: any, b: any) => (a.designation || '').toString().toLowerCase().localeCompare((b.designation || '').toString().toLowerCase()))
-      sections.value = sectionsRes.data.sort((a: any, b: any) => (a.designation || '').toString().toLowerCase().localeCompare((b.designation || '').toString().toLowerCase()))
+      sections.value = sectionsRes.data.sort((a: any, b: any) => (a.ordre || 0) - (b.ordre || 0))
     } catch (error) {
       console.error('Erreur produits/sections', error)
     }
@@ -3421,6 +4206,13 @@ function onStructureChange() {
     mode.value = 'structure'
   }
 }
+
+// Check if selected structure has docVer = 1
+const selectedStructureHasDocVer1 = computed(() => {
+  if (!selectedStructureId.value) return false
+  const structure = structures.value.find(s => s.idStructure === selectedStructureId.value)
+  return structure?.docVer === 1
+})
 
 // Function to go back to form selection
 function goBackToForm() {
@@ -3529,6 +4321,11 @@ const filteredFournisseurs = computed(() => {
   return fournisseursList.value.filter(item => item.date_suppression === null)
 })
 
+const filteredPartenaires = computed(() => {
+  return partenairesList.value.filter(item => item.date_suppression === null)
+})
+
+
 const filteredMaitresOuvrage = computed(() => {
   return maitresOuvrageList.value.filter(item => item.date_suppression === null)
 })
@@ -3596,9 +4393,44 @@ const isSubDivAllowed = computed(() => {
 })
 
 const isPiecesGraphiques = computed(() => {
-  if (!selectedDivisionId.value) return false
-  const division = divisionsNv1.value.find(d => d.idSubDivisionNv_1 === selectedDivisionId.value)
-  return division?.nom?.toUpperCase().includes('PIECES GRAPHIQUES') || division?.nom?.toUpperCase().includes('PIECE GRAPHIQUES') || false
+  // Check if division name contains "PIECES GRAPHIQUES"
+  if (selectedDivisionId.value) {
+    const division = divisionsNv1.value.find(d => d.idSubDivisionNv_1 === selectedDivisionId.value)
+    if (division?.nom?.toUpperCase().includes('PIECES GRAPHIQUES') || division?.nom?.toUpperCase().includes('PIECE GRAPHIQUES')) {
+      return true
+    }
+  }
+
+  // Check planVerif attribute in the subdivision hierarchy
+  // For Division Nv1 (when no further subdivisions)
+  if (selectedDivisionId.value && !requiresSubDiv2.value) {
+    const division = divisionsNv1.value.find(d => d.idSubDivisionNv_1 === selectedDivisionId.value)
+    if (division && !division.subDiv && division.planVerif === true) {
+      return true
+    }
+  }
+
+  // For SubDivision Nv2 (when no Nv3 required)
+  if (selectedSubDiv2Id.value && !requiresSubDiv3.value) {
+    const subDiv2Item = filteredSubDiv2List.value.find(
+      item => item.idSubDivisionNv_2.idSubDivisionNv_2 === selectedSubDiv2Id.value
+    )
+    if (subDiv2Item && !subDiv2Item.idSubDivisionNv_2.subDiv && subDiv2Item.idSubDivisionNv_2.planVerif === true) {
+      return true
+    }
+  }
+
+  // For SubDivision Nv3 (final level)
+  if (selectedSubDiv3Id.value) {
+    const subDiv3Item = filteredSubDiv3List.value.find(
+      item => item.idSubDivisionNv_3.idSubDivisionNv_3 === selectedSubDiv3Id.value
+    )
+    if (subDiv3Item && !subDiv3Item.idSubDivisionNv_3.subDiv && subDiv3Item.idSubDivisionNv_3.planVerif === true) {
+      return true
+    }
+  }
+
+  return false
 })
 
 function onFileChange(e: Event) {
@@ -3896,10 +4728,10 @@ function getProduitDesignation(id: number | null) {
   return produits.value.find(p => p.idProduit === id)?.designation || ''
 }
 function getStructureDesignation(id: number | null) {
-  return structures.value.find(s => s.idStructure === id)?.designation || ''
+  return structures.value.find(s => s.idStructure === id)?.nom || ''
 }
 function getSectionDesignation(id: number | null) {
-  return sections.value.find(s => s.idSectionProduit === id)?.designation || ''
+  return sections.value.find(s => s.idSectionProduit === id)?.nom || ''
 }
 function getDivisionDesignation(id: number | null) {
   return divisionsNv1.value.find(d => d.idSubDivisionNv_1 === id)?.nom || ''
@@ -3910,12 +4742,71 @@ function getDivisionDesignation(id: number | null) {
 // function getSubDiv2Designation(id: number | null) {
 //   return filteredSubDiv2List.value.find(i => i.idSubDivisionNv_2.idSubDivisionNv_2 === id)?.idSubDivisionNv_2.nom || ''
 // }
+function getSubDiv2Designation(id: number | null) {
+  return filteredSubDiv2List.value.find(i => i.idSubDivisionNv_2.idSubDivisionNv_2 === id)?.idSubDivisionNv_2.nom || ''
+}
 function getSubDiv3Designation(id: number | null) {
   return filteredSubDiv3List.value.find(i => i.idSubDivisionNv_3.idSubDivisionNv_3 === id)?.idSubDivisionNv_3.nom || ''
 }
 function getSubDiv4Designation(id: number | null) {
   return filteredSubDiv4List.value.find(i => i.id === id)?.idSubDivisionNv_4?.nom || ''
 }
+
+// Function to calculate colspan for "no data" row in context ajouter table
+function getContextAjouterColspan(): number {
+  let colspan = contextAjouter.value.columns.length + 1; // Base columns + Action column
+  
+  // Add Fichier Document column (for all entities except direction_projet and paq)
+  if (contextAjouter.value.entityKey !== 'direction_projet' && contextAjouter.value.entityKey !== 'paq') {
+    colspan += 1;
+  }
+  
+  // Add PAQ, EGG and Video columns for projet entity
+  if (contextAjouter.value.entityKey === 'projet') {
+    colspan += 3; // PAQ + EGG + Video columns
+  }
+  
+  // Add Directeurs column for specific entities
+  if (contextAjouter.value.entityKey === 'maitre_ouvrage' || 
+      contextAjouter.value.entityKey === 'maitre_oeuvre' || 
+      contextAjouter.value.entityKey === 'bet_soustraitants_etudes') {
+    colspan += 1;
+  }
+  
+  return colspan;
+}
+
+
+
+// Helper function to truncate file names to 90 characters
+// function truncateFileName(fileName: string, maxLength: number = 90): string {
+//   if (!fileName || fileName.length <= maxLength) {
+//     return fileName;
+//   }
+  
+//   // Find the last dot to preserve file extension
+//   const lastDotIndex = fileName.lastIndexOf('.');
+  
+//   if (lastDotIndex === -1) {
+//     // No extension, just truncate
+//     return fileName.substring(0, maxLength);
+//   }
+  
+//   const extension = fileName.substring(lastDotIndex);
+//   const nameWithoutExtension = fileName.substring(0, lastDotIndex);
+  
+//   // Calculate how much space we have for the name part
+//   const availableLength = maxLength - extension.length;
+  
+  
+//   if (availableLength <= 0) {
+//     // Extension is too long, just truncate the whole thing
+//     return fileName.substring(0, maxLength);
+//   }
+  
+//   // Truncate the name part and add the extension
+//   return nameWithoutExtension.substring(0, availableLength) + extension;
+// }
 
 async function submitForm() {
   if (isCreatingDocument.value) return; // Prevent multiple submissions
@@ -3975,13 +4866,18 @@ async function submitForm() {
     
     // Handle normal files - append as 'fichier'
     if (fileToUpload) {
-      console.log('Appending file to FormData:', fileToUpload.name, 'Type:', fileToUpload.type, 'Size:', fileToUpload.size)
+      // const truncatedFileName = truncateFileName(fileToUpload.name);
+      // console.log('Appending file to FormData:', truncatedFileName, 'Type:', fileToUpload.type, 'Size:', fileToUpload.size)
+      // formData.append('fichier', fileToUpload, truncatedFileName);
       formData.append('fichier', fileToUpload, fileToUpload.name);
     }
     
     // Handle video files - append as 'video'
     if (uploadedVideo.value) {
-      console.log('Appending video to FormData:', uploadedVideo.value.name, 'Type:', uploadedVideo.value.type, 'Size:', uploadedVideo.value.size)
+      // const truncatedVideoName = truncateFileName(uploadedVideo.value.name);
+      // console.log('Appending video to FormData:', truncatedVideoName, 'Type:', uploadedVideo.value.type, 'Size:', uploadedVideo.value.size)
+      // formData.append('video', uploadedVideo.value, truncatedVideoName);
+      // const truncatedVideoName = truncateFileName(uploadedVideo.value.name);
       formData.append('video', uploadedVideo.value, uploadedVideo.value.name);
     }
     
@@ -4007,7 +4903,11 @@ async function submitForm() {
         planFile = new File([zipBlob], 'plan_files.zip', { type: 'application/zip' });
       }
       
+      // const truncatedPlanName = truncateFileName(planFile.name);
+      // formData.append('plan', planFile, truncatedPlanName);
+      // const truncatedPlanName = truncateFileName(planFile.name);
       formData.append('plan', planFile, planFile.name);
+
     }
 
     
@@ -4015,6 +4915,10 @@ async function submitForm() {
     if (selectedPhotos.value.length > 0) {
       creationProgress.value = 'Conversion des photos en PDF...';
       const photosPdf = await convertPhotosToPdf();
+      // const truncatedPhotosName = truncateFileName(photosPdf.name);
+      // console.log('Appending photos to FormData:', truncatedPhotosName, 'Type:', photosPdf.type, 'Size:', photosPdf.size)
+      // formData.append('photos', photosPdf, truncatedPhotosName);
+      // const truncatedPhotosName = truncateFileName(photosPdf.name);
       console.log('Appending photos to FormData:', photosPdf.name, 'Type:', photosPdf.type, 'Size:', photosPdf.size)
       formData.append('photos', photosPdf, photosPdf.name);
     }
@@ -4078,9 +4982,9 @@ async function submitForm() {
 // DOC TABLE POPUP MODAL
 const showDocModal = ref(false);
 const docModalMode = ref<'create'|'consult'|'delete'|''>('');
-const loadingDocs = ref(false);
+const loadingDocs = computed(() => paginationLoading.value)
 const docList = ref<any[]>([]);
-const docModalError = ref('');
+const docModalError = computed(() => paginationError.value || '')
 
 // Structure mode sidebar content
 const showStructureDocContent = ref(false);
@@ -4095,11 +4999,16 @@ const showValidationMode = ref(false);
 const loadingConsulter = ref(false);
 const consulterAbortController = ref<AbortController | null>(null);
 
+
+
+
+
 // Validation modal states
 const showValidationConfirmModal = ref(false);
 const documentToValidate = ref<any>(null);
 const validatingDocument = ref(false);
 const validatingDocuments = ref<Record<number, boolean>>({});
+const validationStep = ref<'preview' | 'confirm'>('preview');
 
 // Document to update and move states
 const documentToUpdate = ref<any>(null);
@@ -4116,6 +5025,129 @@ const selectedUpdatePhotos = ref<File[]>([]);
 const planFilesInput = ref<HTMLInputElement>();
 const photosUpdateInput = ref<HTMLInputElement>();
 
+// Search functionality for dropdowns
+const searchTerms = ref({
+  type: '',
+  produit: '',
+  structure: '',
+  section: '',
+  division: '',
+  subDiv2: '',
+  subDiv3: ''
+})
+
+// Search active states
+const searchActive = ref({
+  type: false,
+  produit: false,
+  structure: false,
+  section: false,
+  division: false,
+  subDiv2: false,
+  subDiv3: false
+})
+
+// Dropdown open states
+const dropdownOpen = ref({
+  type: false,
+  produit: false,
+  structure: false,
+  section: false,
+  division: false,
+  subDiv2: false,
+  subDiv3: false
+})
+
+// Toggle search visibility
+function toggleSearch(field: keyof typeof searchActive.value) {
+  searchActive.value[field] = !searchActive.value[field]
+  if (searchActive.value[field]) {
+    // Focus the input after it becomes visible
+    nextTick(() => {
+      const inputElement = document.querySelector(`[ref="${field}Search"]`) as HTMLInputElement
+      if (inputElement) {
+        inputElement.focus()
+      }
+    })
+  }
+}
+
+// Open dropdown when typing
+function openDropdown(field: keyof typeof dropdownOpen.value) {
+  dropdownOpen.value[field] = true
+}
+
+// Computed properties for filtered options
+const filteredTypeProduits = computed(() => {
+  if (!searchTerms.value.type) return typeProduits.value
+  return typeProduits.value.filter(type => 
+    type.designation.toLowerCase().startsWith(searchTerms.value.type.toLowerCase())
+  )
+})
+
+const filteredProduitsSearch = computed(() => {
+  if (!searchTerms.value.produit) return filteredProduits.value
+  return filteredProduits.value.filter(prod => 
+    prod.designation.toLowerCase().startsWith(searchTerms.value.produit.toLowerCase())
+  )
+})
+
+const filteredStructuresSearch = computed(() => {
+  if (!searchTerms.value.structure) return structures.value
+  return structures.value.filter(structure => 
+    structure.nom.toLowerCase().startsWith(searchTerms.value.structure.toLowerCase())
+  )
+})
+
+const filteredSectionsSearch = computed(() => {
+  if (!searchTerms.value.section) return sections.value
+  return sections.value.filter(section => 
+    section.nom.toLowerCase().startsWith(searchTerms.value.section.toLowerCase())
+  )
+})
+
+const filteredDivisionsSearch = computed(() => {
+  if (!searchTerms.value.division) return divisionsNv1.value
+  return divisionsNv1.value.filter(division => 
+    division.nom.toLowerCase().startsWith(searchTerms.value.division.toLowerCase())
+  )
+})
+const filteredSubDiv2Search = computed(() => {
+  if (!searchTerms.value.subDiv2) return filteredSubDiv2List.value
+  return filteredSubDiv2List.value.filter(item => 
+    item.idSubDivisionNv_2.nom.toLowerCase().startsWith(searchTerms.value.subDiv2.toLowerCase())
+  )
+})
+const filteredSubDiv3Search = computed(() => {
+  if (!searchTerms.value.subDiv3) return filteredSubDiv3List.value
+  return filteredSubDiv3List.value.filter(item => 
+    item.idSubDivisionNv_3.nom.toLowerCase().startsWith(searchTerms.value.subDiv3.toLowerCase())
+  )
+})
+
+// Clear search terms when selections change
+watch(selectedTypeId, () => {
+  searchTerms.value.produit = ''
+  searchTerms.value.structure = ''
+  searchTerms.value.section = ''
+  searchTerms.value.division = ''
+})
+
+watch(selectedProduitId, () => {
+  searchTerms.value.structure = ''
+  searchTerms.value.section = ''
+  searchTerms.value.division = ''
+})
+
+watch(selectedStructureId, () => {
+  searchTerms.value.section = ''
+  searchTerms.value.division = ''
+})
+
+watch(selectedSectionId, () => {
+  searchTerms.value.division = ''
+})
+
 // Search functionality
 const searchQuery = ref('');
 
@@ -4123,9 +5155,11 @@ const searchQuery = ref('');
 const contextAjouterSearchQuery = ref('');
 const contextConsulterSearchQuery = ref('');
 
-// Pagination functionality
-const currentPage = ref(1);
-const itemsPerPage = ref(5);
+// Periods dropdown functionality
+const activePeriodsDropdown = ref<number | null>(null);
+const activePeriodsDropdownConsulter = ref<number | null>(null);
+
+// Remove legacy pagination - now using server-side pagination from composable
 
 // Expandable description functionality
 const expandedDescriptions = ref<Record<number, boolean>>({});
@@ -4165,113 +5199,347 @@ function needsTruncation(text: string): boolean {
   return text.length > 30;
 }
 
-// Pagination functions
-function goToPage(page: number) {
-  if (page >= 1 && page <= totalPages.value) {
-    currentPage.value = page;
+// Function to get grouped directors with their periods
+function getGroupedDirectors(directors: any[]): any[] {
+  const grouped = new Map();
+  
+  directors.forEach(director => {
+    const key = director.nomPrenomDirecteur || `${director.nom || ''} ${director.prenom || ''}`.trim();
+    
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        ...director,
+        periods: []
+      });
+    }
+    
+    // Add period if dates exist
+    if (director.date_deb || director.date_fin) {
+      grouped.get(key).periods.push({
+        date_deb: director.date_deb,
+        date_fin: director.date_fin
+      });
+    }
+  });
+  
+  return Array.from(grouped.values());
+}
+
+
+// Function to format date for display
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('fr-FR');
+}
+
+// Function to map sector IDs to sector names
+function mapSecteurIds(secteurIds: any): string {
+  console.log('mapSecteurIds called with:', secteurIds, 'type:', typeof secteurIds);
+  
+  if (!secteurIds) return '-';
+  
+  // Handle null, undefined, empty string
+  if (secteurIds === null || secteurIds === undefined || secteurIds === '') {
+    return '-';
+  }
+  
+  // If it's already a string
+  if (typeof secteurIds === 'string') {
+    // Handle empty string or whitespace
+    if (secteurIds.trim() === '') {
+      return '-';
+    }
+    
+    // Check if it's a comma-separated string of names
+    if (secteurIds.includes(',')) {
+      return secteurIds;
+    }
+    
+    // Check if it's a single sector name that exists in our secteurs list
+    const existingSecteur = secteurs.value.find(s => s.secteur === secteurIds.trim());
+    if (existingSecteur) {
+      return secteurIds.trim();
+    }
+    
+    // Try to parse as number if it's a string representation of an ID
+    const numericId = parseInt(secteurIds.trim());
+    if (!isNaN(numericId)) {
+      const secteur = secteurs.value.find(s => s.id === numericId);
+      return secteur ? secteur.secteur : secteurIds;
+    }
+    
+    // Return the string as-is if no mapping found
+    return secteurIds;
+  }
+  
+  // If it's an array of IDs, map them to sector names
+  if (Array.isArray(secteurIds)) {
+    const mappedSectors = secteurIds.map(id => {
+      if (!id) return null;
+      
+      // Handle both numeric and string IDs
+      const numericId = typeof id === 'string' ? parseInt(id.toString().trim()) : id;
+      if (isNaN(numericId)) {
+        // If it's not a number, check if it's already a sector name
+        const existingSecteur = secteurs.value.find(s => s.secteur === id.toString().trim());
+        return existingSecteur ? id.toString().trim() : id.toString();
+      }
+      
+      const secteur = secteurs.value.find(s => s.id === numericId);
+      return secteur ? secteur.secteur : id.toString();
+    }).filter(name => name && name !== '-' && name.toString().trim() !== '');
+    
+    return mappedSectors.length > 0 ? mappedSectors.join(', ') : '-';
+  }
+  
+  // If it's a single ID (number), find the corresponding sector name
+  if (typeof secteurIds === 'number') {
+    const secteur = secteurs.value.find(s => s.id === secteurIds);
+    return secteur ? secteur.secteur : secteurIds.toString();
+  }
+  
+  // Handle objects that might have sector information
+  if (typeof secteurIds === 'object' && secteurIds !== null) {
+    // Check if it's an object with sector properties
+    if (secteurIds.secteur) {
+      return secteurIds.secteur;
+    }
+    if (secteurIds.nom) {
+      return secteurIds.nom;
+    }
+    if (secteurIds.designation) {
+      return secteurIds.designation;
+    }
+    // Try to convert object to string and parse
+    const stringValue = secteurIds.toString();
+    if (stringValue !== '[object Object]') {
+      return mapSecteurIds(stringValue);
+    }
+  }
+  
+  // Fallback for any other type
+  const fallbackValue = secteurIds.toString();
+  return fallbackValue !== '[object Object]' ? fallbackValue : '-';
+}
+
+// Function to toggle periods dropdown
+function togglePeriodsDropdown(directorId: number) {
+  if (activePeriodsDropdown.value === directorId) {
+    activePeriodsDropdown.value = null;
+  } else {
+    activePeriodsDropdown.value = directorId;
   }
 }
 
-function nextPage() {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++;
+// Function to toggle periods dropdown in consulter modal
+function togglePeriodsDropdownConsulter(directorId: number) {
+  if (activePeriodsDropdownConsulter.value === directorId) {
+    activePeriodsDropdownConsulter.value = null;
+  } else {
+    activePeriodsDropdownConsulter.value = directorId;
   }
 }
 
-function previousPage() {
-  if (currentPage.value > 1) {
-    currentPage.value--;
+// Function to get periods for selected directors
+function getSelectedDirectorPeriods(director: any): any[] {
+  if (!isAlreadySelected('direction_projet', director)) {
+    return [];
   }
+  
+  // Priority 1: Get periods from contextConsulter (consultation API data)
+  if (contextConsulter.value.data && Array.isArray(contextConsulter.value.data)) {
+    const consulterDirector = contextConsulter.value.data.find((d: any) => 
+      d.idDirecteur === director.idDirecteur || 
+      d.id === director.idDirecteur ||
+      d.idDirecteur === director.id
+    );
+    
+    if (consulterDirector?.periodes && Array.isArray(consulterDirector.periodes)) {
+      return consulterDirector.periodes;
+    }
+  }
+  
+  // Priority 2: Get periods from selectedDirectionsProjets
+  const selectedDirector = selectedDirectionsProjets.value.find(selected => 
+    selected.idDirecteur === director.idDirecteur || 
+    selected.id === director.idDirecteur ||
+    selected.idDirecteur === director.id
+  );
+  
+  if (selectedDirector?.periods) {
+    return selectedDirector.periods;
+  }
+  
+  // Priority 3: Create period from date fields
+  if (selectedDirector && (selectedDirector.date_deb || selectedDirector.date_fin)) {
+    return [{
+      date_deb: selectedDirector.date_deb,
+      date_fin: selectedDirector.date_fin
+    }];
+  }
+  
+  return [];
 }
+
+// Function to get director date value for contextAjouter table (legacy support)
+function getDirectorDateValue(director: any, column: string): string {
+  // Only show dates if the director is actually selected (has Enlever button)
+  if (!isAlreadySelected('direction_projet', director)) {
+    return '-';
+  }
+  
+  // Find the matching selected director by ID or name
+  const selectedDirector = selectedDirectionsProjets.value.find(selected => {
+    // Try matching by various ID fields
+    if (director.idDirecteur && selected.idDirecteur && director.idDirecteur === selected.idDirecteur) {
+      return true;
+    }
+    if (director.id && selected.id && director.id === selected.id) {
+      return true;
+    }
+    // Try matching by name combination
+    const directorName = director.nomPrenomDirecteur || `${director.nom || ''} ${director.prenom || ''}`.trim();
+    const selectedName = selected.nomPrenomDirecteur || `${selected.nom || ''} ${selected.prenom || ''}`.trim();
+    return directorName === selectedName;
+  });
+  
+  if (selectedDirector && selectedDirector[column]) {
+    return new Date(selectedDirector[column]).toLocaleDateString('fr-FR');
+  }
+  
+  return '-';
+}
+
+
+// Pagination functions with server-side support
+function goToPageWithParams(page: number) {
+  const params = getCurrentDocumentParams();
+  goToPage(page, params);
+}
+
+function nextPageWithParams() {
+  const params = getCurrentDocumentParams();
+  nextPage(params);
+}
+
+function previousPageWithParams() {
+  const params = getCurrentDocumentParams();
+  previousPage(params);
+}
+
+function getCurrentDocumentParams() {
+  const params: any = {};
+  if (selectedTypeId.value) params.idTypeProduit = selectedTypeId.value;
+  if (selectedProduitId.value) params.idProduit = selectedProduitId.value;
+  if (selectedStructureId.value) params.idStructure = selectedStructureId.value;
+  if (selectedSectionId.value) params.idSection = selectedSectionId.value;
+  if (selectedDivisionId.value) params.idSubDivisionNv_1 = selectedDivisionId.value;
+  if (selectedSubDiv2Id.value) params.idSubDivisionNv_2 = selectedSubDiv2Id.value;
+  if (selectedSubDiv3Id.value) params.idSubDivisionNv_3 = selectedSubDiv3Id.value;
+  if (selectedSubDiv4Id.value) params.idSubDivisionNv_4 = selectedSubDiv4Id.value;
+  return params;
+}
+
+function changePageSizeWithParams(newSize: string) {
+  const params = getCurrentDocumentParams();
+  changePageSize(parseInt(newSize), params);
+}
+
+
 
 // Reset pagination when search changes
 watch(searchQuery, () => {
-  currentPage.value = 1;
+  const params = getCurrentDocumentParams();
+  fetchDocuments(params, 1);
 });
 
-// Reset pagination when documents change
-watch(docList, () => {
-  currentPage.value = 1;
-});
+// Function to fetch documents for current selection
+async function fetchDocListForCurrentSelection() {
+  if (!selectedTypeId.value || !selectedProduitId.value || !selectedStructureId.value) {
+    return;
+  }
 
-// Computed property to filter documents based on search query and user permissions
+  const params: any = {
+    idTypeProduit: selectedTypeId.value,
+    idProduit: selectedProduitId.value,
+    idStructure: selectedStructureId.value
+  };
+
+  // For docVer !== 1, include section and division
+  if (!selectedStructureHasDocVer1.value) {
+    if (!selectedSectionId.value || !selectedDivisionId.value) {
+      return;
+    }
+    params.idSection = selectedSectionId.value;
+    params.idSubDivisionNv_1 = selectedDivisionId.value;
+  }
+
+  if (selectedSubDiv2Id.value) {
+    params.idSubDivisionNv_2 = selectedSubDiv2Id.value;
+  }
+  if (selectedSubDiv3Id.value) {
+    params.idSubDivisionNv_3 = selectedSubDiv3Id.value;
+  }
+  if (selectedSubDiv4Id.value) {
+    params.idSubDivisionNv_4 = selectedSubDiv4Id.value;
+  }
+
+  await fetchDocuments(params);
+}
+
+
+
+// Documents are now paginated from server, apply user permissions
 const filteredDocList = computed(() => {
-  let filteredDocs = docList.value;
+  let filteredDocs = paginatedDocuments.value;
+  
+  // Apply search filter
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    filteredDocs = filteredDocs.filter((doc: any) => {
+      const designation = doc.designation || doc.nomFichier || '';
+      return designation.toLowerCase().includes(query);
+    });
+  }
   
   // Filter out documents with valide null or false for users with profile ID 3 (CONSULTATION) who don't have validation permission
   if (userStore.userRole.value === userStore.ROLES.CONSULTATION && !userStore.user.value?.valide) {
-    filteredDocs = filteredDocs.filter(doc => doc.valide === true);
-  }
-  
-  // Apply search filter if search query exists
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim();
-    filteredDocs = filteredDocs.filter(doc => 
-      (doc.designation || '').toLowerCase().includes(query) ||
-      (doc.nomFichier || '').toLowerCase().includes(query) ||
-      getDocumentType(doc).toLowerCase().includes(query) ||
-      (doc.idDocument?.toString() || '').includes(query)
-    );
+    filteredDocs = filteredDocs.filter((doc: any) => doc.valide === true);
   }
   
   return filteredDocs;
 });
 
-// Computed property for paginated documents
-const paginatedDocList = computed(() => {
-  const startIndex = (currentPage.value - 1) * itemsPerPage.value;
-  const endIndex = startIndex + itemsPerPage.value;
-  return filteredDocList.value.slice(startIndex, endIndex);
-});
-
-// Computed property for total pages
-const totalPages = computed(() => {
-  return Math.ceil(filteredDocList.value.length / itemsPerPage.value);
-});
+// Server-side pagination - documents are already paginated
+const paginatedDocList = computed(() => filteredDocList.value);
 
 // Computed property for pagination info
-const paginationInfo = computed(() => {
-  const total = filteredDocList.value.length;
-  const start = total === 0 ? 0 : (currentPage.value - 1) * itemsPerPage.value + 1;
-  const end = Math.min(currentPage.value * itemsPerPage.value, total);
-  return { start, end, total };
-});
+// const paginationInfo = computed(() => {
+//   const total = totalDocuments.value;
+//   const start = total === 0 ? 0 : (currentPage.value - 1) * pageSize.value + 1;
+//   const end = Math.min(currentPage.value * pageSize.value, total);
+//   return { start, end, total };
+// });
+
+// Alias for compatibility
+const paginatedDocuments = computed(() => documents.value);
 
 // Computed property to filter documents for validation (only documents with valide: false)
 const filteredValidationDocList = computed(() => {
-  let filteredDocs = docList.value.filter(doc => doc.valide === false);
-  
-  // Apply search filter if search query exists
-  if (!searchQuery.value.trim()) {
-    return filteredDocs;
-  }
-  
-  const query = searchQuery.value.toLowerCase().trim();
-  return filteredDocs.filter(doc => 
-    (doc.designation || '').toLowerCase().includes(query) ||
-    (doc.nomFichier || '').toLowerCase().includes(query) ||
-    getDocumentType(doc).toLowerCase().includes(query) ||
-    (doc.idDocument?.toString() || '').includes(query)
-  );
+  return paginatedDocuments.value.filter((doc: any) => doc.valide === false);
 });
 
-// Computed property for paginated validation documents
-const paginatedValidationDocList = computed(() => {
-  const startIndex = (currentPage.value - 1) * itemsPerPage.value;
-  const endIndex = startIndex + itemsPerPage.value;
-  return filteredValidationDocList.value.slice(startIndex, endIndex);
-});
+// Documents are already paginated from API
+const paginatedValidationDocList = computed(() => filteredValidationDocList.value);
 
-// Computed property for validation total pages
-const validationTotalPages = computed(() => {
-  return Math.ceil(filteredValidationDocList.value.length / itemsPerPage.value);
-});
+// Use server pagination for validation
+const validationTotalPages = computed(() => totalPages.value);
 
 // Computed property for validation pagination info
 const validationPaginationInfo = computed(() => {
-  const total = filteredValidationDocList.value.length;
-  const start = total === 0 ? 0 : (currentPage.value - 1) * itemsPerPage.value + 1;
-  const end = Math.min(currentPage.value * itemsPerPage.value, total);
+  const total = totalDocuments.value;
+  const start = total === 0 ? 0 : (currentPage.value - 1) * pageSize.value + 1;
+  const end = Math.min(currentPage.value * pageSize.value, total);
   return { start, end, total };
 });
 
@@ -4283,6 +5551,8 @@ const filteredContextAjouterItems = computed(() => {
   // Apply date_suppression filter based on entity type
   if (contextAjouter.value.entityKey === 'fournisseur') {
     baseList = baseList.filter(item => item.date_suppression === null);
+  } else if (contextAjouter.value.entityKey === 'partenaire') {
+    baseList = baseList.filter(item => item.date_suppression === null);
   } else if (contextAjouter.value.entityKey === 'maitre_ouvrage') {
     baseList = baseList.filter(item => item.date_suppression === null);
   } else if (contextAjouter.value.entityKey === 'maitre_oeuvre') {
@@ -4291,6 +5561,11 @@ const filteredContextAjouterItems = computed(() => {
     baseList = baseList.filter(item => item.date_suppression === null);
   } else if (contextAjouter.value.entityKey === 'bet_soustraitants_etudes') {
     baseList = baseList.filter(item => item.date_suppression === null);
+  }
+  
+  // Group directors by name for direction_projet
+  if (contextAjouter.value.entityKey === 'direction_projet') {
+    baseList = getGroupedDirectors(baseList);
   }
   
   // Apply search filter if search query exists
@@ -4444,45 +5719,57 @@ const contextConsulterEntityConfig: Record<string, EntityConfig> = {
   projet: {
     label: "Projet",
     endpoint: ((produitId: number) => `projets/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["Code", "Description"],
-    columnKeys: ["code", "description"]
+    columns: ["Code", "Description", "Wilaya", "Commune"],
+    columnKeys: ["code", "description", "wilaya", "commune"]
   },
   fournisseur: {
     label: "Fournisseur",
     endpoint: ((produitId: number) => `fournisseur/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Désignation", "Description", "Téléphone", "Email"],
-    columnKeys: ["idFournisseur", "designationFournisseur", "description", "telephone", "email"]
+    columns: ["Désignation", "Description", "Adresse", "Secteur Activité"],
+    columnKeys: ["designation", "description", "adresse", "secteurs_activite"]
   },
   maitre_oeuvre: {
-    label: "Maîtres d'Œuvre",
+    label: "Maîtres d'Œuvre(BCS)",
     endpoint: ((produitId: number) => `/moe/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Désignation", "Description", "Email"],
-    columnKeys: ["idMaitreOeuvre", "designationMO", "description", "email"]
+    columns: ["Désignation", "Description", "Adresse"],
+    columnKeys: ["designation", "description", "adresse"]
   },
   maitre_ouvrage: {
     label: "Maîtres d'Ouvrage",
     endpoint: ((produitId: number) => `moa/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Désignation", "Description", "Email"],
-    columnKeys: ["idMaitreOuvrage", "designationMOg", "description", "email"]
+    columns: ["Désignation", "Description", "Adresse", "Email"],
+    columnKeys: ["designation", "description", "adresse", "email"]
   },
   soustraitants_tvx: {
     label: "Sous-traitants Travaux",
     endpoint: ((produitId: number) => `soustraitants/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Désignation", "Description", "Téléphone", "Email"],
-    columnKeys: ["idSoustraitants", "designationStt", "description", "telephone", "email"]
+    columns: ["Désignation", "Description", "Adresse", "Téléphone", "Email", "Secteur Activité"],
+    columnKeys: ["designationStt", "description", "adresse", "telephone", "email", "secteurs_activite"]
   },
   bet_soustraitants_etudes: {
     label: "BET Sous-traitants",
     endpoint: ((produitId: number) => `bet/by-produit/${produitId}`) as ProduitEndpoint,
-    columns: ["ID", "Nom", "Description", "Téléphone", "Email"],
-    columnKeys: ["idBET", "nom", "description", "telephone", "email"]
+    columns: ["Nom", "Description", "Secteur Activité"],
+    columnKeys: ["nom", "description", "secteurs_activite"]
+  },
+   partenaire: {
+    label: "Partenaire",
+    endpoint: ((produitId: number) => `partenaire/by-produit/${produitId}`) as ProduitEndpoint,
+    columns: ["Désignation", "Description", "Adresse", "Secteur Activité"],
+    columnKeys: ["designation", "description", "adresse", "secteurs_activite"]
   },
   direction_projet: {
     label: "Direction du Projet",
     endpoint: ((projetCode: string) => `directeurs-by-projet/${projetCode}`) as ProjetEndpoint,
-    columns: ["ID", "Nom", "Fonction", "Téléphone", "Date debut", "Date fin"],
-    columnKeys: ["idDirecteur", "nomPrenomDirecteur", "fonction", "telephone", "date_deb", "date_fin"]
-  }
+    columns: ["Nom", "Fonction", "Téléphone", "Périodes"],
+    columnKeys: ["nomPrenomDirecteur", "fonction", "telephone", "periods"]
+  },
+  // paq: {
+  //   label: "PAQ",
+  //   endpoint: (() => `paqs/`) as ProduitEndpoint,
+  //   columns: ["Désignation", "Description"],
+  //   columnKeys: ["designationPAQ", "description"]
+  // }
 };
 
 // Define interfaces for API endpoints
@@ -4518,6 +5805,9 @@ const directeursListConsulter = ref<Directeur[]>([]);
 const loadingDirecteursConsulter = ref<boolean>(false);
 const activeDropdownConsulter = ref<string | null>(null);
 
+// PAQ file viewing
+// const loadingDocumentId = ref<number | null>(null);
+
 
 
 // --- Function to open the consulter popup and fetch data ---
@@ -4532,13 +5822,12 @@ async function onConsulterFunction(entityKey: string) {
   }
 
   // Check if the entity is 'direction_projet' and if a project is selected
-// Check if the entity is 'direction_projet' and if a project is selected
 if (entityKey === 'direction_projet') {
   if (!selectedProjets.value.length) {
     showToast("Veuillez d'abord sélectionner un projet.", 'error');
     return;
   }
-  contextConsulter.value.visible = true; // Add this line to make the modal visible
+  contextConsulter.value.visible = true;
   contextConsulter.value.loading = true;
   contextConsulter.value.error = '';
   contextConsulter.value.entityKey = entityKey;
@@ -4550,6 +5839,27 @@ if (entityKey === 'direction_projet') {
   try {
     const code = selectedProjets.value[0].code;
     const { data } = await axiosInstance.get((config.endpoint as ProjetEndpoint)(encodeURIComponent(code)));
+    let rows = Array.isArray(data) ? data : [data];
+    contextConsulter.value.data = rows;
+  } catch (e) {
+    contextConsulter.value.error = "Erreur lors du chargement des données.";
+    contextConsulter.value.data = [];
+  } finally {
+    contextConsulter.value.loading = false;
+  }
+} else if (entityKey === 'paq') {
+  // PAQ doesn't require product selection - it shows all PAQs from bibliotheque
+  contextConsulter.value.visible = true;
+  contextConsulter.value.loading = true;
+  contextConsulter.value.error = '';
+  contextConsulter.value.entityKey = entityKey;
+  contextConsulter.value.entityLabel = config.label;
+  contextConsulter.value.columns = config.columns;
+  contextConsulter.value.columnKeys = config.columnKeys;
+  contextConsulter.value.data = [];
+
+  try {
+    const { data } = await axiosInstance.get((config.endpoint as any)());
     let rows = Array.isArray(data) ? data : [data];
     contextConsulter.value.data = rows;
   } catch (e) {
@@ -4594,6 +5904,277 @@ function closeContextConsulterModal() {
   contextConsulterSearchQuery.value = '';
 }
 
+// PAQ file viewing function
+// async function viewPAQFile(paqId: number) {
+//   const documentId = `paq_${paqId}`;
+//   const loadingViewDocument = ref<{ [key: string]: boolean }>({});
+//   loadingViewDocument.value[documentId] = true;
+//   showToast('Veuillez patienter, le document PAQ se charge...', 'success');
+  
+//   // Create abort controller for this document
+//   const abortController = new AbortController();
+//   const documentAbortControllers = ref<{ [key: string]: AbortController }>({});
+//   documentAbortControllers.value[documentId] = abortController;
+  
+//   try {
+//     const response = await axiosInstance.get(`paqs/${paqId}/view-file/`, {
+//       signal: abortController.signal,
+//       responseType: 'blob'
+//     });
+    
+//     const blob = new Blob([response.data], { type: 'application/pdf' });
+//     const url = URL.createObjectURL(blob);
+    
+//     selectedDocument.value = {
+//       idDocument: paqId,
+//       fichier: url,
+//       detectedType: 'pdf'
+//     };
+//   } catch (error: any) {
+//     if (error.name === 'AbortError') {
+//       console.log('PAQ document loading cancelled');
+//     } else {
+//       console.error('Erreur lors du chargement du fichier PAQ:', error);
+//       showToast('Erreur lors du chargement du fichier PAQ', 'error');
+//     }
+//   } finally {
+//     delete loadingViewDocument.value[documentId];
+//     delete documentAbortControllers.value[documentId];
+//   }
+// }
+
+// Helper function to get unique document ID for entity
+function getEntityDocumentId(entityKey: string, item: any): string {
+  switch (entityKey) {
+    case 'fournisseur':
+      return `${entityKey}_${item.idFournisseur}`;
+    case 'partenaire':
+      return `${entityKey}_${item.idPartenaire }`;
+    case 'maitre_oeuvre':
+      return `${entityKey}_${item.idMaitreOeuvre}`;
+    case 'maitre_ouvrage':
+      return `${entityKey}_${item.idMaitreOuvrage}`;
+    case 'soustraitants_tvx':
+      return `${entityKey}_${item.idSoustraitants}`;
+    case 'bet_soustraitants_etudes':
+      return `${entityKey}_${item.idBET}`;
+    case 'projet':
+      return `${entityKey}_${item.code}`;
+    default:
+      return `${entityKey}_${item.id || 'unknown'}`;
+  }
+}
+
+// Function to cancel entity document view
+function cancelEntityDocumentView(entityKey: string, item: any) {
+  const documentId = getEntityDocumentId(entityKey, item);
+  const documentAbortControllers = ref<{ [key: string]: AbortController }>({});
+  const loadingViewDocument = ref<{ [key: string]: boolean }>({});
+  const controller = documentAbortControllers.value[documentId];
+  if (controller) {
+    controller.abort();
+    delete documentAbortControllers.value[documentId];
+    
+    delete loadingViewDocument.value[documentId];
+  }
+}
+
+// Function to cancel PAQ document view
+// function cancelPAQDocumentView(paqId: number) {
+//   const documentId = `paq_${paqId}`;
+// const controller = (documentAbortControllers.value as any)[documentId];
+//   if (controller) {
+//     controller.abort();
+//     delete (documentAbortControllers.value as any)[documentId];
+//     delete (loadingViewDocument.value as any)[documentId];
+//   }
+// }
+  
+
+// Entity document viewing function
+async function viewEntityDocument(entityKey: string, item: any) {
+  if (!item.nomfichier && !item.nomFichier) {
+    showToast('Aucun fichier disponible', 'error');
+    return;
+  }
+  
+  const documentId = getEntityDocumentId(entityKey, item);
+  (loadingViewDocument.value as any)[documentId] = true;
+  showToast('Veuillez patienter, le document se charge...', 'success');
+  
+  // Create abort controller for this document
+  const abortController = new AbortController();
+  (documentAbortControllers.value as any)[documentId] = abortController;
+  
+  try {
+    let endpoint = '';
+    
+    // Map entity keys to their API endpoints using the new URL patterns
+    switch (entityKey) {
+      case 'fournisseur':
+        endpoint = `fournisseurs/${item.idFournisseur}/view-file/`;
+        break;
+      case 'partenaire':
+        endpoint = `partenaires/${item.idPartenaire }/view-file/`;
+        break;
+      case 'maitre_oeuvre':
+        endpoint = `maitres-oeuvre/${item.idMaitreOeuvre}/view-file/`;
+        break;
+      case 'maitre_ouvrage':
+        endpoint = `maitres-ouvrage/${item.idMaitreOuvrage}/view-file/`;
+        break;
+      case 'soustraitants_tvx':
+        endpoint = `soustraitants/${item.idSoustraitants}/view-file/`;
+        break;
+      case 'bet_soustraitants_etudes':
+        endpoint = `bureaux-etudes/${item.idBET}/view-file/`;
+        break;
+      case 'projet':
+        endpoint = `projets/${item.code}/view-file/`;
+        break;
+      case 'direction_projet':
+        endpoint = `directions-projets/${item.idDirecteur}/view-file/`;
+        break;
+      default:
+        showToast('Type d\'entité non supporté', 'error');
+        return;
+    }
+
+    const response = await axiosInstance.get(endpoint, {
+      signal: abortController.signal,
+      responseType: 'blob'
+    });
+    
+    // Get the actual content type from response headers
+    const contentType = response.headers['content-type'] || 'application/octet-stream';
+    const blob = new Blob([response.data], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    
+    // Detect file type based on content type
+    let detectedType = 'pdf'; // default
+    if (contentType.includes('image/')) {
+      detectedType = 'image';
+    } else if (contentType.includes('text/')) {
+      detectedType = 'text';
+    } else if (contentType.includes('application/pdf')) {
+      detectedType = 'pdf';
+    }
+    
+    selectedDocument.value = {
+      idDocument: parseInt(documentId.split('_')[1]),
+      fichier: url,
+      detectedType: detectedType
+    };
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.log('Entity document loading cancelled');
+    } else {
+      console.error('Erreur lors du chargement du fichier:', error);
+      showToast('Erreur lors du chargement du fichier', 'error');
+    }
+  } finally {
+    delete (loadingViewDocument.value as any)[documentId];
+    delete (documentAbortControllers.value as any)[documentId];
+  }
+}
+
+// Function to view PAQ file for projet entity
+async function viewProjetPAQFile(projetCode: string) {
+  const documentId = `paq_${projetCode}`;
+  (loadingViewDocument.value as any)[documentId] = true;
+  showToast('Veuillez patienter, le fichier PAQ se charge...', 'success');
+  
+  // Create abort controller for this document
+  const abortController = new AbortController();
+  (documentAbortControllers.value as any)[documentId] = abortController;
+  
+  try {
+    const endpoint = `projets/${projetCode}/view-file-PAQ/`;
+    const response = await axiosInstance.get(endpoint, {
+      signal: abortController.signal,
+      responseType: 'blob'
+    });
+    
+    // Get the actual content type from response headers
+    const contentType = response.headers['content-type'] || 'application/pdf';
+    const blob = new Blob([response.data], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    
+    selectedDocument.value = {
+      idDocument: parseInt(projetCode),
+      fichier: url,
+      detectedType: 'pdf'
+    };
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.log('PAQ document loading cancelled');
+    } else {
+      console.error('Erreur lors du chargement du fichier PAQ:', error);
+      showToast('Erreur lors du chargement du fichier PAQ', 'error');
+    }
+  } finally {
+    delete (loadingViewDocument.value as any)[documentId];
+    delete (documentAbortControllers.value as any)[documentId];
+  }
+}
+
+// Function to view EGG file for projet entity
+async function viewProjetEGGFile(projetCode: string) {
+  const documentId = `egg_${projetCode}`;
+  (loadingViewDocument.value as any)[documentId] = true;
+  showToast('Veuillez patienter, le fichier EGG se charge...', 'success');
+  
+  // Create abort controller for this document
+  const abortController = new AbortController();
+  (documentAbortControllers.value as any)[documentId] = abortController;
+  
+  try {
+    const endpoint = `projets/${projetCode}/view-file-EGG/`;
+    const response = await axiosInstance.get(endpoint, {
+      signal: abortController.signal,
+      responseType: 'blob'
+    });
+    
+    // Get the actual content type from response headers
+    const contentType = response.headers['content-type'] || 'application/pdf';
+    const blob = new Blob([response.data], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    
+    selectedDocument.value = {
+      idDocument: parseInt(projetCode),
+      fichier: url,
+      detectedType: 'pdf'
+    };
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.log('EGG document loading cancelled');
+    } else {
+      console.error('Erreur lors du chargement du fichier EGG:', error);
+      showToast('Erreur lors du chargement du fichier EGG', 'error');
+    }
+  } finally {
+    delete (loadingViewDocument.value as any)[documentId];
+    delete (documentAbortControllers.value as any)[documentId];
+  }
+}
+
+// Function to cancel PAQ document view
+function cancelProjetPAQView(projetCode: string) {
+  const documentId = `paq_${projetCode}`;
+  const abortController = (documentAbortControllers.value as any)[documentId];
+  if (abortController) {
+    abortController.abort();
+  }
+}
+
+// Function to cancel EGG document view
+function cancelProjetEGGView(projetCode: string) {
+  const documentId = `egg_${projetCode}`;
+  const abortController = (documentAbortControllers.value as any)[documentId];
+  if (abortController) {
+    abortController.abort();
+  }
+}
 
 const contextDelete = ref({
   visible: false,
@@ -4607,6 +6188,110 @@ const contextDelete = ref({
   data: [] as any[],
   confirmItem: null as null | any,
 });
+
+
+  // Function to view video for projet entity
+function viewProjetVideo(projetCode: string, videoUrl?: string) {
+  const documentId = `video_${projetCode}`;
+  (loadingViewDocument.value as any)[documentId] = true;
+  showToast('Chargement de la vidéo...', 'success');
+  
+  try {
+    if (videoUrl) {
+      selectedDocument.value = {
+        idDocument: parseInt(projetCode),
+        fichier: videoUrl,
+        detectedType: 'video'
+      };
+    } else {
+      showToast('Aucune vidéo disponible pour ce projet', 'error');
+    }
+  } catch (error) {
+    console.error('Error loading video:', error);
+    showToast('Erreur lors du chargement de la vidéo', 'error');
+  } finally {
+    (loadingViewDocument.value as any)[documentId] = false;
+  }
+}
+
+  // Function to cancel video view
+  function cancelProjetVideoView(projetCode: string) {
+    const documentId = `video_${projetCode}`;
+    (loadingViewDocument.value as any)[documentId] = false;
+  }
+  
+  // Function to open video upload modal
+  function openProjetVideoUploadModal(projet: any) {
+    selectedProjetForVideo.value = projet;
+    showProjetVideoModal.value = true;
+  }
+  
+  // Function to close video upload modal
+  function closeProjetVideoModal() {
+    showProjetVideoModal.value = false;
+    selectedProjetForVideo.value = null;
+    selectedProjetVideo.value = null;
+    isCompressingProjetVideo.value = false;
+    isUploadingProjetVideo.value = false;
+    projetVideoCompressionProgress.value = '';
+    projetVideoUploadProgress.value = '';
+  }
+  
+  // Function to handle video file selection
+  async function onProjetVideoChange(e: Event) {
+    const files = (e.target as HTMLInputElement).files;
+    if (files && files.length > 0) {
+      const originalVideo = files[0];
+      selectedProjetVideo.value = originalVideo;
+    }
+  }
+  
+  // Function to upload video to projet
+// Function to upload video to projet
+async function uploadProjetVideo() {
+  if (!selectedProjetVideo.value || !selectedProjetForVideo.value) return;
+  
+  isUploadingProjetVideo.value = true;
+  projetVideoUploadProgress.value = 'Upload en cours...';
+  
+  try {
+    const formData = new FormData();
+    formData.append('video', selectedProjetVideo.value);
+    formData.append('idProduit', selectedProduitId.value?.toString() || '');
+    formData.append('code', selectedProjetForVideo.value.code);
+    
+    const response = await axiosInstance.put(`contexte-projet/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    // Update the projet object in the contextAjouter data
+    const projetIndex = contextAjouter.value.all.findIndex(p => p.code === selectedProjetForVideo.value.code);
+    if (projetIndex !== -1) {
+      contextAjouter.value.all[projetIndex].video = response.data.video || URL.createObjectURL(selectedProjetVideo.value);
+    }
+    
+    // Also update in selected items if it exists
+    const selectedIndex = contextAjouter.value.selected.findIndex(p => p.code === selectedProjetForVideo.value.code);
+    if (selectedIndex !== -1) {
+      contextAjouter.value.selected[selectedIndex].video = response.data.video || URL.createObjectURL(selectedProjetVideo.value);
+    }
+    
+    showToast('Vidéo ajoutée avec succès!', 'success');
+    closeProjetVideoModal();
+    
+  } catch (error) {
+    console.error('Error uploading video:', error);
+    showToast('Erreur lors de l\'upload de la vidéo', 'error');
+  } finally {
+    isUploadingProjetVideo.value = false;
+    projetVideoUploadProgress.value = '';
+  }
+}
+
+
+
 
 // Map endpoints & request payload for DELETE per entity
 // Map endpoints & request payload for DELETE per entity
@@ -4631,15 +6316,32 @@ const contextEntityDeleteConfig = {
     endpoint: '/contexte-fournisseur/',
     getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idFournisseur: item.idFournisseur }),
   },
+  partenaire: {
+    endpoint: '/contexte-partenaire/',
+    getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idPartenaire: item.idPartenaire }),
+  },
   bet_soustraitants_etudes: {
     endpoint: '/contexte-bureau-etude/',
     getPayload: (item: any) => ({ idProduit: selectedProduitId.value, idBET: item.idBET }),
-  },
-  direction_projet: {
-    endpoint: '/projets-directeurs/',
-    getPayload: (item: any) => ({ code: String(selectedProjets.value[0]?.code), idDirecteur: item.idDirecteur }),
   }
-};
+}; 
+// const endpoints = {
+//   bureau_etude: {
+//     endpoint: '/projets-bet/',
+//     getPayload: (item: any) => ({
+//       selectedProduitId: selectedProduitId.value,
+//       idBET: item.idBET
+//     }),
+//   },
+//   direction_projet: {
+//     endpoint: '/projets-directeurs/',
+//     getPayload: (item: any) => ({
+//       code: String(selectedProjets.value[0]?.code),
+//       idDirecteur: item.idDirecteur
+//     }),
+//   }
+// };
+
 
 // Helper: check column key by 'columns' header for confirm table
 // Helper: check column key by 'columns' header for confirm table
@@ -4653,11 +6355,13 @@ function getColKeyByHeader(header: string) {
 const contextEntities = [
   { key: "projet", label: "Projet" },
   { key: "maitre_ouvrage", label: "Maîtres d'Ouvrage" },
-  { key: "maitre_oeuvre", label: "Maîtres d'Œuvre" },
+  { key: "maitre_oeuvre", label: "Maîtres d'Œuvre(BCS)" },
   { key: "soustraitants_tvx", label: "Sous-traitants de Travaux" },
   { key: "fournisseur", label: "Fournisseur" },
+  // { key: "partenaire", label: "Partenaire" },
   { key: "bet_soustraitants_etudes", label: "BET Sous-traitants" },
-  { key: "direction_projet", label: "Direction du Projet" }
+  { key: "direction_projet", label: "Direction du Projet" },
+  // { key: "paq", label: "PAQ" }
 ];
 // MODAL STATE FOR CONTEXTE "AJOUTER"
 const contextAjouter = ref({
@@ -4707,7 +6411,8 @@ async function addDirectionProjet() {
       date_fin: dateModal.value.date_fin
     };
 
-    await axiosInstance.post('/projets-directeurs/', payload);
+    await axiosInstance.post(`directeurs-by-projet/${encodeURIComponent(String(selectedProjets.value[0].code))}`, payload);
+
     
     // Add to selected list
     const directeur = dateModal.value.directeur;
@@ -4731,6 +6436,7 @@ const contextSelectedEntitiesApi: Record<string, ProduitEndpoint | ProjetEndpoin
   maitre_ouvrage: ((produitId: number) => `moa/by-produit/${produitId}`) as ProduitEndpoint,
   maitre_oeuvre: ((produitId: number) => `moe/by-produit/${produitId}`) as ProduitEndpoint,
   fournisseur: ((produitId: number) => `fournisseur/by-produit/${produitId}`) as ProduitEndpoint,
+  partenaire: ((produitId: number) => `partenaire/by-produit/${produitId}`) as ProduitEndpoint,
   soustraitants_tvx: ((produitId: number) => `soustraitants/by-produit/${produitId}`) as ProduitEndpoint,
   bet_soustraitants_etudes: ((produitId: number) => `bet/by-produit/${produitId}`) as ProduitEndpoint,
   direction_projet: ((projetCode: string) => `directeurs-by-projet/${encodeURIComponent(projetCode)}`) as ProjetEndpoint,
@@ -4744,6 +6450,9 @@ function getSelectedApiParam(entityKey: string): { produit?: number; projet?: st
   }
   return { produit: typeof selectedProduitId.value === 'number' ? selectedProduitId.value : undefined };
 }
+
+
+
 
 // Modify the onAjouter function
 async function onAjouter(entityKey: string) {
@@ -4764,8 +6473,28 @@ async function onAjouter(entityKey: string) {
   contextAjouter.value.columns = config.columns;
   contextAjouter.value.columnKeys = config.columnKeys;
 
+  // Load consultation data for direction_projet to ensure periods are available
+  if (entityKey === 'direction_projet') {
+    const consulterConfig = contextConsulterEntityConfig[entityKey as keyof typeof contextConsulterEntityConfig];
+    if (consulterConfig && selectedProjets.value.length) {
+      try {
+        const code = selectedProjets.value[0].code;
+        const { data } = await axiosInstance.get((consulterConfig.endpoint as ProjetEndpoint)(encodeURIComponent(code)));
+        let rows = Array.isArray(data) ? data : [data];
+        contextConsulter.value.data = rows;
+        contextConsulter.value.entityKey = entityKey;
+        contextConsulter.value.entityLabel = consulterConfig.label;
+        contextConsulter.value.columns = consulterConfig.columns;
+        contextConsulter.value.columnKeys = consulterConfig.columnKeys;
+      } catch (e) {
+        console.error('Error loading consultation data for direction_projet:', e);
+      }
+    }
+  }
+
   // Fetch all possible items for right-table
   const originalListRef = entityKey === 'fournisseur' ? fournisseursList :
+                         entityKey === 'partenaire' ? partenairesList :
                          entityKey === 'maitre_ouvrage' ? maitresOuvrageList :
                          entityKey === 'maitre_oeuvre' ? maitresOeuvreList :
                          entityKey === 'soustraitants_tvx' ? soustraitantsList :
@@ -4781,6 +6510,8 @@ async function onAjouter(entityKey: string) {
         sortedData = data.sort((a: any, b: any) => (a.code || '').toString().toLowerCase().localeCompare((b.code || '').toString().toLowerCase()));
       } else if (entityKey === 'fournisseur') {
         sortedData = data.sort((a: any, b: any) => (a.designationFournisseur || '').toString().toLowerCase().localeCompare((b.designationFournisseur || '').toString().toLowerCase()));
+      } else if (entityKey === 'partenaire') {
+        sortedData = data.sort((a: any, b: any) => (a.designationPartenaire || '').toString().toLowerCase().localeCompare((b.designationPartenaire || '').toString().toLowerCase()));
       } else if (entityKey === 'maitre_ouvrage') {
         sortedData = data.sort((a: any, b: any) => (a.designationMOg || '').toString().toLowerCase().localeCompare((b.designationMOg || '').toString().toLowerCase()));
       } else if (entityKey === 'maitre_oeuvre') {
@@ -4801,13 +6532,18 @@ async function onAjouter(entityKey: string) {
   }
   // Use filtered list (excludes deleted items) for display
   const filteredListRef = entityKey === 'fournisseur' ? filteredFournisseurs :
+                         entityKey === 'partenaire' ? filteredPartenaires :
                          entityKey === 'maitre_ouvrage' ? filteredMaitresOuvrage :
                          entityKey === 'maitre_oeuvre' ? filteredMaitresOeuvre :
                          entityKey === 'soustraitants_tvx' ? filteredSoustraitants :
                          entityKey === 'bet_soustraitants_etudes' ? filteredBureauxEtudes :
                          config.listRef;
   contextAjouter.value.all = filteredListRef.value;
-
+  // Special case: enrich projets with video info
+  // Add video information for projet entity
+  if (entityKey === 'projet') {
+    contextAjouter.value.all = await enrichProjetsWithVideoInfo(contextAjouter.value.all);
+  }
   // Fetch already selected items from backend for left-table
   let selectedList: any[] = [];
   try {
@@ -4857,7 +6593,27 @@ async function onAjouter(entityKey: string) {
   
   contextAjouter.value.visible = true;
 }
-
+// Function to enrich projets with video information
+async function enrichProjetsWithVideoInfo(projets: any[]) {
+  if (!selectedProduitId.value) return projets;
+  
+  try {
+    const response = await axiosInstance.get(`projets/by-produit/${selectedProduitId.value}/`);
+    const projetsWithVideo = response.data;
+    
+    // Merge video info into existing projets
+    return projets.map(projet => {
+      const projetWithVideo = projetsWithVideo.find((p: any) => p.code === projet.code);
+      return {
+        ...projet,
+        video: projetWithVideo?.video || null
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching video info:', error);
+    return projets;
+  }
+}
 
 // Add: In addToSelected(), block adding if !allowMultiple && already has 1
 // Modify the addToSelected function
@@ -4893,6 +6649,10 @@ async function addToSelected(entityKey: string, item: any) {
         case 'fournisseur':
           endpoint = 'contexte-fournisseur';
           payload = { idProduit: selectedProduitId.value, idFournisseur: item.idFournisseur };
+          break;
+        case 'partenaire':
+          endpoint = 'contexte-partenaire';
+          payload = { idProduit: selectedProduitId.value, idPartenaire: item.idPartenaire };
           break;
         case 'bet_soustraitants_etudes':
           endpoint = 'contexte-bureau-etude';
@@ -4956,6 +6716,10 @@ async function removeFromSelected(entityKey: string, item: any) {
         endpoint = 'contexte-fournisseur';
         payload = { idProduit: selectedProduitId.value, idFournisseur: item.idFournisseur };
         break;
+      case 'partenaire':
+        endpoint = 'contexte-partenaire';
+        payload = { idProduit: selectedProduitId.value, idPartenaire: item.idPartenaire };
+        break;
       case 'bet_soustraitants_etudes':
         endpoint = 'contexte-bureau-etude';
         payload = { idProduit: selectedProduitId.value, idBET: item.idBET };
@@ -4977,6 +6741,15 @@ async function removeFromSelected(entityKey: string, item: any) {
       (i: any) => i[config.idCol] !== item[config.idCol]
     );
     contextAjouter.value.selected = [...config.selectedRef.value];
+    // Clear video info for projet entity when removed
+    if (entityKey === 'projet') {
+      contextAjouter.value.all = contextAjouter.value.all.map(allItem => {
+        if (allItem[config.idCol] === item[config.idCol]) {
+          return { ...allItem, video: null };
+        }
+        return allItem;
+      });
+    }
   } catch (e) {
     showToast("Erreur lors de la suppression de l'entité.", 'error');
   }
@@ -5227,60 +7000,10 @@ async function performEntityDelete(item:any) {
 
 
 
-let fetchInProgress = false;
 
-async function fetchDocListForCurrentSelection() {
-  if (fetchInProgress) return;
-  
-  console.log('User valide permission:', userStore.user.value?.valide);
-  console.log('User role:', userStore.userRole.value);
-  
-  // Only fetch if essential IDs are selected
-  if (!selectedTypeId.value || !selectedProduitId.value || !selectedStructureId.value || !selectedSectionId.value || !selectedDivisionId.value) {
-    docList.value = [];
-    return;
-  }
-  
-  fetchInProgress = true;
-  loadingDocs.value = true;
-  docModalError.value = '';
-  try {
-    // Compose filter query params
-    const params: Record<string, string | number> = {};
-    if (selectedTypeId.value) params.idTypeProduit = selectedTypeId.value;
-    if (selectedProduitId.value) params.idProduit = selectedProduitId.value;
-    if (selectedStructureId.value) params.idStructure = selectedStructureId.value;
-    if (selectedSectionId.value) params.idSection = selectedSectionId.value;
-    if (selectedDivisionId.value) params.idSubDivisionNv_1 = selectedDivisionId.value;
-    if (requiresSubDiv2.value && selectedSubDiv2Id.value) {
-      params.idSubDivisionNv_2 = selectedSubDiv2Id.value;
-    }
-    if (requiresSubDiv2.value && selectedSubDiv3Id.value) {
-      params.idSubDivisionNv_3 = selectedSubDiv3Id.value;
-    }
-    if (requiresSubDiv2.value && selectedSubDiv4Id.value) {
-      params.idSubDivisionNv_4 = selectedSubDiv4Id.value;
-    }
-    
-    // Add abort signal if available
-    const requestConfig: any = { params };
-    if (consulterAbortController.value) {
-      requestConfig.signal = consulterAbortController.value.signal;
-    }
-    
-    const { data } = await axiosInstance.get('documentsFilter/', requestConfig);
-    docList.value = Array.isArray(data) ? data : [];
-  } catch(e: any) {
-    if (e.name === 'AbortError') {
-      throw e; // Re-throw abort errors to be handled by caller
-    }
-    docModalError.value = "Erreur lors du chargement des documents.";
-    docList.value = [];
-  } finally {
-    loadingDocs.value = false;
-    fetchInProgress = false;
-  }
-}
+
+
+
 
 // function openDocModal(mode: 'create'|'consult'|'delete') {
 //   docModalMode.value = mode;
@@ -5290,7 +7013,6 @@ async function fetchDocListForCurrentSelection() {
 
 function closeDocModal() {
   showDocModal.value = false;
-  docModalError.value = '';
 }
 
 // Structure mode sidebar functions
@@ -5309,12 +7031,10 @@ function openStructureDocContent() {
 
 function closeStructureDocContent() {
   showStructureDocContent.value = false;
-  docModalError.value = '';
 }
 
 function closeStructureConsulterContent() {
   showStructureConsulterContent.value = false;
-  docModalError.value = '';
 }
 
 // SUCCESS MESSAGE FUNCTION
@@ -5468,16 +7188,52 @@ async function showValidationMessage() {
 }
 
 // Function to open validation confirmation modal
-function openValidationModal(document: any) {
+async function openValidationModal(document: any) {
   documentToValidate.value = document;
+  validationStep.value = 'preview';
+  
+  // Load the document file if it has a PDF
+  if (document.nomFichier) {
+    try {
+      const response = await axiosInstance.get(`documents/view-file/${document.idDocument}/`, {
+        responseType: 'blob'
+      });
+      
+      const blob = response.data;
+      const fileUrl = URL.createObjectURL(blob);
+      
+      console.log('Validation modal - Document loaded:', {
+        documentId: document.idDocument,
+        blobSize: blob.size,
+        blobType: blob.type,
+        fileUrl: fileUrl
+      });
+      
+      documentToValidate.value = {
+        ...document,
+        fichier: fileUrl,
+        detectedType: 'pdf'
+      };
+    } catch (error) {
+      console.error('Error loading document for validation:', error);
+      showToast('Erreur lors du chargement du document', 'error');
+    }
+  }
+  
   showValidationConfirmModal.value = true;
 }
 
 // Function to close validation modal
 function closeValidationModal() {
+  // Clean up the loaded file URL if it exists
+  if (documentToValidate.value?.fichier) {
+    URL.revokeObjectURL(documentToValidate.value.fichier);
+  }
+  
   showValidationConfirmModal.value = false;
   documentToValidate.value = null;
   validatingDocument.value = false;
+  validationStep.value = 'preview';
 }
 
 // Function to confirm validation
@@ -5606,264 +7362,25 @@ const hasSelectedFiles = computed(() => {
 // Computed properties for delete modal
 
 
-// Fiche Technique modal state
-const ficheTechniqueModal = ref({
-  visible: false,
-  entityKey: '',
-  entityId: null as number | null,
-  selectedFile: null as File | null,
-  uploading: false
-});
 
 
 
-// Function to open fiche technique modal
-function openFicheTechniqueModal(entityKey: string, item: any) {
-  ficheTechniqueModal.value.visible = true;
-  ficheTechniqueModal.value.entityKey = entityKey;
-  
-  // Get the correct ID based on entity type
-  switch (entityKey) {
-    case 'projet':
-      ficheTechniqueModal.value.entityId = item.code;
-      break;
-    case 'maitre_ouvrage':
-      ficheTechniqueModal.value.entityId = item.idMaitreOuvrage;
-      break;
-    case 'maitre_oeuvre':
-      ficheTechniqueModal.value.entityId = item.idMaitreOeuvre;
-      break;
-    case 'soustraitants_tvx':
-      ficheTechniqueModal.value.entityId = item.idSoustraitants;
-      break;
-    case 'fournisseur':
-      ficheTechniqueModal.value.entityId = item.idFournisseur;
-      break;
-    case 'bet_soustraitants_etudes':
-      ficheTechniqueModal.value.entityId = item.idBET;
-      break;
-    default:
-      ficheTechniqueModal.value.entityId = null;
-  }
-}
 
-// Function to get the ID property name for an entity
-function getFicheTechniqueIdProperty(entityKey: string): string {
-  switch (entityKey) {
-    case 'projet':
-      return 'code';
-    case 'maitre_ouvrage':
-      return 'idMaitreOuvrage';
-    case 'maitre_oeuvre':
-      return 'idMaitreOeuvre';
-    case 'soustraitants_tvx':
-      return 'idSoustraitants';
-    case 'fournisseur':
-      return 'idFournisseur';
-    case 'bet_soustraitants_etudes':
-      return 'idBET';
-    default:
-      return 'id';
-  }
-}
 
-// Function to close fiche technique modal
-function closeFicheTechniqueModal() {
-  ficheTechniqueModal.value.visible = false;
-  ficheTechniqueModal.value.entityKey = '';
-  ficheTechniqueModal.value.entityId = null;
-  ficheTechniqueModal.value.selectedFile = null;
-  ficheTechniqueModal.value.uploading = false;
-}
 
-// Function to handle file selection for fiche technique
-function onFicheTechniqueFileChange(e: Event) {
-  const files = (e.target as HTMLInputElement).files;
-  if (files && files.length > 0) {
-    const file = files[0];
-    if (file.type === 'application/pdf') {
-      ficheTechniqueModal.value.selectedFile = file;
-    } else {
-      showToast('Veuillez sélectionner un fichier PDF', 'error');
-    }
-  }
-}
 
-// Function to get fiche technique upload status
-function getFicheTechniqueStatus(_entityKey: string, item: any): boolean {
-  console.log('Item data:', item, 'hasFichier:', item.hasFichier);
-  return item.hasFichier || false;
-}
 
-// Helper function to get entity ID for fiche technique
-function getFicheTechniqueEntityId(entityKey: string, item: any): string | number {
-  switch (entityKey) {
-    case 'projet':
-      return item.code;
-    case 'maitre_ouvrage':
-      return item.idMaitreOuvrage;
-    case 'maitre_oeuvre':
-      return item.idMaitreOeuvre;
-    case 'soustraitants_tvx':
-      return item.idSoustraitants;
-    case 'fournisseur':
-      return item.idFournisseur;
-    case 'bet_soustraitants_etudes':
-      return item.idBET;
-    default:
-      return '';
-  }
-}
 
-// Function to upload fiche technique
-async function uploadFicheTechnique() {
-  if (!ficheTechniqueModal.value.selectedFile || !ficheTechniqueModal.value.entityId) {
-    showToast('Veuillez sélectionner un fichier PDF', 'error');
-    return;
-  }
 
-  ficheTechniqueModal.value.uploading = true;
-  
-  try {
-    const formData = new FormData();
-    formData.append('idProduit', String(selectedProduitId.value));
-    formData.append('fichier', ficheTechniqueModal.value.selectedFile);
-    
-    // Add entity-specific ID
-    switch (ficheTechniqueModal.value.entityKey) {
-      case 'projet':
-        formData.append('code', String(ficheTechniqueModal.value.entityId));
-        break;
-      case 'maitre_ouvrage':
-        formData.append('idMaitreOuvrage', String(ficheTechniqueModal.value.entityId));
-        break;
-      case 'maitre_oeuvre':
-        formData.append('idMaitreOeuvre', String(ficheTechniqueModal.value.entityId));
-        break;
-      case 'soustraitants_tvx':
-        formData.append('idSoustraitant', String(ficheTechniqueModal.value.entityId));
-        break;
-      case 'fournisseur':
-        formData.append('idFournisseur', String(ficheTechniqueModal.value.entityId));
-        break;
-      case 'bet_soustraitants_etudes':
-        formData.append('idBET', String(ficheTechniqueModal.value.entityId));
-        break;
-    }
 
-    // Determine the correct API endpoint
-    let endpoint = '';
-    switch (ficheTechniqueModal.value.entityKey) {
-      case 'projet':
-        endpoint = 'AddFilePRJ/';
-        break;
-      case 'maitre_ouvrage':
-        endpoint = 'AddFileMOA/';
-        break;
-      case 'maitre_oeuvre':
-        endpoint = 'AddFileMOE/';
-        break;
-      case 'soustraitants_tvx':
-        endpoint = 'AddFileSOUT/';
-        break;
-      case 'fournisseur':
-        endpoint = 'AddFileFOUR/';
-        break;
-      case 'bet_soustraitants_etudes':
-        endpoint = 'AddFileBET/';
-        break;
-      default:
-        throw new Error('Type d\'entité non supporté');
-    }
 
-    await axiosInstance.post(endpoint, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
 
-    showToast('Fiche technique ajoutée avec succès!', 'success');
-    closeFicheTechniqueModal();
-    
-    // Refresh the context data to get updated hasFichier status
-    if (contextAjouter.value.visible) {
-      await onAjouter(contextAjouter.value.entityKey);
-    }
-  } catch (error: any) {
-    console.error('Erreur lors de l\'ajout de la fiche technique:', error);
-    showToast('Erreur lors de l\'ajout de la fiche technique', 'error');
-  } finally {
-    ficheTechniqueModal.value.uploading = false;
-  }
-}
 
-// Function to view fiche technique
-async function viewFicheTechnique(entityKey: string, item: any) {
-  try {
-    showToast('Chargement de la fiche technique...', 'success');
-    
-    // Get entity ID
-    const entityId = getFicheTechniqueEntityId(entityKey, item);
-    
-    // Determine the correct View API endpoint
-    let endpoint = '';
-    let params = new URLSearchParams();
-    params.append('idProduit', String(selectedProduitId.value));
-    
-    switch (entityKey) {
-      case 'projet':
-        endpoint = 'ViewFilePRJ/';
-        params.append('code', String(entityId));
-        break;
-      case 'maitre_ouvrage':
-        endpoint = 'ViewFileMOA/';
-        params.append('idMaitreOuvrage', String(entityId));
-        break;
-      case 'maitre_oeuvre':
-        endpoint = 'ViewFileMOE/';
-        params.append('idMaitreOeuvre', String(entityId));
-        break;
-      case 'soustraitants_tvx':
-        endpoint = 'ViewFileSOUT/';
-        params.append('idSoustraitant', String(entityId));
-        break;
-      case 'fournisseur':
-        endpoint = 'ViewFileFOUR/';
-        params.append('idFournisseur', String(entityId));
-        break;
-      case 'bet_soustraitants_etudes':
-        endpoint = 'ViewFileBET/';
-        params.append('idBET', String(entityId));
-        break;
-      default:
-        throw new Error('Type d\'entité non supporté');
-    }
-    
-    // Fetch the PDF file
-    const response = await fetch(`http://10.10.150.75:8000/api/${endpoint}?${params.toString()}`);
-    if (!response.ok) {
-      throw new Error('Fiche technique non trouvée');
-    }
-    
-    const blob = await response.blob();
-    const fileUrl = URL.createObjectURL(blob);
-    
-    // Display in the existing document viewer
-    selectedDocument.value = {
-      idDocument: 0, // Dummy ID for fiche technique
-      fichier: fileUrl,
-      detectedType: 'pdf'
-    };
-    
-  } catch (error: any) {
-    console.error('Erreur lors du chargement de la fiche technique:', error);
-    if (error.message === 'Fiche technique non trouvée') {
-      showToast('Aucune fiche technique trouvée pour cette entité', 'error');
-    } else {
-      showToast('Erreur lors du chargement de la fiche technique', 'error');
-    }
-  }
-}
+
+
+
+
+
 
 // Open delete modal function
 function openDeleteModal(document: any) {
@@ -6101,12 +7618,14 @@ const mode = ref<'structure' | 'contexte' | ''>('')
 const loadingContexteLists = ref(false)
 const bureauxEtudesList = ref<any[]>([])
 const fournisseursList = ref<any[]>([])
+const partenairesList = ref<any[]>([])
 const maitresOeuvreList = ref<any[]>([])
 const maitresOuvrageList = ref<any[]>([])
 const soustraitantsList = ref<any[]>([])
 const projetsList = ref<any[]>([])
 const directionsProjetsList = ref<any[]>([])
 const selectedBureauxEtudes = ref<any[]>([])
+const selectedPartenaire = ref<any[]>([])
 const selectedFournisseurs = ref<any[]>([])
 const selectedMaitresOeuvre = ref<any[]>([])
 const selectedMaitresOuvrage = ref<any[]>([])
@@ -6173,6 +7692,9 @@ const selectedBureauEtudeNoms = computed(() =>
 const selectedFournisseurNoms = computed(() =>
   selectedFournisseurs.value.map(f => f.designationFournisseur)
 )
+const selectedPartenaireNoms = computed(() =>
+  selectedPartenaire.value.map(f => f.designationPartenaire)
+)
 const selectedMaitreOeuvreNoms = computed(() =>
   selectedMaitresOeuvre.value.map(m => m.designationMO)
 )
@@ -6190,6 +7712,7 @@ const selectedProjetNoms = computed(() =>
 const hasMoreProjets = ref(false)
 const hasMoreBET = ref(false)
 const hasMoreFournisseurs = ref(false)
+const hasMorePartenaires = ref(false)
 const hasMoreMOE = ref(false)
 const hasMoreMOA = ref(false)
 const hasMoreSoustraitants = ref(false)
@@ -6202,6 +7725,7 @@ const showArborescenceDetails = ref(false)
 const hasOtherDetails = computed(() => {
   return selectedBureauxEtudes.value.length > 0 ||
          selectedFournisseurs.value.length > 0 ||
+         selectedPartenaire.value.length > 0 ||
          selectedMaitresOeuvre.value.length > 0 ||
          selectedMaitresOuvrage.value.length > 0 ||
          selectedSoustraitants.value.length > 0 ||
@@ -6223,6 +7747,7 @@ watch(mode, async (val) => {
       const [
         betRes,
         fourRes,
+        parRes,
         moeurRes,
         mouvRes,
         sttRes,
@@ -6231,6 +7756,7 @@ watch(mode, async (val) => {
       ] = await Promise.all([
         axiosInstance.get(`bureaux-etudes/`),
         axiosInstance.get(`fournisseurs/`),
+        axiosInstance.get(`partenaires/`),
         axiosInstance.get(`maitres-oeuvre/`),
         axiosInstance.get(`maitres-ouvrage/`),
         axiosInstance.get(`soustraitants/`),
@@ -6239,6 +7765,7 @@ watch(mode, async (val) => {
       ]);
       bureauxEtudesList.value = betRes.data;
       fournisseursList.value = fourRes.data;
+      partenairesList.value = parRes.data;
       maitresOeuvreList.value = moeurRes.data;
       maitresOuvrageList.value = mouvRes.data;
       soustraitantsList.value = sttRes.data;
@@ -6329,7 +7856,8 @@ async function loadExistingContextData() {
       loadExistingEntity('maitre_ouvrage', 'moa/by-produit/', selectedMaitresOuvrage),
       loadExistingEntity('maitre_oeuvre', 'moe/by-produit/', selectedMaitresOeuvre),
       loadExistingEntity('soustraitants_tvx', 'soustraitants/by-produit/', selectedSoustraitants),
-      loadExistingEntity('bet_soustraitants_etudes', 'bet/by-produit/', selectedBureauxEtudes)
+      loadExistingEntity('bet_soustraitants_etudes', 'bet/by-produit/', selectedBureauxEtudes),
+      loadExistingEntity('partenaire', 'partenaire/by-produit/', selectedPartenaire)
     ];
     
     await Promise.all(contextPromises);
@@ -6359,6 +7887,9 @@ async function loadExistingEntity(entityKey: string, endpoint: string, targetRef
         break;
       case 'fournisseur':
         hasMoreFournisseurs.value = validItems.length > 3;
+        break;
+      case 'partenaire':
+        hasMorePartenaires.value = validItems.length > 3;
         break;
       case 'maitre_oeuvre':
         hasMoreMOE.value = validItems.length > 3;
@@ -6411,8 +7942,8 @@ const contextEntitiesConfig = {
     label: 'Fournisseur',
     api: '/fournisseurs/',
     idCol: 'idFournisseur',
-    columns: ['ID', 'Désignation', 'Description', 'Téléphone', 'Email'],
-    columnKeys: ['idFournisseur', 'designationFournisseur', 'description', 'telephone', 'email'],
+    columns: ['ID', 'Désignation', 'Description', 'Téléphone', 'Email', 'Secteur Activité'],
+    columnKeys: ['idFournisseur', 'designationFournisseur', 'description', 'telephone', 'email', 'secteurs_activite'],
     listRef: fournisseursList,
     selectedRef: selectedFournisseurs,
     allowMultiple: true,
@@ -6441,8 +7972,8 @@ const contextEntitiesConfig = {
     label: "Soustraitants de Travaux",
     api: '/soustraitants/',
     idCol: 'idSoustraitants',
-    columns: ['ID', 'Désignation', 'Description', 'Téléphone', 'Email'],
-    columnKeys: ['idSoustraitants', 'designationStt', 'description', 'telephone', 'email'],
+    columns: ['ID', 'Désignation', 'Description', 'Téléphone', 'Email', 'Secteur Activité'],
+    columnKeys: ['idSoustraitants', 'designationStt', 'description', 'telephone', 'email', 'secteurs_activite'],
     listRef: soustraitantsList,
     selectedRef: selectedSoustraitants,
     allowMultiple: true,
@@ -6451,18 +7982,28 @@ const contextEntitiesConfig = {
     label: "BET Soustraitants Études",
     api: '/bureaux-etudes/',
     idCol: 'idBET',
-    columns: ['ID', 'Nom', 'Description', 'Téléphone', 'Email'],
-    columnKeys: ['idBetSoustraitant', 'nom', 'description', 'telephone', 'email'],
+    columns: ['Nom', 'Description', 'Secteur Activité'],
+    columnKeys: ['nom', 'description', 'secteurs_activite'],
     listRef: bureauxEtudesList,
     selectedRef: selectedBureauxEtudes,
+    allowMultiple: true,
+  },
+   partenaire: {
+    label: 'Partenaire',
+    api: '/partenaires/',
+    idCol: 'idPartenaire',
+    columns: ['ID', 'Désignation', 'Description', 'Téléphone', 'Email', 'Secteur Activité'],
+    columnKeys: ['idPartenaire', 'designationPartenaire', 'description', 'telephone', 'email', 'secteurs_activite'],
+    listRef: partenairesList,
+    selectedRef: selectedPartenaire,
     allowMultiple: true,
   },
   direction_projet: {
     label: "Direction du Projet",
     api: '/directions-projets/',
     idCol: 'idDirecteur',
-    columns: ['ID', 'Nom', 'Fonction', 'Téléphone', 'Date debut', 'Date fin'],
-    columnKeys: ['idDirecteur', 'nomPrenomDirecteur', 'fonction', 'telephone', 'date_deb', 'date_fin'],
+    columns: ['ID', 'Nom', 'Fonction', 'Téléphone', 'Périodes'],
+    columnKeys: ['idDirecteur', 'nomPrenomDirecteur', 'fonction', 'telephone', 'periods'],
     listRef: directionsProjetsList,
     selectedRef: selectedDirectionsProjets,
     allowMultiple: true,
@@ -6589,17 +8130,17 @@ function getFileType(document: any): string {
   return 'pdf'
 }
 
-function getDocumentType(document: any): string {
-  if (!document.nomFichier) return 'Document'
+// function getDocumentType(document: any): string {
+//   if (!document.nomFichier) return 'Document'
   
-  const fileName = document.nomFichier.toLowerCase()
-  if (fileName.endsWith('.pdf')) return 'PDF'
-  if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.gif')) return 'Image'
-  if (fileName.endsWith('.mp4') || fileName.endsWith('.mov') || fileName.endsWith('.avi')) return 'Vidéo'
-  if (fileName.endsWith('.txt')) return 'Texte'
-  if (fileName.endsWith('.zip')) return 'Archive'
-  return 'Document'
-}
+//   const fileName = document.nomFichier.toLowerCase()
+//   if (fileName.endsWith('.pdf')) return 'PDF'
+//   if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.gif')) return 'Image'
+//   if (fileName.endsWith('.mp4') || fileName.endsWith('.mov') || fileName.endsWith('.avi')) return 'Vidéo'
+//   if (fileName.endsWith('.txt')) return 'Texte'
+//   if (fileName.endsWith('.zip')) return 'Archive'
+//   return 'Document'
+// }
 
 
 
@@ -6669,11 +8210,11 @@ function clearAllSidebarContent() {
   
   // Clear document lists
   docList.value = []
-  docModalError.value = ''
   
   // Clear context selections
   selectedBureauxEtudes.value = []
   selectedFournisseurs.value = []
+  selectedPartenaire.value = []
   selectedMaitresOeuvre.value = []
   selectedMaitresOuvrage.value = []
   selectedSoustraitants.value = []
@@ -6765,6 +8306,9 @@ async function submitPlanImport() {
         planFile = new File([zipBlob], `plan-${documentToImportPlan.value.idDocument}.zip`, { type: 'application/zip' });
       }
       
+      // const truncatedPlanName = truncateFileName(planFile.name);
+      // formData.append('plan', planFile, truncatedPlanName);
+      // const truncatedPlanName = truncateFileName(planFile.name);
       formData.append('plan', planFile, planFile.name);
     }
     
@@ -7257,7 +8801,7 @@ async function submitImportForm() {
 }
 
 .table-container {
-  max-height: 500px;
+  /*max-height: 500px;*/
   overflow-y: auto;
   border: 1px solid #232f4b;
   border-radius: 6px;
@@ -7351,91 +8895,9 @@ async function submitImportForm() {
   transform: translateY(-1px);
 }
 
-.fiche-technique-btn {
-  background: #FF9800;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.5em 1em;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-right: 0.5em;
-}
 
-.fiche-technique-btn:hover {
-  background: #F57C00;
-  transform: translateY(-1px);
-}
 
-.fiche-technique-btn:disabled {
-  background: #888;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
 
-.fiche-technique-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-}
-
-.fiche-technique-uploaded {
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-}
-
-.uploaded-indicator {
-  background: #4CAF50;
-  color: white;
-  padding: 0.3em 0.8em;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.3em;
-}
-
-.fiche-technique-btn-modify {
-  background: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  padding: 0;
-}
-
-.fiche-technique-btn-modify:hover {
-  background: #1976d2;
-  transform: scale(1.1);
-}
-
-.view-fiche-btn {
-  background: #9C27B0;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.5em 1em;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.view-fiche-btn:hover {
-  background: #7B1FA2;
-  transform: translateY(-1px);
-}
 
 .validate-btn {
   background: linear-gradient(90deg, #2196F3 0%, #43E97B 100%);
@@ -9698,6 +11160,32 @@ ul {
   align-items: center;
   justify-content: center;
 }
+.edit-video-btn {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+  margin-left: 4px;
+}
+
+.edit-video-btn:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4);
+}
+
+.edit-video-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 
 .toast-close:hover {
   background: rgba(255, 255, 255, 0.2);
@@ -9731,3 +11219,105 @@ ul {
 }
 
 </style>
+  
+  // Function to view video for projet entity
+  async function viewProjetVideo(projetCode: string) {
+    const documentId = `video_${projetCode}`;
+    (loadingViewDocument.value as any)[documentId] = true;
+    showToast('Chargement de la vidéo...', 'success');
+    
+    try {
+      const response = await axiosInstance.get(`projets/by-code/${projetCode}/`);
+      const projet = response.data;
+      
+      if (projet.video) {
+        selectedDocument.value = {
+          idDocument: parseInt(projetCode),
+          fichier: projet.video,
+          detectedType: 'video'
+        };
+      } else {
+        showToast('Aucune vidéo disponible pour ce projet', 'error');
+      }
+    } catch (error) {
+      console.error('Error loading video:', error);
+      showToast('Erreur lors du chargement de la vidéo', 'error');
+    } finally {
+      (loadingViewDocument.value as any)[documentId] = false;
+    }
+  }
+  
+  // Function to cancel video view
+  function cancelProjetVideoView(projetCode: string) {
+    const documentId = `video_${projetCode}`;
+    (loadingViewDocument.value as any)[documentId] = false;
+  }
+  
+  // Function to open video upload modal
+  function openProjetVideoUploadModal(projet: any) {
+    selectedProjetForVideo.value = projet;
+    showProjetVideoModal.value = true;
+  }
+  
+  // Function to close video upload modal
+  function closeProjetVideoModal() {
+    showProjetVideoModal.value = false;
+    selectedProjetForVideo.value = null;
+    selectedProjetVideo.value = null;
+    isCompressingProjetVideo.value = false;
+    isUploadingProjetVideo.value = false;
+    projetVideoCompressionProgress.value = '';
+    projetVideoUploadProgress.value = '';
+  }
+  
+  // Function to handle video file selection
+  async function onProjetVideoChange(e: Event) {
+    const files = (e.target as HTMLInputElement).files;
+    if (files && files.length > 0) {
+      const originalVideo = files[0];
+      selectedProjetVideo.value = originalVideo;
+    }
+  }
+  
+  // Function to upload video to projet
+  async function uploadProjetVideo() {
+    if (!selectedProjetVideo.value || !selectedProjetForVideo.value) return;
+    
+    isUploadingProjetVideo.value = true;
+    projetVideoUploadProgress.value = 'Upload en cours...';
+    
+    try {
+      const formData = new FormData();
+      formData.append('video', selectedProjetVideo.value);
+      
+      await axiosInstance.put(`contexte-projet/`, formData, {
+        params: {
+          code: selectedProjetForVideo.value.code
+        },
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Update the projet object with video info
+      selectedProjetForVideo.value.video = URL.createObjectURL(selectedProjetVideo.value);
+      
+      showToast('Vidéo ajoutée avec succès!', 'success');
+      closeProjetVideoModal();
+      
+      // Refresh the context data if needed
+      if (contextAjouter.value.visible && contextAjouter.value.entityKey === 'projet') {
+        await onAjouter('projet');
+      }
+      if (contextConsulter.value.visible && contextConsulter.value.entityKey === 'projet') {
+        await onConsulterFunction('projet');
+      }
+      
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      showToast('Erreur lors de l\'upload de la vidéo', 'error');
+    } finally {
+      isUploadingProjetVideo.value = false;
+      projetVideoUploadProgress.value = '';
+    }
+  }

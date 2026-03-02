@@ -32,16 +32,27 @@
               Désignation
               <span v-if="sortColumn === 'designation'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
+            <th @click="toggleSort('ordre')" class="sortable">
+              Ordre
+              <span v-if="sortColumn === 'ordre'">{{ sortAsc ? '▲' : '▼' }}</span>
+            </th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="structure in paginatedStructures" :key="structure.idStructure">
+          <tr v-for="(structure, index) in paginatedStructures" :key="structure.idStructure"
+              :draggable="canModifyStructureOrder(structure)"
+              @dragstart="onDragStart($event, index)"
+              @dragover="onDragOver($event)"
+              @drop="onDrop($event, index)"
+              :class="{ 'selected-for-move': selectedStructureForMove?.idStructure === structure.idStructure, 'non-draggable': !canModifyStructureOrder(structure) }"
+              @click="selectStructureForMove(structure)">
             <!-- <td>{{ structure.idStructure }}</td> -->
             <td>{{ structure.nom }}</td>
             <td>{{ structure.designation }}</td>
+            <td>{{ structure.ordre || 0 }}</td>
             <td>
-              <button class="update-button" @click="confirmUpdate(structure)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button class="update-button" @click="confirmUpdate(structure)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value || !canModifyStructureOrder(structure) }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value || !canModifyStructureOrder(structure)" title="Modifier">✎</button>
               <button class="delete-button" @click="confirmDelete(structure)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
@@ -78,6 +89,15 @@
           />
           <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div>
         </div>
+        <div class="form-group">
+          <label>Ordre</label>
+          <input 
+            type="number" 
+            v-model.number="newStructure.ordre" 
+            placeholder="Ordre" 
+            min="1"
+          />
+        </div>
         <div class="modal-actions">
           <button @click="validateAndAddStructure">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
@@ -103,10 +123,29 @@
         <h2>Modifier Structure</h2>
         <input v-model="structureToUpdate.nom" placeholder="Nom" />
         <textarea v-model="structureToUpdate.designation" placeholder="Désignation" />
+        <input type="number" v-model.number="structureToUpdate.ordre" placeholder="Ordre" min="1" />
         <div class="modal-actions">
           <button @click="updateStructure">Modifier</button>
           <button @click="structureToUpdate = null" class="cancel">Annuler</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Move Controls -->
+    <div v-if="selectedStructureForMove" class="move-controls">
+      <div class="move-info">
+        Structure sélectionnée: <strong>{{ selectedStructureForMove.nom }}</strong>
+      </div>
+      <div class="move-buttons">
+        <button @click="moveUp" :disabled="!canMoveUp" class="move-button">
+          ↑ Monter
+        </button>
+        <button @click="moveDown" :disabled="!canMoveDown" class="move-button">
+          ↓ Descendre
+        </button>
+        <button @click="selectedStructureForMove = null" class="cancel-move-button">
+          Annuler
+        </button>
       </div>
     </div>
   </div>
@@ -120,6 +159,10 @@ interface Structure {
   idStructure: number
   nom: string
   designation: string
+  ordre: number
+  docVer: number
+  date_suppression: string | null
+  createdBy?: number // ID of the user who created this structure
 }
 
 const structures = ref<Structure[]>([])
@@ -130,11 +173,18 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'nom' | 'designation'>('nom')
+const sortColumn = ref<'nom' | 'designation' | 'ordre'>('ordre')
 const sortAsc = ref(true)
 
+// Drag and drop variables
+const draggedIndex = ref<number | null>(null)
+const draggedStructure = ref<Structure | null>(null)
+
+// Selection variables
+const selectedStructureForMove = ref<Structure | null>(null)
+
 const showAddPopup = ref(false)
-const newStructure = ref({ nom: '', designation: '' })
+const newStructure = ref({ nom: '', designation: '', ordre: 1 })
 const structureToDelete = ref<Structure | null>(null)
 const structureToUpdate = ref<Structure | null>(null)
 
@@ -145,6 +195,19 @@ const validationErrors = ref({
 })
 
 const userStore = useUserStore()
+
+// Check if user can modify structure order
+function canModifyStructureOrder(structure: Structure): boolean {
+  if (!userStore.currentUser.value) return false
+  
+  // Admin users can modify any structure
+  if (userStore.isAdminFonctionnel.value || userStore.isAdminInformatique.value) {
+    return true
+  }
+  
+  // Regular users can only modify structures they created
+  return structure.createdBy === userStore.currentUser.value.idUser
+}
 
 function toggleSort(column: typeof sortColumn.value) {
   if (sortColumn.value === column) {
@@ -164,6 +227,10 @@ const filteredStructures = computed(() => {
       struct.idStructure.toString().includes(s)
     )
     .sort((a, b) => {
+      if (sortColumn.value === 'ordre') {
+        return sortAsc.value ? (a.ordre || 0) - (b.ordre || 0) : (b.ordre || 0) - (a.ordre || 0)
+      }
+      
       // Primary sort by nom (A to Z)
       const nameA = a.nom.toLowerCase()
       const nameB = b.nom.toLowerCase()
@@ -205,7 +272,7 @@ async function fetchStructures() {
   error.value = null
   try {
     const res = await axiosInstance.get('structures/')
-    structures.value = res.data
+    structures.value = res.data.sort((a: Structure, b: Structure) => (a.ordre || 0) - (b.ordre || 0))
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
   } finally {
@@ -215,10 +282,14 @@ async function fetchStructures() {
 
 async function addStructure() {
   try {
-    const res = await axiosInstance.post('structures/', newStructure.value)
+    const structureData = {
+      ...newStructure.value,
+      createdBy: userStore.currentUser.value?.idUser
+    }
+    const res = await axiosInstance.post('structures/', structureData)
     structures.value.push(res.data)
     showAddPopup.value = false
-    newStructure.value = { nom: '', designation: '' }
+    newStructure.value = { nom: '', designation: '', ordre: 1 }
     validationErrors.value = { nom: '', designation: '' }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
@@ -230,6 +301,10 @@ function confirmDelete(structure: Structure) {
 }
 
 function confirmUpdate(structure: Structure) {
+  if (!canModifyStructureOrder(structure)) {
+    alert('Vous ne pouvez modifier que les structures que vous avez créées.')
+    return
+  }
   structureToUpdate.value = { ...structure }
 }
 
@@ -238,7 +313,8 @@ async function updateStructure() {
   try {
     const structureToSend = {
       nom: structureToUpdate.value.nom,
-      designation: structureToUpdate.value.designation
+      designation: structureToUpdate.value.designation,
+      ordre: structureToUpdate.value.ordre
     }
     await axiosInstance.put(`structures/${structureToUpdate.value.idStructure}/`, structureToSend)
     const index = structures.value.findIndex(s => s.idStructure === structureToUpdate.value!.idStructure)
@@ -250,6 +326,135 @@ async function updateStructure() {
     alert('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'))
   }
 }
+
+// Drag and drop functions
+function onDragStart(event: DragEvent, index: number) {
+  draggedIndex.value = index
+  draggedStructure.value = paginatedStructures.value[index]
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+function onDragOver(event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function onDrop(event: DragEvent, dropIndex: number) {
+  event.preventDefault()
+  
+  if (draggedIndex.value === null || draggedStructure.value === null) return
+  if (draggedIndex.value === dropIndex) return
+  
+  reorderStructures(draggedIndex.value, dropIndex)
+  
+  draggedIndex.value = null
+  draggedStructure.value = null
+}
+
+// Reorder structures function
+async function reorderStructures(fromIndex: number, toIndex: number) {
+  const sortedStructures = [...filteredStructures.value]
+  const [movedItem] = sortedStructures.splice(fromIndex, 1)
+  
+  // Check if user can modify the moved structure
+  if (!canModifyStructureOrder(movedItem)) {
+    alert('Vous ne pouvez modifier que les structures que vous avez créées.')
+    return
+  }
+  
+  sortedStructures.splice(toIndex, 0, movedItem)
+  
+  // Update ordre for all affected items
+  const updatedStructures: Structure[] = []
+  sortedStructures.forEach((structure, index) => {
+    structure.ordre = index + 1
+    updatedStructures.push(structure)
+  })
+  
+  try {
+    // Update all structures in batch
+    await Promise.all(
+      updatedStructures.map(structure => 
+        axiosInstance.put(`structures/${structure.idStructure}/`, {
+          nom: structure.nom,
+          designation: structure.designation,
+          ordre: structure.ordre
+        })
+      )
+    )
+    
+    // Update local data
+    structures.value = updatedStructures
+  } catch (e: any) {
+    alert('Erreur lors de la réorganisation : ' + (e?.message || 'Erreur inconnue'))
+    await fetchStructures()
+  }
+}
+
+// Selection functions
+function selectStructureForMove(structure: Structure) {
+  selectedStructureForMove.value = structure
+}
+
+const canMoveUp = computed(() => {
+  if (!selectedStructureForMove.value) return false
+  const currentIndex = filteredStructures.value.findIndex(s => s.idStructure === selectedStructureForMove.value!.idStructure)
+  return currentIndex > 0
+})
+
+const canMoveDown = computed(() => {
+  if (!selectedStructureForMove.value) return false
+  const currentIndex = filteredStructures.value.findIndex(s => s.idStructure === selectedStructureForMove.value!.idStructure)
+  return currentIndex < filteredStructures.value.length - 1
+})
+
+function moveUp() {
+  if (!selectedStructureForMove.value || !canMoveUp.value) return
+  if (!canModifyStructureOrder(selectedStructureForMove.value)) {
+    alert('Vous ne pouvez modifier que les structures que vous avez créées.')
+    return
+  }
+  const currentIndex = filteredStructures.value.findIndex(s => s.idStructure === selectedStructureForMove.value!.idStructure)
+  reorderStructures(currentIndex, currentIndex - 1)
+}
+
+function moveDown() {
+  if (!selectedStructureForMove.value || !canMoveDown.value) return
+  if (!canModifyStructureOrder(selectedStructureForMove.value)) {
+    alert('Vous ne pouvez modifier que les structures que vous avez créées.')
+    return
+  }
+  const currentIndex = filteredStructures.value.findIndex(s => s.idStructure === selectedStructureForMove.value!.idStructure)
+  reorderStructures(currentIndex, currentIndex + 1)
+}
+
+// Update single order function
+// async function updateOrder(structure: Structure) {
+//   try {
+//     const structureToSend = {
+//       nom: structure.nom,
+//       designation: structure.designation,
+//       ordre: structure.ordre
+//     }
+//     await axiosInstance.put(`structures/${structure.idStructure}/`, structureToSend)
+    
+//     // Update local data
+//     const index = structures.value.findIndex(s => s.idStructure === structure.idStructure)
+//     if (index !== -1) {
+//       structures.value[index] = { ...structure }
+//     }
+    
+//     // Re-sort structures by order
+//     structures.value.sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+//   } catch (e: any) {
+//     alert('Erreur lors de la mise à jour de l\'ordre : ' + (e?.message || 'Erreur inconnue'))
+//     await fetchStructures()
+//   }
+// }
 
 async function deleteStructure() {
   if (!structureToDelete.value) return
@@ -293,11 +498,12 @@ function validateAndAddStructure() {
 }
 
 function exportCSV() {
-  const headers = ['ID Structure', 'Nom', 'Désignation']
+  const headers = ['ID Structure', 'Nom', 'Désignation', 'Ordre']
   const rows = filteredStructures.value.map(s => [
     s.idStructure,
     s.nom,
-    s.designation
+    s.designation,
+    s.ordre
   ])
 
   const csvContent = 'data:text/csv;charset=utf-8,' +
@@ -413,6 +619,10 @@ h1 {
   border-bottom: 1px solid #232f4b;
   text-align: left;
   font-size: 1rem;
+  max-width: 200px;
+  word-wrap: break-word;
+  white-space: normal;
+  vertical-align: top;
 }
 
 .product-table th {
@@ -420,7 +630,10 @@ h1 {
   font-size: 1.05rem;
   font-weight: bold;
   letter-spacing: 0.5px;
+  position: relative;
 }
+
+
 
 .product-table tr:last-child td {
   border-bottom: none;
@@ -589,5 +802,86 @@ h1 {
   font-size: 0.85em;
   margin-top: 0.3em;
   font-weight: 500;
+}
+
+/* Drag and drop styles */
+.product-table tbody tr {
+  cursor: move;
+  transition: background-color 0.2s;
+}
+
+.product-table tbody tr:hover {
+  background-color: #1e2a4a;
+}
+
+.selected-for-move {
+  background-color: #2d4a87 !important;
+  border: 2px solid #4a90e2;
+}
+
+/* Move controls */
+.move-controls {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.move-info {
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.move-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.move-button {
+  padding: 6px 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.move-button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.move-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.cancel-move-button {
+  padding: 6px 12px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.cancel-move-button:hover {
+  background: #545b62;
+}
+
+.non-draggable {
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
+.non-draggable:hover {
+  background-color: #192850 !important;
 }
 </style>

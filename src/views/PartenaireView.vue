@@ -1,12 +1,12 @@
 <template>
   <div class="page-wrapper">
-    <h1>Bureaux d'Études</h1>
+    <h1>Partenaires</h1>
 
     <div class="controls">
       <input
         v-model="search"
         type="text"
-        placeholder="Rechercher un bureau d'études..."
+        placeholder="Rechercher un partenaire..."
         class="search-input"
       />
       <button @click="exportCSV" class="export-button" :class="{ 'disabled': userStore.loading.value || !userStore.canExportCSV.value }" :disabled="userStore.loading.value || !userStore.canExportCSV.value">Exporter CSV</button>
@@ -17,16 +17,12 @@
     <div v-else-if="error" class="error">Erreur : {{ error }}</div>
 
     <div class="table-wrapper">
-      <table v-if="filteredBEs.length > 0" class="product-table">
+      <table v-if="filteredPartenaires.length > 0" class="product-table">
         <thead>
           <tr>
-            <!-- <th @click="toggleSort('idBET')" class="sortable">
-              ID
-              <span v-if="sortColumn === 'idBET'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th> -->
-            <th @click="toggleSort('nom')" class="sortable">
-              Nom
-              <span v-if="sortColumn === 'nom'">{{ sortAsc ? '▲' : '▼' }}</span>
+            <th @click="toggleSort('designationPartenaire')" class="sortable">
+              Désignation
+              <span v-if="sortColumn === 'designationPartenaire'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
             <th @click="toggleSort('description')" class="sortable">
               Description
@@ -51,28 +47,27 @@
         </thead>
 
         <tbody>
-          <tr v-for="be in paginatedBEs" :key="be.idBET">
-            <!-- <td>{{ be.idBET }}</td> -->
-            <td>{{ be.nom }}</td>
-            <td>{{ be.description || '—' }}</td>
-            <td>{{ be.adresse || '—' }}</td>
-            <td>{{ be.telephone || '—' }}</td>
-            <td>{{ be.email || '—' }}</td>
-            <td>{{ getSecteursNames(be.secteurs_activite) }}</td>
+          <tr v-for="partenaire in paginatedPartenaires" :key="partenaire.idPartenaire">
+            <td>{{ partenaire.designationPartenaire }}</td>
+            <td>{{ partenaire.description || '—' }}</td>
+            <td>{{ partenaire.adresse || '—' }}</td>
+            <td>{{ partenaire.telephone || '—' }}</td>
+            <td>{{ partenaire.email || '—' }}</td>
+            <td>{{ getSecteursNames(partenaire.secteurs_activite) }}</td>
             <td>
-              <div v-if="be.nomFichier" class="document-actions">
-                <span>{{ be.nomFichier }}</span>
-                <button @click="viewFile(be.idBET)" class="file-btn" :disabled="loadingConsulter" title="Consulter">
-                  <span v-if="loadingConsulter && loadingDocumentId === be.idBET">...</span>
+              <div v-if="partenaire.nomFichier" class="document-actions">
+                <span>{{ partenaire.nomFichier }}</span>
+                <button @click="viewFile(partenaire.idPartenaire)" class="file-btn" :disabled="loadingConsulter" title="Consulter">
+                  <span v-if="loadingConsulter && loadingDocumentId === partenaire.idPartenaire">...</span>
                   <span v-else>👁️</span>
                 </button>
               </div>
               <span v-else class="no-file">—</span>
             </td>
             <td>
-              <button class="update-button" @click="confirmUpdate(be)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
-              <button v-if="userStore.canAccessBibliothequePages.value" class="upload-button" @click="showUploadModal(be)" title="Télécharger fichier">📁</button>
-              <button class="delete-button" @click="confirmDelete(be)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
+              <button class="update-button" @click="confirmUpdate(partenaire)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button v-if="userStore.canAccessBibliothequePages.value" class="upload-button" @click="showUploadModal(partenaire)" title="Télécharger fichier">📁</button>
+              <button class="delete-button" @click="confirmDelete(partenaire)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
         </tbody>
@@ -89,49 +84,37 @@
     <!-- ADD POPUP -->
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
-        <h2>Ajouter un Bureau d'Études</h2>
+        <h2>Ajouter un Partenaire</h2>
         <div class="form-group">
-          <label>Nom *</label>
+          <label>Désignation *</label>
           <input 
-            v-model="newBE.nom" 
-            placeholder="Nom" 
-            :class="{ 'error': validationErrors.nom }"
+            v-model="newPartenaire.designationPartenaire" 
+            placeholder="Désignation" 
+            :class="{ 'error': validationErrors.designationPartenaire }"
           />
-          <div v-if="validationErrors.nom" class="error-message">{{ validationErrors.nom }}</div>
+          <div v-if="validationErrors.designationPartenaire" class="error-message">{{ validationErrors.designationPartenaire }}</div>
         </div>
         <div class="form-group">
           <label>Description</label>
-          <textarea v-model="newBE.description" placeholder="Description (optionnelle)" />
+          <textarea v-model="newPartenaire.description" placeholder="Description (optionnelle)" />
         </div>
         <div class="form-group">
           <label>Adresse</label>
-          <input 
-            v-model="newBE.adresse" 
-            placeholder="Adresse (optionnelle)" 
-          />
-          <!-- <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div> -->
+          <input v-model="newPartenaire.adresse" placeholder="Adresse" />
         </div>
         <div class="form-group">
           <label>Téléphone</label>
-          <input 
-            v-model="newBE.telephone" 
-            placeholder="Téléphone (optionnelle)" 
-          />
-          <!-- <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div> -->
+          <input v-model="newPartenaire.telephone" placeholder="Téléphone" />
         </div>
         <div class="form-group">
           <label>Email</label>
-          <input 
-            v-model="newBE.email" 
-            placeholder="Email (optionnelle)" 
-          />
-          <!-- <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div> -->
+          <input v-model="newPartenaire.email" placeholder="Email" />
         </div>
         <div class="form-group">
           <label>Secteurs d'activité (optionnel)</label>
           <div class="multi-select-container">
             <div class="selected-items">
-              <span v-for="secteurId in newBE.secteurs_activite" :key="secteurId" class="selected-item">
+              <span v-for="secteurId in newPartenaire.secteurs_activite" :key="secteurId" class="selected-item">
                 {{ getSecteurName(secteurId) }}
                 <button type="button" @click="removeSecteur(secteurId)" class="remove-item">×</button>
               </span>
@@ -144,62 +127,54 @@
             </select>
           </div>
         </div>
-        <!-- <div class="form-group">
-          <label>Fichier</label>
-          <input 
-            type="file" 
-            @change="handleFileSelect"
-            accept=".pdf,.doc,.docx,.txt"
-          />
-        </div> -->
         <div class="modal-actions">
-          <button @click="validateAndAddBE">Ajouter</button>
+          <button @click="validateAndAddPartenaire">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
         </div>
       </div>
     </div>
 
     <!-- DELETE CONFIRMATION -->
-    <div v-if="beToDelete" class="modal-overlay">
+    <div v-if="partenaireToDelete" class="modal-overlay">
       <div class="modal">
         <h2>Supprimer</h2>
-        <p>Confirmez-vous la suppression de <strong>{{ beToDelete.nom }}</strong> ?</p>
+        <p>Confirmez-vous la suppression de <strong>{{ partenaireToDelete.designationPartenaire }}</strong> ?</p>
         <div class="modal-actions">
-          <button @click="deleteBE">Oui, supprimer</button>
-          <button @click="beToDelete = null" class="cancel">Annuler</button>
+          <button @click="deletePartenaire">Oui, supprimer</button>
+          <button @click="partenaireToDelete = null" class="cancel">Annuler</button>
         </div>
       </div>
     </div>
 
     <!-- UPDATE MODAL -->
-    <div v-if="beToUpdate" class="modal-overlay">
+    <div v-if="partenaireToUpdate" class="modal-overlay">
       <div class="modal">
-        <h2>Modifier Bureau d'Études</h2>
+        <h2>Modifier Partenaire</h2>
         <div class="form-group">
-          <label>Nom</label>
-          <input v-model="beToUpdate.nom" placeholder="Nom" />
+          <label>Désignation</label>
+          <input v-model="partenaireToUpdate.designationPartenaire" placeholder="Désignation" />
         </div>
         <div class="form-group">
           <label>Description</label>
-          <textarea v-model="beToUpdate.description" placeholder="Description (optionnelle)" />
+          <textarea v-model="partenaireToUpdate.description" placeholder="Description (optionnelle)" />
         </div>
         <div class="form-group">
           <label>Adresse</label>
-          <input v-model="beToUpdate.adresse" placeholder="Adresse" />
+          <input v-model="partenaireToUpdate.adresse" placeholder="Adresse" />
         </div>
         <div class="form-group">
           <label>Téléphone</label>
-          <input v-model="beToUpdate.telephone" placeholder="Téléphone" />
+          <input v-model="partenaireToUpdate.telephone" placeholder="Téléphone" />
         </div>
         <div class="form-group">
           <label>Email</label>
-          <input v-model="beToUpdate.email" placeholder="Email" />
+          <input v-model="partenaireToUpdate.email" placeholder="Email" />
         </div>
         <div class="form-group">
           <label>Secteurs d'activité</label>
           <div class="multi-select-container">
             <div class="selected-items">
-              <span v-for="secteurId in beToUpdate.secteurs_activite" :key="secteurId" class="selected-item">
+              <span v-for="secteurId in partenaireToUpdate.secteurs_activite" :key="secteurId" class="selected-item">
                 {{ getSecteurName(secteurId) }}
                 <button type="button" @click="removeUpdateSecteur(secteurId)" class="remove-item">×</button>
               </span>
@@ -213,16 +188,16 @@
           </div>
         </div>
         <div class="modal-actions">
-          <button @click="updateBE">Modifier</button>
-          <button @click="beToUpdate = null" class="cancel">Annuler</button>
+          <button @click="updatePartenaire">Modifier</button>
+          <button @click="partenaireToUpdate = null" class="cancel">Annuler</button>
         </div>
       </div>
     </div>
 
     <!-- UPLOAD FILE MODAL -->
-    <div v-if="beToUpload" class="modal-overlay">
+    <div v-if="partenaireToUpload" class="modal-overlay">
       <div class="modal">
-        <h2>Télécharger fichier pour {{ beToUpload.nom }}</h2>
+        <h2>Télécharger fichier pour {{ partenaireToUpload.designationPartenaire }}</h2>
         <div class="form-group">
           <label>Fichier</label>
           <input 
@@ -233,7 +208,7 @@
         </div>
         <div class="modal-actions">
           <button @click="uploadFile" :disabled="!uploadFileSelected">Télécharger</button>
-          <button @click="beToUpload = null" class="cancel">Annuler</button>
+          <button @click="partenaireToUpload = null" class="cancel">Annuler</button>
         </div>
       </div>
     </div>
@@ -248,21 +223,21 @@
           <PdfViewer
             v-if="selectedDocument.fichier && getFileType(selectedDocument) === 'pdf'"
             :pdfUrl="selectedDocument.fichier"
-            :documentId="selectedDocument.idBET"
+            :documentId="selectedDocument.idPartenaire"
           />
           
           <!-- Image Viewer -->
           <ImageViewer
             v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'"
             :imageUrl="selectedDocument.fichier"
-            :documentId="selectedDocument.idBET"
+            :documentId="selectedDocument.idPartenaire"
           />
           
           <!-- Video Viewer -->
           <VideoViewer
             v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'"
             :videoUrl="selectedDocument.fichier"
-            :documentId="selectedDocument.idBET"
+            :documentId="selectedDocument.idPartenaire"
           />
         </div>
         
@@ -273,6 +248,7 @@
     </div>
   </div>
 </template>
+
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
@@ -286,9 +262,9 @@ interface Secteur {
   secteur: string
 }
 
-interface BureauEtude {
-  idBET: number
-  nom: string
+interface Partenaire {
+  idPartenaire: number
+  designationPartenaire: string
   description: string
   adresse: string
   telephone: string
@@ -300,7 +276,7 @@ interface BureauEtude {
   detectedType?: string
 }
 
-const bes = ref<BureauEtude[]>([])
+const partenaires = ref<Partenaire[]>([])
 const secteurs = ref<Secteur[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -309,26 +285,29 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'nom' | 'description' | 'adresse' | 'telephone' | 'email'>('nom')
+const sortColumn = ref<'designationPartenaire' | 'description' | 'adresse' | 'telephone' | 'email'>('designationPartenaire')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
-const newBE = ref({ nom: '', description: '', adresse: '', telephone: '', email: '', secteurs_activite: [] as number[] })
-const selectedFile = ref<File | null>(null)
-const beToDelete = ref<BureauEtude | null>(null)
-const beToUpdate = ref<BureauEtude | null>(null)
-const beToUpload = ref<BureauEtude | null>(null)
+const newPartenaire = ref({ 
+  designationPartenaire: '', 
+  description: '', 
+  adresse: '', 
+  telephone: '', 
+  email: '', 
+  secteurs_activite: [] as number[] 
+})
+const partenaireToDelete = ref<Partenaire | null>(null)
+const partenaireToUpdate = ref<Partenaire | null>(null)
+const partenaireToUpload = ref<Partenaire | null>(null)
 const uploadFileSelected = ref<File | null>(null)
-const selectedDocument = ref<BureauEtude | null>(null)
+const selectedDocument = ref<Partenaire | null>(null)
 const loadingConsulter = ref(false)
 const loadingDocumentId = ref<number | null>(null)
 
 // Validation errors
 const validationErrors = ref({
-  nom: '',
-  adresse: '',
-  telephone: '',
-  email: ''
+  designationPartenaire: ''
 })
 
 const userStore = useUserStore()
@@ -342,29 +321,26 @@ function toggleSort(column: typeof sortColumn.value) {
   }
 }
 
-const filteredBEs = computed(() => {
+const filteredPartenaires = computed(() => {
   const s = search.value.trim().toLowerCase()
 
-  const filtered = bes.value.filter((be) =>
-    be.nom.toLowerCase().includes(s) ||
-    (be.description?.toLowerCase().includes(s) ?? false) ||
-    (be.adresse?.toLowerCase().includes(s) ?? false) ||
-    (be.telephone?.toLowerCase().includes(s) ?? false) ||
-    (be.email?.toLowerCase().includes(s) ?? false)
+  const filtered = partenaires.value.filter((partenaire) =>
+    partenaire.designationPartenaire.toLowerCase().includes(s) ||
+    (partenaire.description?.toLowerCase().includes(s) ?? false) ||
+    (partenaire.adresse?.toLowerCase().includes(s) ?? false) ||
+    (partenaire.telephone?.toLowerCase().includes(s) ?? false) ||
+    (partenaire.email?.toLowerCase().includes(s) ?? false)
   )
 
   return filtered.sort((a, b) => {
-    // Primary sort by name (A to Z)
-    const nameA = a.nom.toLowerCase()
-    const nameB = b.nom.toLowerCase()
+    const nameA = a.designationPartenaire.toLowerCase()
+    const nameB = b.designationPartenaire.toLowerCase()
     
-    if (sortColumn.value === 'nom') {
-      // If sorting by name column, respect user's sort direction
+    if (sortColumn.value === 'designationPartenaire') {
       if (nameA < nameB) return sortAsc.value ? -1 : 1
       if (nameA > nameB) return sortAsc.value ? 1 : -1
       return 0
     } else {
-      // For other columns, sort by that column first, then by name as secondary sort
       const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
       const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
       
@@ -373,7 +349,6 @@ const filteredBEs = computed(() => {
         if (fieldA > fieldB) return sortAsc.value ? 1 : -1
       }
       
-      // Secondary sort by name (always A to Z)
       if (nameA < nameB) return -1
       if (nameA > nameB) return 1
       return 0
@@ -381,12 +356,25 @@ const filteredBEs = computed(() => {
   })
 })
 
-const paginatedBEs = computed(() => {
+const paginatedPartenaires = computed(() => {
   const start = (currentPage.value - 1) * pageSize
-  return filteredBEs.value.slice(start, start + pageSize)
+  return filteredPartenaires.value.slice(start, start + pageSize)
 })
 
-const totalPages = computed(() => Math.ceil(filteredBEs.value.length / pageSize))
+const totalPages = computed(() => Math.ceil(filteredPartenaires.value.length / pageSize))
+
+async function fetchPartenaires() {
+  loading.value = true
+  error.value = null
+  try {
+    const response = await axiosInstance.get('partenaires/')
+    partenaires.value = response.data
+  } catch (e: any) {
+    error.value = e?.message || 'Erreur inconnue'
+  } finally {
+    loading.value = false
+  }
+}
 
 async function fetchSecteurs() {
   try {
@@ -397,174 +385,192 @@ async function fetchSecteurs() {
   }
 }
 
-async function fetchBEs() {
-  loading.value = true
-  error.value = null
-  try {
-    const response = await axiosInstance.get('bureaux-etudes/')
-    bes.value = response.data
-  } catch (e: any) {
-    error.value = e?.message || 'Erreur inconnue'
-  } finally {
-    loading.value = false
+function getSecteurName(secteurId: number | null): string {
+  if (!secteurId) return '—'
+  const secteur = secteurs.value.find(s => s.id === secteurId)
+  return secteur ? secteur.secteur : '—'
+}
+
+function getSecteursNames(secteurIds: number[] | null): string {
+  if (!secteurIds || secteurIds.length === 0) return '—'
+  const names = secteurIds.map(id => getSecteurName(id)).filter(name => name !== '—')
+  return names.length > 0 ? names.join(', ') : '—'
+}
+
+const availableSecteurs = computed(() => {
+  return secteurs.value.filter(secteur => !newPartenaire.value.secteurs_activite.includes(secteur.id))
+})
+
+const availableUpdateSecteurs = computed(() => {
+  if (!partenaireToUpdate.value || !partenaireToUpdate.value.secteurs_activite) return secteurs.value
+  return secteurs.value.filter(secteur => !partenaireToUpdate.value!.secteurs_activite!.includes(secteur.id))
+})
+
+function addSecteur(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const secteurId = parseInt(target.value)
+  if (secteurId && !newPartenaire.value.secteurs_activite.includes(secteurId)) {
+    newPartenaire.value.secteurs_activite.push(secteurId)
+  }
+  target.value = ''
+}
+
+function removeSecteur(secteurId: number) {
+  const index = newPartenaire.value.secteurs_activite.indexOf(secteurId)
+  if (index > -1) {
+    newPartenaire.value.secteurs_activite.splice(index, 1)
   }
 }
 
-// function handleFileSelect(event: Event) {
-//   const target = event.target as HTMLInputElement
-//   selectedFile.value = target.files?.[0] || null
-// }
+function addUpdateSecteur(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const secteurId = parseInt(target.value)
+  if (secteurId && partenaireToUpdate.value && partenaireToUpdate.value.secteurs_activite && !partenaireToUpdate.value.secteurs_activite.includes(secteurId)) {
+    partenaireToUpdate.value.secteurs_activite.push(secteurId)
+  }
+  target.value = ''
+}
+
+function removeUpdateSecteur(secteurId: number) {
+  if (!partenaireToUpdate.value || !partenaireToUpdate.value.secteurs_activite) return
+  const index = partenaireToUpdate.value.secteurs_activite.indexOf(secteurId)
+  if (index > -1) {
+    partenaireToUpdate.value.secteurs_activite.splice(index, 1)
+  }
+}
 
 function handleUploadFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
   uploadFileSelected.value = target.files?.[0] || null
 }
 
-function showUploadModal(be: BureauEtude) {
-  beToUpload.value = be
+function showUploadModal(partenaire: Partenaire) {
+  partenaireToUpload.value = partenaire
   uploadFileSelected.value = null
 }
 
-async function addBE() {
+async function addPartenaire() {
   try {
     const formData = new FormData()
-    formData.append('nom', newBE.value.nom)
-    formData.append('description', newBE.value.description || '')
-    formData.append('adresse', newBE.value.adresse || '')
-    formData.append('telephone', newBE.value.telephone || '')
-    formData.append('email', newBE.value.email || '')
-    if (selectedFile.value) {
-      formData.append('fichier', selectedFile.value)
-    }
-
-    if (newBE.value.secteurs_activite.length > 0) {
-      newBE.value.secteurs_activite.forEach(secteurId => {
+    formData.append('designationPartenaire', newPartenaire.value.designationPartenaire)
+    formData.append('description', newPartenaire.value.description || '')
+    formData.append('adresse', newPartenaire.value.adresse || '')
+    formData.append('telephone', newPartenaire.value.telephone || '')
+    formData.append('email', newPartenaire.value.email || '')
+    if (newPartenaire.value.secteurs_activite.length > 0) {
+      newPartenaire.value.secteurs_activite.forEach(secteurId => {
         formData.append('secteurs_activite', secteurId.toString())
       })
     }
 
-    const res = await axiosInstance.post('bureaux-etudes/', formData, {
+    const res = await axiosInstance.post('partenaires/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
-    bes.value.push(res.data)
+    partenaires.value.push(res.data)
     showAddPopup.value = false
-    newBE.value = { nom: '', description: '', adresse: '', telephone: '', email: '', secteurs_activite: [] }
-    selectedFile.value = null
+    newPartenaire.value = { 
+      designationPartenaire: '', 
+      description: '', 
+      adresse: '', 
+      telephone: '', 
+      email: '', 
+      secteurs_activite: [] 
+    }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
 }
 
-function confirmDelete(be: BureauEtude) {
-  beToDelete.value = be
+function confirmDelete(partenaire: Partenaire) {
+  partenaireToDelete.value = partenaire
 }
 
-function confirmUpdate(be: BureauEtude) {
-  beToUpdate.value = { 
-    ...be, 
-    secteurs_activite: Array.isArray(be.secteurs_activite) ? [...be.secteurs_activite] : [] 
+function confirmUpdate(partenaire: Partenaire) {
+  partenaireToUpdate.value = { 
+    ...partenaire, 
+    secteurs_activite: Array.isArray(partenaire.secteurs_activite) ? [...partenaire.secteurs_activite] : [] 
   }
 }
 
-async function updateBE() {
-  if (!beToUpdate.value) return
+async function updatePartenaire() {
+  if (!partenaireToUpdate.value) return
   try {
     const formData = new FormData()
-    formData.append('nom', beToUpdate.value.nom)
-    formData.append('description', beToUpdate.value.description || '')
-    formData.append('adresse', beToUpdate.value.adresse || '')
-    formData.append('telephone', beToUpdate.value.telephone || '')
-    formData.append('email', beToUpdate.value.email || '')
-    if (beToUpdate.value.secteurs_activite && beToUpdate.value.secteurs_activite.length > 0) {
-      beToUpdate.value.secteurs_activite.forEach(secteurId => {
+    formData.append('designationPartenaire', partenaireToUpdate.value.designationPartenaire)
+    formData.append('description', partenaireToUpdate.value.description || '')
+    formData.append('adresse', partenaireToUpdate.value.adresse || '')
+    formData.append('telephone', partenaireToUpdate.value.telephone || '')
+    formData.append('email', partenaireToUpdate.value.email || '')
+    if (partenaireToUpdate.value.secteurs_activite && partenaireToUpdate.value.secteurs_activite.length > 0) {
+      partenaireToUpdate.value.secteurs_activite.forEach(secteurId => {
         formData.append('secteurs_activite', secteurId.toString())
       })
     }
 
-    await axiosInstance.put(`bureaux-etudes/${beToUpdate.value.idBET}/`, formData, {
+    await axiosInstance.put(`partenaires/${partenaireToUpdate.value.idPartenaire}/`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
-    const index = bes.value.findIndex(b => b.idBET === beToUpdate.value!.idBET)
+    const index = partenaires.value.findIndex(p => p.idPartenaire === partenaireToUpdate.value!.idPartenaire)
     if (index !== -1) {
-      bes.value[index] = { ...beToUpdate.value }
+      partenaires.value[index] = { ...partenaireToUpdate.value }
     }
-    beToUpdate.value = null
+    partenaireToUpdate.value = null
   } catch (e: any) {
     alert('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'))
   }
 }
 
-async function deleteBE() {
-  if (!beToDelete.value) return
+async function deletePartenaire() {
+  if (!partenaireToDelete.value) return
   try {
-    await axiosInstance.delete(`bureaux-etudes/${beToDelete.value.idBET}/`)
-    bes.value = bes.value.filter(b => b.idBET !== beToDelete.value!.idBET)
-    beToDelete.value = null
+    await axiosInstance.delete(`partenaires/${partenaireToDelete.value.idPartenaire}/`)
+    partenaires.value = partenaires.value.filter(p => p.idPartenaire !== partenaireToDelete.value!.idPartenaire)
+    partenaireToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
   }
 }
 
-// Validate required fields
 function validateRequiredFields() {
   const errors = {
-    nom: '',
-    adresse: '',
-    telephone: '',
-    email: ''
+    designationPartenaire: ''
   }
   
   let isValid = true
   
-  if (!newBE.value.nom.trim()) {
-    errors.nom = 'Le nom est requis'
-     isValid = false
-  }
-  
-  if (!newBE.value.adresse.trim()) {
-    errors.adresse = 'L\'adresse est requise'
-    // isValid = false
-  }
-  
-  if (!newBE.value.telephone.trim()) {
-    errors.telephone = 'Le téléphone est requis'
-    // isValid = false
-  }
-  
-  if (!newBE.value.email.trim()) {
-    errors.email = 'L\'email est requis'
-    // isValid = false
+  if (!newPartenaire.value.designationPartenaire.trim()) {
+    errors.designationPartenaire = 'La désignation est requise'
+    isValid = false
   }
   
   validationErrors.value = errors
   return isValid
 }
 
-// Validate and add BE
-function validateAndAddBE() {
+function validateAndAddPartenaire() {
   if (validateRequiredFields()) {
-    addBE()
+    addPartenaire()
   }
 }
 
 async function uploadFile() {
-  if (!beToUpload.value || !uploadFileSelected.value) return
+  if (!partenaireToUpload.value || !uploadFileSelected.value) return
   try {
     const formData = new FormData()
     formData.append('fichier', uploadFileSelected.value)
 
-    await axiosInstance.post(`bureaux-etudes/${beToUpload.value.idBET}/upload-file/`, formData, {
+    await axiosInstance.post(`partenaires/${partenaireToUpload.value.idPartenaire}/upload-file/`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
     
-    await fetchBEs()
-    beToUpload.value = null
+    await fetchPartenaires()
+    partenaireToUpload.value = null
     uploadFileSelected.value = null
   } catch (e: any) {
     alert('Erreur lors du téléchargement : ' + (e?.message || 'Erreur inconnue'))
@@ -572,14 +578,14 @@ async function uploadFile() {
 }
 
 async function viewFile(id: number) {
-  const document = bes.value.find(be => be.idBET === id)
+  const document = partenaires.value.find(p => p.idPartenaire === id)
   if (!document) return
   
   loadingConsulter.value = true
   loadingDocumentId.value = id
   
   try {
-    const response = await axiosInstance.get(`bureaux-etudes/${id}/view-file/`, {
+    const response = await axiosInstance.get(`partenaires/${id}/view-file/`, {
       responseType: 'blob'
     })
     
@@ -587,7 +593,6 @@ async function viewFile(id: number) {
       const blob = response.data
       const fileUrl = URL.createObjectURL(blob)
       
-      // Detect file type from blob content-type
       let detectedType = 'pdf'
       if (blob.type.startsWith('image/')) {
         detectedType = 'image'
@@ -623,71 +628,17 @@ function closeDocumentViewer() {
   selectedDocument.value = null
 }
 
-function getSecteurName(secteurId: number | null): string {
-  if (!secteurId) return '—'
-  const secteur = secteurs.value.find(s => s.id === secteurId)
-  return secteur ? secteur.secteur : '—'
-}
-
-function getSecteursNames(secteurIds: number[] | null): string {
-  if (!secteurIds || secteurIds.length === 0) return '—'
-  const names = secteurIds.map(id => getSecteurName(id)).filter(name => name !== '—')
-  return names.length > 0 ? names.join(', ') : '—'
-}
-
-const availableSecteurs = computed(() => {
-  return secteurs.value.filter(secteur => !newBE.value.secteurs_activite.includes(secteur.id))
-})
-
-const availableUpdateSecteurs = computed(() => {
-  if (!beToUpdate.value || !beToUpdate.value.secteurs_activite) return secteurs.value
-  return secteurs.value.filter(secteur => !beToUpdate.value!.secteurs_activite!.includes(secteur.id))
-})
-
-function addSecteur(event: Event) {
-  const target = event.target as HTMLSelectElement
-  const secteurId = parseInt(target.value)
-  if (secteurId && !newBE.value.secteurs_activite.includes(secteurId)) {
-    newBE.value.secteurs_activite.push(secteurId)
-  }
-  target.value = ''
-}
-
-function removeSecteur(secteurId: number) {
-  const index = newBE.value.secteurs_activite.indexOf(secteurId)
-  if (index > -1) {
-    newBE.value.secteurs_activite.splice(index, 1)
-  }
-}
-
-function addUpdateSecteur(event: Event) {
-  const target = event.target as HTMLSelectElement
-  const secteurId = parseInt(target.value)
-  if (secteurId && beToUpdate.value && beToUpdate.value.secteurs_activite && !beToUpdate.value.secteurs_activite.includes(secteurId)) {
-    beToUpdate.value.secteurs_activite.push(secteurId)
-  }
-  target.value = ''
-}
-
-function removeUpdateSecteur(secteurId: number) {
-  if (!beToUpdate.value || !beToUpdate.value.secteurs_activite) return
-  const index = beToUpdate.value.secteurs_activite.indexOf(secteurId)
-  if (index > -1) {
-    beToUpdate.value.secteurs_activite.splice(index, 1)
-  }
-}
-
 function exportCSV() {
-  const headers = ['ID', 'Nom', 'Description', 'Adresse', 'Téléphone', 'Email', 'Secteur d\'activité', 'Fichier']
-  const rows = filteredBEs.value.map(be => [
-    be.idBET,
-    be.nom,
-    be.description || '',
-    be.adresse || '',
-    be.telephone || '',
-    be.email || '',
-    getSecteursNames(be.secteurs_activite),
-    be.nomFichier || ''
+  const headers = ['ID', 'Désignation', 'Description', 'Adresse', 'Téléphone', 'Email', 'Secteur d\'activité', 'Fichier']
+  const rows = filteredPartenaires.value.map(partenaire => [
+    partenaire.idPartenaire,
+    partenaire.designationPartenaire,
+    partenaire.description || '',
+    partenaire.adresse || '',
+    partenaire.telephone || '',
+    partenaire.email || '',
+    getSecteursNames(partenaire.secteurs_activite),
+    partenaire.nomFichier || ''
   ])
 
   const csvContent =
@@ -699,7 +650,7 @@ function exportCSV() {
   const encodedUri = encodeURI(csvContent)
   const link = document.createElement('a')
   link.setAttribute('href', encodedUri)
-  link.setAttribute('download', 'bureaux_etudes.csv')
+  link.setAttribute('download', 'partenaires.csv')
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -708,13 +659,14 @@ function exportCSV() {
 onMounted(async () => {
   await userStore.fetchUserProfile()
   await fetchSecteurs()
-  fetchBEs()
+  fetchPartenaires()
 })
 </script>
+
 <style scoped>
 .page-wrapper {
   padding: 16px;
-  margin-right: 20px; /* Adjust as needed */
+  margin-right: 20px;
 }
 
 h1 {
@@ -787,7 +739,7 @@ h1 {
   border-bottom: 1px solid #232f4b;
   text-align: left;
   font-size: 1rem;
-  max-width: 150px;
+  max-width: 200px;
   word-wrap: break-word;
   white-space: normal;
   vertical-align: top;
@@ -910,7 +862,8 @@ h1 {
 }
 
 .modal input,
-.modal textarea {
+.modal textarea,
+.modal select {
   width: 100%;
   margin-top: 0.5rem;
   margin-bottom: 1rem;
@@ -1001,29 +954,10 @@ h1 {
   border-color: #d39e00;
 }
 
-.view-file-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  margin-left: 5px;
-  font-size: 1.1em;
-}
-.view-file-btn:hover {
-  opacity: 0.7;
-}
-
 .document-actions {
   display: flex;
   gap: 0.5em;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-
-.document-actions span {
-  word-break: break-all;
-  line-height: 1.3;
-  flex: 1;
-  min-width: 0;
+  align-items: center;
 }
 
 .file-btn {
@@ -1052,7 +986,6 @@ h1 {
   font-style: italic;
 }
 
-/* PDF Modal Styles */
 .pdf-modal {
   max-width: 95vw;
   max-height: 95vh;

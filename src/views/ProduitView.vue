@@ -538,6 +538,10 @@ h1 {
   border-bottom: 1px solid #232f4b;
   text-align: left;
   font-size: 1rem;
+  max-width: 200px;
+  word-wrap: break-word;
+  white-space: normal;
+  vertical-align: top;
 }
 
 .product-table th {

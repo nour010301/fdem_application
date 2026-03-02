@@ -1,0 +1,258 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+
+\geometry{margin=2.5cm}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Rapport d'Analyse de Base de Données}
+\fancyhead[R]{\thepage}
+\fancyfoot[C]{}
+
+\begin{document}
+
+% Page de garde
+\thispagestyle{empty}
+\begin{center}
+\vspace*{2cm}
+
+{\Huge \textbf{Projet Fond Documentaire}}\\
+\vspace{0.5cm}
+{\Large \textbf{« Etudes et Méthodes »}}\\
+
+\vspace{3cm}
+
+{\LARGE \textbf{Rapport d'Analyse de Stockage}}\\
+\vspace{0.5cm}
+{\LARGE \textbf{de Base de Données}}\\
+
+\vspace{2cm}
+
+{\large Distribution des Documents par Produit}\\
+{\large et Estimation des Tailles}
+
+\vfill
+
+
+{\large \today}
+
+\end{center}
+\newpage
+
+% Début du contenu avec numérotation
+\setcounter{page}{1}
+
+\tableofcontents
+\newpage
+
+\section{Résumé Exécutif}
+
+Ce rapport présente une analyse complète de l'utilisation du stockage de la base de données, en se concentrant sur la distribution des documents par produit et les calculs de taille de stockage. L'analyse révèle des informations critiques sur les modèles de distribution des données et les exigences de stockage pour une gestion optimale de la base de données.
+
+\subsection{Résultats Clés}
+\begin{itemize}
+    \item Total des documents analysés : \textbf{51 428} dans toutes les tables
+    \item Plus grande table : \texttt{accounts\_document} avec \textbf{3,65 MB}
+    \item Produit ID 90 (METRO SOUTER. STATION DE METRO Med Boudiaf) contient \textbf{1 177 documents}
+    \item Stockage de fichiers estimé pour le Produit 90 : \textbf{3 929,58 MB}
+    \item Taille moyenne de document par produit : \textbf{3,34 MB}
+\end{itemize}
+
+\section{Analyse des Tables de Base de Données}
+
+\subsection{Distribution de la Taille des Tables}
+
+L'analyse suivante montre la distribution du stockage à travers les tables de base de données, ordonnées par taille totale :
+
+\begin{longtable}{|l|r|r|}
+\hline
+\textbf{Nom de la Table} & \textbf{Nombre de Lignes} & \textbf{Taille (MB)} \\
+\hline
+\endhead
+accounts\_document & 51 428 & 3,65 \\
+\hline
+accounts\_soustraitants & 28 & 1,21 \\
+\hline
+token\_blacklist\_outstandingtoken & 7 140 & 1,21 \\
+\hline
+accounts\_utilisateur\_produits & 10 908 & 0,53 \\
+\hline
+accounts\_contexteprojet & 1 026 & 0,35 \\
+\hline
+\textbf{Total} & \textbf{70 530} & \textbf{6,95} \\
+\hline
+\end{longtable}
+
+\subsection{Analyse du Stockage au Niveau des Colonnes}
+
+Les colonnes les plus intensives en stockage identifiées :
+
+\begin{longtable}{|l|l|l|r|r|}
+\hline
+\textbf{Table} & \textbf{Colonne} & \textbf{Type} & \textbf{Lignes} & \textbf{Taille Est. (MB)} \\
+\hline
+\endhead
+accounts\_document & video & nvarchar & 3 956 & 3,77 \\
+\hline
+accounts\_document & nomFichier & nvarchar & 3 956 & 1,92 \\
+\hline
+accounts\_document & nomPhotos & nvarchar & 3 956 & 1,92 \\
+\hline
+accounts\_document & designation & nvarchar & 3 956 & 1,51 \\
+\hline
+token\_blacklist\_outstandingtoken & jti & nvarchar & 1 429 & 0,70 \\
+\hline
+\end{longtable}
+
+\section{Analyse Spécifique par Produit}
+
+\subsection{Étude de Cas : Produit ID 90 - METRO SOUTER. STATION DE METRO Med Boudiaf}
+
+Cette section fournit une analyse détaillée du produit le plus intensif en documents dans la base de données.
+
+\subsubsection{Statistiques des Documents}
+\begin{itemize}
+    \item \textbf{Total des Documents :} 1 177
+    \item \textbf{Stockage Base de Données :} 3 929,58 MB
+    \item \textbf{Stockage Système de Fichiers :}
+    \begin{itemize}
+        \item Fichiers de plans : 5,19 GB (5 578 700 317 octets)
+        \item Fichiers vidéo : 956 MB (1 003 343 872 octets)
+        \item \textbf{Stockage Total des Fichiers :} 6,146 GB
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Répartition du Stockage}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Type de Stockage} & \textbf{Taille} & \textbf{Pourcentage} \\
+\hline
+Métadonnées Base de Données & 3 929,58 MB & 39,1\% \\
+Fichiers de Plans & 5 578,70 MB & 55,5\% \\
+Fichiers Vidéo & 1 003,34 MB & 10,0\% \\
+\hline
+\textbf{Total} & \textbf{10 511,62 MB} & \textbf{100\%} \\
+\hline
+\end{tabular}
+\caption{Distribution du stockage pour le Produit ID 90}
+\end{table}
+
+\section{Calculs et Estimations}
+
+\subsection{Calcul de la Taille Moyenne par Produit}
+
+Basé sur l'analyse du Produit ID 90, nous pouvons estimer les exigences de stockage moyennes :
+
+\begin{align}
+\text{Taille Moyenne BD par Document} &= \frac{3 929,58 \text{ MB}}{1 177 \text{ documents}} = 3,34 \text{ MB/document}\\
+\text{Taille Moyenne Fichier par Document} &= \frac{6 582,04 \text{ MB}}{1 177 \text{ documents}} = 5,59 \text{ MB/document}\\
+\text{Moyenne Totale par Document} &= 3,34 + 5,59 = 8,93 \text{ MB/document}
+\end{align}
+
+\subsection{Projections de Croissance de la Base de Données}
+
+En supposant des modèles de distribution de documents similaires :
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|r|r|r|r|}
+\hline
+\textbf{Documents} & \textbf{Taille BD (MB)} & \textbf{Taille Fichiers (MB)} & \textbf{Total (GB)} \\
+\hline
+1 000 & 3 340 & 5 590 & 8,7 \\
+5 000 & 16 700 & 27 950 & 43,6 \\
+10 000 & 33 400 & 55 900 & 87,2 \\
+50 000 & 167 000 & 279 500 & 436,0 \\
+\hline
+\end{tabular}
+\caption{Exigences de stockage projetées basées sur le nombre de documents}
+\end{table}
+
+\section{Annexe Technique}
+
+\subsection{Requêtes SQL Utilisées}
+
+L'analyse a été effectuée en utilisant les requêtes SQL suivantes :
+
+\subsubsection{Analyse de la Taille des Tables}
+\begin{verbatim}
+SELECT s.name, t.name, SUM(p.rows),
+CAST(ROUND(SUM(a.total_pages) * 8 / 1024.0, 2) AS DECIMAL(10,2))
+FROM sys.tables t
+JOIN sys.schemas s ON t.schema_id = s.schema_id
+JOIN sys.indexes i ON t.object_id = i.object_id
+JOIN sys.partitions p ON i.object_id = p.object_id 
+    AND i.index_id = p.index_id
+JOIN sys.allocation_units a ON p.partition_id = a.container_id
+GROUP BY s.name, t.name
+ORDER BY SUM(a.total_pages) DESC;
+\end{verbatim}
+
+\subsubsection{Analyse Spécifique par Produit}
+\begin{verbatim}
+SELECT COUNT(*) AS TotalDocuments,
+CAST(SUM(ISNULL(DATALENGTH([fichier]),0) +
+         ISNULL(DATALENGTH([video]),0) +
+         ISNULL(DATALENGTH([photos]),0) +
+         ISNULL(DATALENGTH([plan]),0)) / 1024.0 / 1024.0
+     AS DECIMAL(18,2)) AS FilesSizeMB
+FROM dbo.accounts_document
+WHERE [idProduit_id] = 90;
+\end{verbatim}
+
+\section{Conclusion}
+
+L'analyse de la base de données révèle que la table \texttt{accounts\_document} est le principal consommateur de stockage, avec le Produit ID 90 représentant une portion significative du stockage total.
+
+\subsection{Estimation de la Taille par Produit}
+
+Basé sur l'analyse détaillée du Produit ID 90 (METRO SOUTER. STATION DE METRO Med Boudiaf), nous avons établi les estimations suivantes :
+
+\subsubsection{Métriques Clés par Produit}
+\begin{itemize}
+    \item \textbf{Taille moyenne par document :} 8,93 MB
+    \item \textbf{Stockage base de données par document :} 3,34 MB
+    \item \textbf{Stockage fichiers par document :} 5,59 MB
+    \item \textbf{Ratio stockage fichiers/base de données :} 1,67:1
+\end{itemize}
+
+\subsubsection{Estimation de Stockage par Type de Produit}
+En extrapolant les données du Produit ID 90, nous estimons qu'un produit type nécessite :
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Nombre de Documents} & \textbf{Stockage Estimé (GB)} & \textbf{Coût de Stockage Relatif} \\
+\hline
+100 documents & 0,89 & Faible \\
+500 documents & 4,47 & Moyen \\
+1 000 documents & 8,93 & Élevé \\
+1 177 documents (comme Produit 90) & 10,51 & Très élevé \\
+\hline
+\end{tabular}
+\caption{Estimation de stockage par taille de produit}
+\end{table}
+
+\subsubsection{Implications pour la Planification}
+Cette analyse permet d'établir que :
+\begin{enumerate}
+    \item Les produits avec plus de 1 000 documents nécessitent une attention particulière pour l'optimisation du stockage
+    \item Le stockage des fichiers (plans et vidéos) représente 60,9\% du stockage total
+\end{enumerate}
+
+La croissance future de la base de données doit être surveillée de près, avec une attention particulière aux composants de stockage de fichiers qui représentent la plus grande partie des exigences de stockage totales. Cette estimation de 8,93 MB par document fournit une base de référence pour la planification de capacité et les stratégies d'optimisation du stockage.
+
+\end{document}

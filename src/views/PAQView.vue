@@ -1,12 +1,12 @@
 <template>
   <div class="page-wrapper">
-    <h1>Maîtres d'Ouvrage</h1>
+    <h1>PAQs</h1>
 
     <div class="controls">
       <input
         v-model="search"
         type="text"
-        placeholder="Rechercher un maître d'ouvrage..."
+        placeholder="Rechercher un PAQ..."
         class="search-input"
       />
       <button @click="exportCSV" class="export-button" :class="{ 'disabled': userStore.loading.value || !userStore.canExportCSV.value }" :disabled="userStore.loading.value || !userStore.canExportCSV.value">Exporter CSV</button>
@@ -17,55 +17,43 @@
     <div v-else-if="error" class="error">Erreur : {{ error }}</div>
 
     <div class="table-wrapper">
-      <table v-if="filteredMaitresOuvrage.length > 0" class="product-table">
+      <table v-if="filteredPAQs.length > 0" class="product-table">
         <thead>
           <tr>
-            <!-- <th @click="toggleSort('idMaitreOuvrage')" class="sortable">
-              ID
-              <span v-if="sortColumn === 'idMaitreOuvrage'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th> -->
-            <th @click="toggleSort('designationMOg')" class="sortable">
+            <th @click="toggleSort('designationPAQ')" class="sortable">
               Désignation
-              <span v-if="sortColumn === 'designationMOg'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-if="sortColumn === 'designationPAQ'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
             <th @click="toggleSort('description')" class="sortable">
               Description
               <span v-if="sortColumn === 'description'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
-            <th @click="toggleSort('adresse')" class="sortable">
-              Adresse
-              <span v-if="sortColumn === 'adresse'">{{ sortAsc ? '▲' : '▼' }}</span>
+            <th @click="toggleSort('nomFichier')" class="sortable">
+              Fichier
+              <span v-if="sortColumn === 'nomFichier'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
-            <th @click="toggleSort('email')" class="sortable">
-              Email
-              <span v-if="sortColumn === 'email'">{{ sortAsc ? '▲' : '▼' }}</span>
-            </th>
-            <th>Fichier</th>
             <th>Actions</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr v-for="maitreOuvrage in paginatedMaitresOuvrage" :key="maitreOuvrage.idMaitreOuvrage">
-            <!-- <td>{{ maitreOuvrage.idMaitreOuvrage }}</td> -->
-            <td>{{ maitreOuvrage.designationMOg }}</td>
-            <td>{{ maitreOuvrage.description || '—' }}</td>
-            <td>{{ maitreOuvrage.adresse || '—' }}</td>
-            <td>{{ maitreOuvrage.email || '—' }}</td>
+          <tr v-for="paq in paginatedPAQs" :key="paq.idPAQ">
+            <td>{{ paq.designationPAQ }}</td>
+            <td>{{ paq.description || '—' }}</td>
             <td>
-              <div v-if="maitreOuvrage.nomFichier" class="document-actions">
-                <span>{{ maitreOuvrage.nomFichier }}</span>
-                <button @click="viewFile(maitreOuvrage.idMaitreOuvrage)" class="file-btn" :disabled="loadingConsulter" title="Consulter">
-                  <span v-if="loadingConsulter && loadingDocumentId === maitreOuvrage.idMaitreOuvrage">...</span>
+              <div v-if="paq.nomFichier" class="document-actions">
+                <span>{{ paq.nomFichier }}</span>
+                <button @click="viewFile(paq.idPAQ)" class="file-btn" :disabled="loadingConsulter" title="Consulter">
+                  <span v-if="loadingConsulter && loadingDocumentId === paq.idPAQ">...</span>
                   <span v-else>👁️</span>
                 </button>
               </div>
               <span v-else class="no-file">—</span>
             </td>
             <td>
-              <button class="update-button" @click="confirmUpdate(maitreOuvrage)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
-              <button v-if="userStore.canAccessBibliothequePages.value" class="upload-button" @click="showUploadModal(maitreOuvrage)" title="Télécharger fichier">📁</button>
-              <button class="delete-button" @click="confirmDelete(maitreOuvrage)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
+              <button class="update-button" @click="confirmUpdate(paq)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button v-if="userStore.canAccessBibliothequePages.value" class="upload-button" @click="showUploadModal(paq)" title="Télécharger fichier">📁</button>
+              <button class="delete-button" @click="confirmDelete(paq)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
         </tbody>
@@ -82,82 +70,56 @@
     <!-- ADD POPUP -->
     <div v-if="showAddPopup" class="modal-overlay">
       <div class="modal">
-        <h2>Ajouter un Maître d'Ouvrage</h2>
+        <h2>Ajouter un PAQ</h2>
         <div class="form-group">
           <label>Désignation *</label>
           <input 
-            v-model="newMaitreOuvrage.designationMOg" 
+            v-model="newPAQ.designationPAQ" 
             placeholder="Désignation" 
-            :class="{ 'error': validationErrors.designationMOg }"
+            :class="{ 'error': validationErrors.designationPAQ }"
           />
-          <div v-if="validationErrors.designationMOg" class="error-message">{{ validationErrors.designationMOg }}</div>
+          <div v-if="validationErrors.designationPAQ" class="error-message">{{ validationErrors.designationPAQ }}</div>
         </div>
         <div class="form-group">
           <label>Description</label>
-          <textarea v-model="newMaitreOuvrage.description" placeholder="Description (optionnelle)" />
+          <textarea v-model="newPAQ.description" placeholder="Description (optionnelle)" />
         </div>
-        <div class="form-group">
-          <label>Adresse</label>
-          <input 
-            v-model="newMaitreOuvrage.adresse" 
-            placeholder="Adresse" 
-          />
-          <!-- <div v-if="validationErrors.adresse" class="error-message">{{ validationErrors.adresse }}</div> -->
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input 
-            v-model="newMaitreOuvrage.email" 
-            placeholder="Email" 
-          />
-          <!-- <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div> -->
-        </div>
-        <!-- <div class="form-group">
-          <label>Fichier</label>
-          <input 
-            type="file" 
-            @change="handleFileSelect"
-            accept=".pdf,.doc,.docx,.txt"
-          />
-        </div> -->
         <div class="modal-actions">
-          <button @click="validateAndAddMaitreOuvrage">Ajouter</button>
+          <button @click="validateAndAddPAQ">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
         </div>
       </div>
     </div>
 
     <!-- DELETE CONFIRMATION -->
-    <div v-if="maitreOuvrageToDelete" class="modal-overlay">
+    <div v-if="paqToDelete" class="modal-overlay">
       <div class="modal">
         <h2>Supprimer</h2>
-        <p>Confirmez-vous la suppression de <strong>{{ maitreOuvrageToDelete.designationMOg }}</strong> ?</p>
+        <p>Confirmez-vous la suppression de <strong>{{ paqToDelete.designationPAQ }}</strong> ?</p>
         <div class="modal-actions">
-          <button @click="deleteMaitreOuvrage">Oui, supprimer</button>
-          <button @click="maitreOuvrageToDelete = null" class="cancel">Annuler</button>
+          <button @click="deletePAQ">Oui, supprimer</button>
+          <button @click="paqToDelete = null" class="cancel">Annuler</button>
         </div>
       </div>
     </div>
 
     <!-- UPDATE MODAL -->
-    <div v-if="maitreOuvrageToUpdate" class="modal-overlay">
+    <div v-if="paqToUpdate" class="modal-overlay">
       <div class="modal">
-        <h2>Modifier Maître d'Ouvrage</h2>
-        <input v-model="maitreOuvrageToUpdate.designationMOg" placeholder="Désignation" />
-        <textarea v-model="maitreOuvrageToUpdate.description" placeholder="Description (optionnelle)" />
-        <input v-model="maitreOuvrageToUpdate.adresse" placeholder="Adresse" />
-        <input v-model="maitreOuvrageToUpdate.email" placeholder="Email" />
+        <h2>Modifier PAQ</h2>
+        <input v-model="paqToUpdate.designationPAQ" placeholder="Désignation" />
+        <textarea v-model="paqToUpdate.description" placeholder="Description (optionnelle)" />
         <div class="modal-actions">
-          <button @click="updateMaitreOuvrage">Modifier</button>
-          <button @click="maitreOuvrageToUpdate = null" class="cancel">Annuler</button>
+          <button @click="updatePAQ">Modifier</button>
+          <button @click="paqToUpdate = null" class="cancel">Annuler</button>
         </div>
       </div>
     </div>
 
     <!-- UPLOAD FILE MODAL -->
-    <div v-if="maitreOuvrageToUpload" class="modal-overlay">
+    <div v-if="paqToUpload" class="modal-overlay">
       <div class="modal">
-        <h2>Télécharger fichier pour {{ maitreOuvrageToUpload.designationMOg }}</h2>
+        <h2>Télécharger fichier pour {{ paqToUpload.designationPAQ }}</h2>
         <div class="form-group">
           <label>Fichier</label>
           <input 
@@ -168,7 +130,7 @@
         </div>
         <div class="modal-actions">
           <button @click="uploadFile" :disabled="!uploadFileSelected">Télécharger</button>
-          <button @click="maitreOuvrageToUpload = null" class="cancel">Annuler</button>
+          <button @click="paqToUpload = null" class="cancel">Annuler</button>
         </div>
       </div>
     </div>
@@ -183,21 +145,21 @@
           <PdfViewer
             v-if="selectedDocument.fichier && getFileType(selectedDocument) === 'pdf'"
             :pdfUrl="selectedDocument.fichier"
-            :documentId="selectedDocument.idMaitreOuvrage"
+            :documentId="selectedDocument.idPAQ"
           />
           
           <!-- Image Viewer -->
           <ImageViewer
             v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'"
             :imageUrl="selectedDocument.fichier"
-            :documentId="selectedDocument.idMaitreOuvrage"
+            :documentId="selectedDocument.idPAQ"
           />
           
           <!-- Video Viewer -->
           <VideoViewer
             v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'"
             :videoUrl="selectedDocument.fichier"
-            :documentId="selectedDocument.idMaitreOuvrage"
+            :documentId="selectedDocument.idPAQ"
           />
         </div>
         
@@ -208,6 +170,7 @@
     </div>
   </div>
 </template>
+
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
@@ -216,19 +179,17 @@ import PdfViewer from '../components/PdfViewer.vue'
 import ImageViewer from '../components/ImageViewer.vue'
 import VideoViewer from '../components/VideoViewer.vue'
 
-interface MaitreOuvrage {
-  idMaitreOuvrage: number
-  designationMOg: string
+interface PAQ {
+  idPAQ: number
+  designationPAQ: string
   description: string
-  adresse: string
-  email: string
-  nomFichier: string | null
+  nomFichier: string
   date_suppression: string | null
   fichier?: string
   detectedType?: string
 }
 
-const maitresOuvrage = ref<MaitreOuvrage[]>([])
+const paqs = ref<PAQ[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -236,25 +197,23 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'designationMOg' | 'description' | 'adresse' | 'email'>('designationMOg')
+const sortColumn = ref<'designationPAQ' | 'description' | 'nomFichier'>('designationPAQ')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
-const newMaitreOuvrage = ref({ designationMOg: '', description: '', adresse: '', email: '' })
+const newPAQ = ref({ designationPAQ: '', description: '' })
 const selectedFile = ref<File | null>(null)
-const maitreOuvrageToDelete = ref<MaitreOuvrage | null>(null)
-const maitreOuvrageToUpdate = ref<MaitreOuvrage | null>(null)
-const maitreOuvrageToUpload = ref<MaitreOuvrage | null>(null)
+const paqToDelete = ref<PAQ | null>(null)
+const paqToUpdate = ref<PAQ | null>(null)
+const paqToUpload = ref<PAQ | null>(null)
 const uploadFileSelected = ref<File | null>(null)
-const selectedDocument = ref<MaitreOuvrage | null>(null)
+const selectedDocument = ref<PAQ | null>(null)
 const loadingConsulter = ref(false)
 const loadingDocumentId = ref<number | null>(null)
 
 // Validation errors
 const validationErrors = ref({
-  designationMOg: '',
-  adresse: '',
-  email: ''
+  designationPAQ: ''
 })
 
 const userStore = useUserStore()
@@ -268,28 +227,24 @@ function toggleSort(column: typeof sortColumn.value) {
   }
 }
 
-const filteredMaitresOuvrage = computed(() => {
+const filteredPAQs = computed(() => {
   const s = search.value.trim().toLowerCase()
 
-  const filtered = maitresOuvrage.value.filter((maitreOuvrage) =>
-    maitreOuvrage.designationMOg.toLowerCase().includes(s) ||
-    (maitreOuvrage.description?.toLowerCase().includes(s) ?? false) ||
-    (maitreOuvrage.adresse?.toLowerCase().includes(s) ?? false) ||
-    (maitreOuvrage.email?.toLowerCase().includes(s) ?? false)
+  const filtered = paqs.value.filter((paq) =>
+    paq.designationPAQ.toLowerCase().includes(s) ||
+    (paq.description?.toLowerCase().includes(s) ?? false) ||
+    (paq.nomFichier?.toLowerCase().includes(s) ?? false)
   )
 
   return filtered.sort((a, b) => {
-    // Primary sort by designation (A to Z)
-    const nameA = a.designationMOg.toLowerCase()
-    const nameB = b.designationMOg.toLowerCase()
+    const nameA = a.designationPAQ.toLowerCase()
+    const nameB = b.designationPAQ.toLowerCase()
     
-    if (sortColumn.value === 'designationMOg') {
-      // If sorting by designation column, respect user's sort direction
+    if (sortColumn.value === 'designationPAQ') {
       if (nameA < nameB) return sortAsc.value ? -1 : 1
       if (nameA > nameB) return sortAsc.value ? 1 : -1
       return 0
     } else {
-      // For other columns, sort by that column first, then by designation as secondary sort
       const fieldA = (a[sortColumn.value] || '').toString().toLowerCase()
       const fieldB = (b[sortColumn.value] || '').toString().toLowerCase()
       
@@ -298,7 +253,6 @@ const filteredMaitresOuvrage = computed(() => {
         if (fieldA > fieldB) return sortAsc.value ? 1 : -1
       }
       
-      // Secondary sort by designation (always A to Z)
       if (nameA < nameB) return -1
       if (nameA > nameB) return 1
       return 0
@@ -306,19 +260,19 @@ const filteredMaitresOuvrage = computed(() => {
   })
 })
 
-const paginatedMaitresOuvrage = computed(() => {
+const paginatedPAQs = computed(() => {
   const start = (currentPage.value - 1) * pageSize
-  return filteredMaitresOuvrage.value.slice(start, start + pageSize)
+  return filteredPAQs.value.slice(start, start + pageSize)
 })
 
-const totalPages = computed(() => Math.ceil(filteredMaitresOuvrage.value.length / pageSize))
+const totalPages = computed(() => Math.ceil(filteredPAQs.value.length / pageSize))
 
-async function fetchMaitresOuvrage() {
+async function fetchPAQs() {
   loading.value = true
   error.value = null
   try {
-    const response = await axiosInstance.get('maitres-ouvrage/')
-    maitresOuvrage.value = response.data
+    const response = await axiosInstance.get('paqs/')
+    paqs.value = response.data
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
   } finally {
@@ -326,154 +280,111 @@ async function fetchMaitresOuvrage() {
   }
 }
 
-// function handleFileSelect(event: Event) {
-//   const target = event.target as HTMLInputElement
-//   selectedFile.value = target.files?.[0] || null
-// }
 
 function handleUploadFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
   uploadFileSelected.value = target.files?.[0] || null
 }
 
-function showUploadModal(maitreOuvrage: MaitreOuvrage) {
-  maitreOuvrageToUpload.value = maitreOuvrage
-  uploadFileSelected.value = null
-}
-
-async function addMaitreOuvrage() {
+async function addPAQ() {
   try {
     const formData = new FormData()
-    formData.append('designationMOg', newMaitreOuvrage.value.designationMOg)
-    formData.append('description', newMaitreOuvrage.value.description || '')
-    formData.append('adresse', newMaitreOuvrage.value.adresse || '')
-    formData.append('email', newMaitreOuvrage.value.email || '')
+    formData.append('designationPAQ', newPAQ.value.designationPAQ)
+    formData.append('description', newPAQ.value.description)
     if (selectedFile.value) {
       formData.append('fichier', selectedFile.value)
     }
 
-    const res = await axiosInstance.post('maitres-ouvrage/', formData, {
+    const res = await axiosInstance.post('paqs/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
-    maitresOuvrage.value.push(res.data)
+    paqs.value.push(res.data)
     showAddPopup.value = false
-    newMaitreOuvrage.value = { designationMOg: '', description: '', adresse: '', email: '' }
+    newPAQ.value = { designationPAQ: '', description: '' }
     selectedFile.value = null
   } catch (e: any) {
-    alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
+    alert('Erreur lors de l\'ajout : ' + (e?.message || 'Erreur inconnue'))
   }
 }
 
-function confirmDelete(maitreOuvrage: MaitreOuvrage) {
-  maitreOuvrageToDelete.value = maitreOuvrage
+function confirmDelete(paq: PAQ) {
+  paqToDelete.value = paq
 }
 
-function confirmUpdate(maitreOuvrage: MaitreOuvrage) {
-  maitreOuvrageToUpdate.value = { ...maitreOuvrage }
+function confirmUpdate(paq: PAQ) {
+  paqToUpdate.value = { ...paq }
 }
 
-async function updateMaitreOuvrage() {
-  if (!maitreOuvrageToUpdate.value) return
+function showUploadModal(paq: PAQ) {
+  paqToUpload.value = paq
+  uploadFileSelected.value = null
+}
+
+async function updatePAQ() {
+  if (!paqToUpdate.value) return
   try {
     const formData = new FormData()
-    formData.append('designationMOg', maitreOuvrageToUpdate.value.designationMOg)
-    formData.append('description', maitreOuvrageToUpdate.value.description || '')
-    formData.append('adresse', maitreOuvrageToUpdate.value.adresse || '')
-    formData.append('email', maitreOuvrageToUpdate.value.email || '')
+    formData.append('designationPAQ', paqToUpdate.value.designationPAQ)
+    formData.append('description', paqToUpdate.value.description)
 
-    await axiosInstance.put(`maitres-ouvrage/${maitreOuvrageToUpdate.value.idMaitreOuvrage}/`, formData, {
+    await axiosInstance.put(`paqs/${paqToUpdate.value.idPAQ}/`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
-    const index = maitresOuvrage.value.findIndex(m => m.idMaitreOuvrage === maitreOuvrageToUpdate.value!.idMaitreOuvrage)
+    const index = paqs.value.findIndex(p => p.idPAQ === paqToUpdate.value!.idPAQ)
     if (index !== -1) {
-      maitresOuvrage.value[index] = { ...maitreOuvrageToUpdate.value }
+      paqs.value[index] = { ...paqToUpdate.value }
     }
-    maitreOuvrageToUpdate.value = null
+    paqToUpdate.value = null
   } catch (e: any) {
     alert('Erreur lors de la modification : ' + (e?.message || 'Erreur inconnue'))
   }
 }
 
-async function deleteMaitreOuvrage() {
-  if (!maitreOuvrageToDelete.value) return
+async function deletePAQ() {
+  if (!paqToDelete.value) return
   try {
-    await axiosInstance.delete(`maitres-ouvrage/${maitreOuvrageToDelete.value.idMaitreOuvrage}/`)
-    maitresOuvrage.value = maitresOuvrage.value.filter(m => m.idMaitreOuvrage !== maitreOuvrageToDelete.value!.idMaitreOuvrage)
-    maitreOuvrageToDelete.value = null
+    await axiosInstance.delete(`paqs/${paqToDelete.value.idPAQ}/`)
+    paqs.value = paqs.value.filter(p => p.idPAQ !== paqToDelete.value!.idPAQ)
+    paqToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
   }
 }
 
-// Validate required fields
-function validateRequiredFields() {
-  const errors = {
-    designationMOg: '',
-    adresse: '',
-    email: ''
-  }
-  
-  let isValid = true
-  
-  if (!newMaitreOuvrage.value.designationMOg.trim()) {
-    errors.designationMOg = 'La désignation est requise'
-    isValid = false
-  }
-  
-  if (!newMaitreOuvrage.value.adresse.trim()) {
-    errors.adresse = 'L\'adresse est requise'
-    // isValid = false
-  }
-  
-  if (!newMaitreOuvrage.value.email.trim()) {
-    errors.email = 'L\'email est requis'
-    // isValid = false
-  }
-  
-  validationErrors.value = errors
-  return isValid
-}
-
-// Validate and add MaitreOuvrage
-function validateAndAddMaitreOuvrage() {
-  if (validateRequiredFields()) {
-    addMaitreOuvrage()
-  }
-}
-
 async function uploadFile() {
-  if (!maitreOuvrageToUpload.value || !uploadFileSelected.value) return
+  if (!paqToUpload.value || !uploadFileSelected.value) return
   try {
     const formData = new FormData()
     formData.append('fichier', uploadFileSelected.value)
 
-    await axiosInstance.post(`maitres-ouvrage/${maitreOuvrageToUpload.value.idMaitreOuvrage}/upload-file/`, formData, {
+    await axiosInstance.post(`paqs/${paqToUpload.value.idPAQ}/upload-file/`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
     
-    await fetchMaitresOuvrage()
-    maitreOuvrageToUpload.value = null
+    // Refresh the PAQ list to get updated file info
+    await fetchPAQs()
+    paqToUpload.value = null
     uploadFileSelected.value = null
   } catch (e: any) {
     alert('Erreur lors du téléchargement : ' + (e?.message || 'Erreur inconnue'))
   }
 }
 
-async function viewFile(id: number) {
-  const document = maitresOuvrage.value.find(m => m.idMaitreOuvrage === id)
+async function viewFile(paqId: number) {
+  const document = paqs.value.find(p => p.idPAQ === paqId)
   if (!document) return
   
   loadingConsulter.value = true
-  loadingDocumentId.value = id
+  loadingDocumentId.value = paqId
   
   try {
-    const response = await axiosInstance.get(`maitres-ouvrage/${id}/view-file/`, {
+    const response = await axiosInstance.get(`paqs/${paqId}/view-file/`, {
       responseType: 'blob'
     })
     
@@ -517,15 +428,35 @@ function closeDocumentViewer() {
   selectedDocument.value = null
 }
 
+function validateRequiredFields() {
+  const errors = {
+    designationPAQ: ''
+  }
+  
+  let isValid = true
+  
+  if (!newPAQ.value.designationPAQ.trim()) {
+    errors.designationPAQ = 'La désignation est requise'
+    isValid = false
+  }
+  
+  validationErrors.value = errors
+  return isValid
+}
+
+function validateAndAddPAQ() {
+  if (validateRequiredFields()) {
+    addPAQ()
+  }
+}
+
 function exportCSV() {
-  const headers = ['ID', 'Désignation', 'Description', 'Adresse', 'Email', 'Fichier']
-  const rows = filteredMaitresOuvrage.value.map(maitreOuvrage => [
-    maitreOuvrage.idMaitreOuvrage,
-    maitreOuvrage.designationMOg,
-    maitreOuvrage.description || '',
-    maitreOuvrage.adresse || '',
-    maitreOuvrage.email || '',
-    maitreOuvrage.nomFichier || ''
+  const headers = ['ID', 'Désignation', 'Description', 'Fichier']
+  const rows = filteredPAQs.value.map(paq => [
+    paq.idPAQ,
+    paq.designationPAQ,
+    paq.description || '',
+    paq.nomFichier || ''
   ])
 
   const csvContent =
@@ -537,7 +468,7 @@ function exportCSV() {
   const encodedUri = encodeURI(csvContent)
   const link = document.createElement('a')
   link.setAttribute('href', encodedUri)
-  link.setAttribute('download', 'maitres_ouvrage.csv')
+  link.setAttribute('download', 'paqs.csv')
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -545,13 +476,14 @@ function exportCSV() {
 
 onMounted(async () => {
   await userStore.fetchUserProfile()
-  fetchMaitresOuvrage()
+  fetchPAQs()
 })
 </script>
+
 <style scoped>
 .page-wrapper {
   padding: 16px;
-  margin-right: 20px; /* Adjust as needed */
+  margin-right: 20px;
 }
 
 h1 {
@@ -624,7 +556,7 @@ h1 {
   border-bottom: 1px solid #232f4b;
   text-align: left;
   font-size: 1rem;
-  max-width: 150px;
+  max-width: 200px;
   word-wrap: break-word;
   white-space: normal;
   vertical-align: top;
@@ -725,6 +657,104 @@ h1 {
   opacity: 0.6;
 }
 
+.update-button {
+  padding: 5px 10px;
+  background: #17a2b8;
+  color: white;
+  border: 1px solid #17a2b8;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.update-button:hover {
+  background: #138496;
+  border-color: #138496;
+}
+.update-button.disabled {
+  background: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.upload-button {
+  padding: 5px 10px;
+  background: #ffc107;
+  color: #212529;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.upload-button:hover {
+  background: #e0a800;
+  border-color: #d39e00;
+}
+
+.view-file-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 5px;
+  font-size: 1.1em;
+}
+.view-file-btn:hover {
+  opacity: 0.7;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.5em;
+  align-items: center;
+}
+
+.file-btn {
+  padding: 6px 12px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.file-btn:hover:not(:disabled) {
+  background: #1976d2;
+}
+
+.file-btn:disabled {
+  background: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.no-file {
+  color: #888;
+  font-style: italic;
+}
+
+/* PDF Modal Styles */
+.pdf-modal {
+  max-width: 95vw;
+  max-height: 95vh;
+  width: fit-content;
+  height: fit-content;
+}
+
+.file-viewer-container {
+  width: 100%;
+  height: auto;
+  max-height: calc(90vh - 120px);
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 10px 0;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -778,27 +808,6 @@ h1 {
   background: #2244aa;
 }
 
-.update-button {
-  padding: 5px 10px;
-  background: #17a2b8;
-  color: white;
-  border: 1px solid #17a2b8;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-right: 5px;
-}
-.update-button:hover {
-  background: #138496;
-  border-color: #138496;
-}
-
-.update-button.disabled {
-  background: #888 !important;
-  cursor: not-allowed !important;
-  opacity: 0.6;
-}
-
 .form-group {
   margin-bottom: 1rem;
 }
@@ -821,91 +830,5 @@ h1 {
   font-size: 0.85em;
   margin-top: 0.3em;
   font-weight: 500;
-}
-
-.upload-button {
-  padding: 5px 10px;
-  background: #ffc107;
-  color: #212529;
-  border: 1px solid #ffc107;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-right: 5px;
-}
-.upload-button:hover {
-  background: #e0a800;
-  border-color: #d39e00;
-}
-
-.view-file-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  margin-left: 5px;
-  font-size: 1.1em;
-}
-.view-file-btn:hover {
-  opacity: 0.7;
-}
-
-.document-actions {
-  display: flex;
-  gap: 0.5em;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-
-.document-actions span {
-  word-break: break-all;
-  line-height: 1.3;
-  flex: 1;
-  min-width: 0;
-}
-
-.file-btn {
-  padding: 6px 12px;
-  background: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: background-color 0.2s;
-}
-
-.file-btn:hover:not(:disabled) {
-  background: #1976d2;
-}
-
-.file-btn:disabled {
-  background: #888;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.no-file {
-  color: #888;
-  font-style: italic;
-}
-
-/* PDF Modal Styles */
-.pdf-modal {
-  max-width: 95vw;
-  max-height: 95vh;
-  width: fit-content;
-  height: fit-content;
-}
-
-.file-viewer-container {
-  width: 100%;
-  height: auto;
-  max-height: calc(90vh - 120px);
-  overflow: auto;
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  margin: 10px 0;
 }
 </style>

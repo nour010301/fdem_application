@@ -44,6 +44,8 @@
               Email
               <span v-if="sortColumn === 'email'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
+            <th>Secteur d'activité</th>
+            <th>Fichier</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -56,8 +58,20 @@
             <td>{{ soustraitant.adresse || '—' }}</td>
             <td>{{ soustraitant.telephone || '—' }}</td>
             <td>{{ soustraitant.email || '—' }}</td>
+            <td>{{ getSecteursNames(soustraitant.secteurs_activite) }}</td>
+            <td>
+              <div v-if="soustraitant.nomFichier" class="document-actions">
+                <span>{{ soustraitant.nomFichier }}</span>
+                <button @click="viewFile(soustraitant.idSoustraitants)" class="file-btn" :disabled="loadingConsulter" title="Consulter">
+                  <span v-if="loadingConsulter && loadingDocumentId === soustraitant.idSoustraitants">...</span>
+                  <span v-else>👁️</span>
+                </button>
+              </div>
+              <span v-else class="no-file">—</span>
+            </td>
             <td>
               <button class="update-button" @click="confirmUpdate(soustraitant)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button v-if="userStore.canAccessBibliothequePages.value" class="upload-button" @click="showUploadModal(soustraitant)" title="Télécharger fichier">📁</button>
               <button class="delete-button" @click="confirmDelete(soustraitant)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
@@ -113,6 +127,31 @@
           />
           <!-- <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div> -->
         </div>
+        <div class="form-group">
+          <label>Secteurs d'activité (optionnel)</label>
+          <div class="multi-select-container">
+            <div class="selected-items">
+              <span v-for="secteurId in newSoustraitant.secteurs_activite" :key="secteurId" class="selected-item">
+                {{ getSecteurName(secteurId) }}
+                <button type="button" @click="removeSecteur(secteurId)" class="remove-item">×</button>
+              </span>
+            </div>
+            <select @change="addSecteur($event)" class="secteur-select">
+              <option value="">-- Ajouter un secteur --</option>
+              <option v-for="secteur in availableSecteurs" :key="secteur.id" :value="secteur.id">
+                {{ secteur.secteur }}
+              </option>
+            </select>
+          </div>
+        </div>
+        <!-- <div class="form-group">
+          <label>Fichier</label>
+          <input 
+            type="file" 
+            @change="handleFileSelect"
+            accept=".pdf,.doc,.docx,.txt"
+          />
+        </div> -->
         <div class="modal-actions">
           <button @click="validateAndAddSoustraitant">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
@@ -136,14 +175,99 @@
     <div v-if="soustraitantToUpdate" class="modal-overlay">
       <div class="modal">
         <h2>Modifier Sous-traitant</h2>
-        <input v-model="soustraitantToUpdate.designationStt" placeholder="Désignation" />
-        <textarea v-model="soustraitantToUpdate.description" placeholder="Description (optionnelle)" />
-        <input v-model="soustraitantToUpdate.adresse" placeholder="Adresse" />
-        <input v-model="soustraitantToUpdate.telephone" placeholder="Téléphone" />
-        <input v-model="soustraitantToUpdate.email" placeholder="Email" />
+        <div class="form-group">
+          <label>Désignation</label>
+          <input v-model="soustraitantToUpdate.designationStt" placeholder="Désignation" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea v-model="soustraitantToUpdate.description" placeholder="Description (optionnelle)" />
+        </div>
+        <div class="form-group">
+          <label>Adresse</label>
+          <input v-model="soustraitantToUpdate.adresse" placeholder="Adresse" />
+        </div>
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input v-model="soustraitantToUpdate.telephone" placeholder="Téléphone" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input v-model="soustraitantToUpdate.email" placeholder="Email" />
+        </div>
+        <div class="form-group">
+          <label>Secteurs d'activité</label>
+          <div class="multi-select-container">
+            <div class="selected-items">
+              <span v-for="secteurId in soustraitantToUpdate.secteurs_activite" :key="secteurId" class="selected-item">
+                {{ getSecteurName(secteurId) }}
+                <button type="button" @click="removeUpdateSecteur(secteurId)" class="remove-item">×</button>
+              </span>
+            </div>
+            <select @change="addUpdateSecteur($event)" class="secteur-select">
+              <option value="">-- Ajouter un secteur --</option>
+              <option v-for="secteur in availableUpdateSecteurs" :key="secteur.id" :value="secteur.id">
+                {{ secteur.secteur }}
+              </option>
+            </select>
+          </div>
+        </div>
         <div class="modal-actions">
           <button @click="updateSoustraitant">Modifier</button>
           <button @click="soustraitantToUpdate = null" class="cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPLOAD FILE MODAL -->
+    <div v-if="soustraitantToUpload" class="modal-overlay">
+      <div class="modal">
+        <h2>Télécharger fichier pour {{ soustraitantToUpload.designationStt }}</h2>
+        <div class="form-group">
+          <label>Fichier</label>
+          <input 
+            type="file" 
+            @change="handleUploadFileSelect"
+            accept=".pdf,.doc,.docx,.txt"
+          />
+        </div>
+        <div class="modal-actions">
+          <button @click="uploadFile" :disabled="!uploadFileSelected">Télécharger</button>
+          <button @click="soustraitantToUpload = null" class="cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILE VIEWER MODAL -->
+    <div v-if="selectedDocument && selectedDocument.fichier" class="modal-overlay">
+      <div class="modal pdf-modal">
+        <h2>Consulter Document</h2>
+        
+        <div class="file-viewer-container">
+          <!-- PDF Viewer -->
+          <PdfViewer
+            v-if="selectedDocument.fichier && getFileType(selectedDocument) === 'pdf'"
+            :pdfUrl="selectedDocument.fichier"
+            :documentId="selectedDocument.idSoustraitants"
+          />
+          
+          <!-- Image Viewer -->
+          <ImageViewer
+            v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'"
+            :imageUrl="selectedDocument.fichier"
+            :documentId="selectedDocument.idSoustraitants"
+          />
+          
+          <!-- Video Viewer -->
+          <VideoViewer
+            v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'"
+            :videoUrl="selectedDocument.fichier"
+            :documentId="selectedDocument.idSoustraitants"
+          />
+        </div>
+        
+        <div class="modal-actions">
+          <button @click="closeDocumentViewer" class="cancel">Fermer</button>
         </div>
       </div>
     </div>
@@ -153,6 +277,9 @@
 import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
 import { useUserStore } from '../store/userStore'
+import PdfViewer from '../components/PdfViewer.vue'
+import ImageViewer from '../components/ImageViewer.vue'
+import VideoViewer from '../components/VideoViewer.vue'
 
 interface Soustraitant {
   idSoustraitants: number
@@ -161,9 +288,20 @@ interface Soustraitant {
   adresse: string
   telephone: string
   email: string
+  nomFichier: string | null
+  date_suppression: string | null
+  secteurs_activite: number[] | null
+  fichier?: string
+  detectedType?: string
+}
+
+interface Secteur {
+  id: number
+  secteur: string
 }
 
 const soustraitants = ref<Soustraitant[]>([])
+const secteurs = ref<Secteur[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -175,9 +313,15 @@ const sortColumn = ref<'designationStt' | 'description' | 'adresse' | 'telephone
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
-const newSoustraitant = ref({ designationStt: '', description: '', adresse: '', telephone: '', email: '' })
+const newSoustraitant = ref({ designationStt: '', description: '', adresse: '', telephone: '', email: '', secteurs_activite: [] as number[] })
+const selectedFile = ref<File | null>(null)
 const soustraitantToDelete = ref<Soustraitant | null>(null)
 const soustraitantToUpdate = ref<Soustraitant | null>(null)
+const soustraitantToUpload = ref<Soustraitant | null>(null)
+const uploadFileSelected = ref<File | null>(null)
+const selectedDocument = ref<Soustraitant | null>(null)
+const loadingConsulter = ref(false)
+const loadingDocumentId = ref<number | null>(null)
 
 // Validation errors
 const validationErrors = ref({
@@ -257,12 +401,57 @@ async function fetchSoustraitants() {
   }
 }
 
+async function fetchSecteurs() {
+  try {
+    const response = await axiosInstance.get('http://10.10.150.75:8000/api/secteurs/')
+    secteurs.value = response.data
+  } catch (e: any) {
+    console.error('Erreur lors du chargement des secteurs:', e)
+  }
+}
+
+// function handleFileSelect(event: Event) {
+//   const target = event.target as HTMLInputElement
+//   selectedFile.value = target.files?.[0] || null
+// }
+
+function handleUploadFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  uploadFileSelected.value = target.files?.[0] || null
+}
+
+function showUploadModal(soustraitant: Soustraitant) {
+  soustraitantToUpload.value = soustraitant
+  uploadFileSelected.value = null
+}
+
 async function addSoustraitant() {
   try {
-    const res = await axiosInstance.post('soustraitants/', newSoustraitant.value)
+    const formData = new FormData()
+    formData.append('designationStt', newSoustraitant.value.designationStt)
+    formData.append('description', newSoustraitant.value.description || '')
+    formData.append('adresse', newSoustraitant.value.adresse || '')
+    formData.append('telephone', newSoustraitant.value.telephone || '')
+    formData.append('email', newSoustraitant.value.email || '')
+    if (selectedFile.value) {
+      formData.append('fichier', selectedFile.value)
+    }
+
+    if (newSoustraitant.value.secteurs_activite.length > 0) {
+      newSoustraitant.value.secteurs_activite.forEach(secteurId => {
+        formData.append('secteurs_activite', secteurId.toString())
+      })
+    }
+
+    const res = await axiosInstance.post('soustraitants/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
     soustraitants.value.push(res.data)
     showAddPopup.value = false
-    newSoustraitant.value = { designationStt: '', description: '', adresse: '', telephone: '', email: '' }
+    newSoustraitant.value = { designationStt: '', description: '', adresse: '', telephone: '', email: '', secteurs_activite: [] }
+    selectedFile.value = null
     validationErrors.value = { designationStt: '', adresse: '', telephone: '', email: '' }
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
@@ -274,20 +463,32 @@ function confirmDelete(soustraitant: Soustraitant) {
 }
 
 function confirmUpdate(soustraitant: Soustraitant) {
-  soustraitantToUpdate.value = { ...soustraitant }
+  soustraitantToUpdate.value = { 
+    ...soustraitant, 
+    secteurs_activite: Array.isArray(soustraitant.secteurs_activite) ? [...soustraitant.secteurs_activite] : [] 
+  }
 }
 
 async function updateSoustraitant() {
   if (!soustraitantToUpdate.value) return
   try {
-    const soustraitantToSend = {
-      designationStt: soustraitantToUpdate.value.designationStt,
-      description: soustraitantToUpdate.value.description,
-      adresse: soustraitantToUpdate.value.adresse,
-      telephone: soustraitantToUpdate.value.telephone,
-      email: soustraitantToUpdate.value.email
+    const formData = new FormData()
+    formData.append('designationStt', soustraitantToUpdate.value.designationStt)
+    formData.append('description', soustraitantToUpdate.value.description || '')
+    formData.append('adresse', soustraitantToUpdate.value.adresse || '')
+    formData.append('telephone', soustraitantToUpdate.value.telephone || '')
+    formData.append('email', soustraitantToUpdate.value.email || '')
+    if (soustraitantToUpdate.value.secteurs_activite && soustraitantToUpdate.value.secteurs_activite.length > 0) {
+      soustraitantToUpdate.value.secteurs_activite.forEach(secteurId => {
+        formData.append('secteurs_activite', secteurId.toString())
+      })
     }
-    await axiosInstance.put(`soustraitants/${soustraitantToUpdate.value.idSoustraitants}/`, soustraitantToSend)
+
+    await axiosInstance.put(`soustraitants/${soustraitantToUpdate.value.idSoustraitants}/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
     const index = soustraitants.value.findIndex(s => s.idSoustraitants === soustraitantToUpdate.value!.idSoustraitants)
     if (index !== -1) {
       soustraitants.value[index] = { ...soustraitantToUpdate.value }
@@ -351,15 +552,143 @@ function validateAndAddSoustraitant() {
   }
 }
 
+async function uploadFile() {
+  if (!soustraitantToUpload.value || !uploadFileSelected.value) return
+  try {
+    const formData = new FormData()
+    formData.append('fichier', uploadFileSelected.value)
+
+    await axiosInstance.post(`soustraitants/${soustraitantToUpload.value.idSoustraitants}/upload-file/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    await fetchSoustraitants()
+    soustraitantToUpload.value = null
+    uploadFileSelected.value = null
+  } catch (e: any) {
+    alert('Erreur lors du téléchargement : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+async function viewFile(id: number) {
+  const document = soustraitants.value.find(s => s.idSoustraitants === id)
+  if (!document) return
+  
+  loadingConsulter.value = true
+  loadingDocumentId.value = id
+  
+  try {
+    const response = await axiosInstance.get(`soustraitants/${id}/view-file/`, {
+      responseType: 'blob'
+    })
+    
+    if (response.status === 200) {
+      const blob = response.data
+      const fileUrl = URL.createObjectURL(blob)
+      
+      // Detect file type from blob content-type
+      let detectedType = 'pdf'
+      if (blob.type.startsWith('image/')) {
+        detectedType = 'image'
+      } else if (blob.type.startsWith('video/')) {
+        detectedType = 'video'
+      }
+      
+      selectedDocument.value = {
+        ...document,
+        fichier: fileUrl,
+        detectedType: detectedType
+      }
+    }
+  } catch (e: any) {
+    alert('Erreur lors de l\'ouverture du fichier : ' + (e?.message || 'Erreur inconnue'))
+  } finally {
+    loadingConsulter.value = false
+    loadingDocumentId.value = null
+  }
+}
+
+function getFileType(document: any): string {
+  if (document.detectedType) {
+    return document.detectedType
+  }
+  return 'pdf'
+}
+
+function closeDocumentViewer() {
+  if (selectedDocument.value?.fichier) {
+    URL.revokeObjectURL(selectedDocument.value.fichier)
+  }
+  selectedDocument.value = null
+}
+
+function getSecteurName(secteurId: number | null): string {
+  if (!secteurId) return '—'
+  const secteur = secteurs.value.find(s => s.id === secteurId)
+  return secteur ? secteur.secteur : '—'
+}
+
+function getSecteursNames(secteurIds: number[] | null): string {
+  if (!secteurIds || secteurIds.length === 0) return '—'
+  const names = secteurIds.map(id => getSecteurName(id)).filter(name => name !== '—')
+  return names.length > 0 ? names.join(', ') : '—'
+}
+
+const availableSecteurs = computed(() => {
+  return secteurs.value.filter(secteur => !newSoustraitant.value.secteurs_activite.includes(secteur.id))
+})
+
+const availableUpdateSecteurs = computed(() => {
+  if (!soustraitantToUpdate.value || !soustraitantToUpdate.value.secteurs_activite) return secteurs.value
+  return secteurs.value.filter(secteur => !soustraitantToUpdate.value!.secteurs_activite!.includes(secteur.id))
+})
+
+function addSecteur(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const secteurId = parseInt(target.value)
+  if (secteurId && !newSoustraitant.value.secteurs_activite.includes(secteurId)) {
+    newSoustraitant.value.secteurs_activite.push(secteurId)
+  }
+  target.value = ''
+}
+
+function removeSecteur(secteurId: number) {
+  const index = newSoustraitant.value.secteurs_activite.indexOf(secteurId)
+  if (index > -1) {
+    newSoustraitant.value.secteurs_activite.splice(index, 1)
+  }
+}
+
+function addUpdateSecteur(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const secteurId = parseInt(target.value)
+  if (secteurId && soustraitantToUpdate.value && soustraitantToUpdate.value.secteurs_activite && !soustraitantToUpdate.value.secteurs_activite.includes(secteurId)) {
+    soustraitantToUpdate.value.secteurs_activite.push(secteurId)
+  }
+  target.value = ''
+}
+
+function removeUpdateSecteur(secteurId: number) {
+  if (!soustraitantToUpdate.value || !soustraitantToUpdate.value.secteurs_activite) return
+  const index = soustraitantToUpdate.value.secteurs_activite.indexOf(secteurId)
+  if (index > -1) {
+    soustraitantToUpdate.value.secteurs_activite.splice(index, 1)
+  }
+}
+
 function exportCSV() {
-  const headers = ['ID', 'Désignation', 'Description', 'Adresse', 'Téléphone', 'Email']
+  const headers = ['ID', 'Désignation', 'Description', 'Adresse', 'Téléphone', 'Email', 'Secteur d\'activité', 'Fichier']
   const rows = filteredSoustraitants.value.map(soustraitant => [
     soustraitant.idSoustraitants,
     soustraitant.designationStt,
     soustraitant.description || '',
     soustraitant.adresse || '',
     soustraitant.telephone || '',
-    soustraitant.email || ''
+    soustraitant.email || '',
+    getSecteursNames(soustraitant.secteurs_activite),
+    soustraitant.nomFichier || ''
   ])
 
   const csvContent =
@@ -379,6 +708,7 @@ function exportCSV() {
 
 onMounted(async () => {
   await userStore.fetchUserProfile()
+  fetchSecteurs()
   fetchSoustraitants()
 })
 </script>
@@ -458,6 +788,10 @@ h1 {
   border-bottom: 1px solid #232f4b;
   text-align: left;
   font-size: 1rem;
+  max-width: 150px;
+  word-wrap: break-word;
+  white-space: normal;
+  vertical-align: top;
 }
 
 .product-table th {
@@ -577,7 +911,8 @@ h1 {
 }
 
 .modal input,
-.modal textarea {
+.modal textarea,
+.modal select {
   width: 100%;
   margin-top: 0.5rem;
   margin-bottom: 1rem;
@@ -651,5 +986,142 @@ h1 {
   font-size: 0.85em;
   margin-top: 0.3em;
   font-weight: 500;
+}
+
+.upload-button {
+  padding: 5px 10px;
+  background: #ffc107;
+  color: #212529;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.upload-button:hover {
+  background: #e0a800;
+  border-color: #d39e00;
+}
+
+.view-file-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 5px;
+  font-size: 1.1em;
+}
+.view-file-btn:hover {
+  opacity: 0.7;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.5em;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.document-actions span {
+  word-break: break-all;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-btn {
+  padding: 6px 12px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.file-btn:hover:not(:disabled) {
+  background: #1976d2;
+}
+
+.file-btn:disabled {
+  background: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.no-file {
+  color: #888;
+  font-style: italic;
+}
+
+/* PDF Modal Styles */
+.pdf-modal {
+  max-width: 95vw;
+  max-height: 95vh;
+  width: fit-content;
+  height: fit-content;
+}
+
+.file-viewer-container {
+  width: 100%;
+  height: auto;
+  max-height: calc(90vh - 120px);
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 10px 0;
+}
+
+/* Multi-select styles */
+.multi-select-container {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 8px;
+  background: white;
+}
+
+.selected-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  min-height: 32px;
+}
+
+.selected-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #2244aa;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.remove-item {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.remove-item:hover {
+  color: #ff495c;
+}
+
+.secteur-select {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
 }
 </style>

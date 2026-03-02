@@ -1,6 +1,6 @@
 <template>
   <div class="page-wrapper">
-    <h1>Maîtres d'Œuvre</h1>
+    <h1>Maîtres d'Œuvre(BCS)</h1>
 
     <div class="controls">
       <input
@@ -40,6 +40,7 @@
               Email
               <span v-if="sortColumn === 'email'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
+            <th>Fichier</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -52,7 +53,18 @@
             <td>{{ maitreOeuvre.adresse || '—' }}</td>
             <td>{{ maitreOeuvre.email || '—' }}</td>
             <td>
+              <div v-if="maitreOeuvre.nomFichier" class="document-actions">
+                <span>{{ maitreOeuvre.nomFichier }}</span>
+                <button @click="viewFile(maitreOeuvre.idMaitreOeuvre)" class="file-btn" :disabled="loadingConsulter" title="Consulter">
+                  <span v-if="loadingConsulter && loadingDocumentId === maitreOeuvre.idMaitreOeuvre">...</span>
+                  <span v-else>👁️</span>
+                </button>
+              </div>
+              <span v-else class="no-file">—</span>
+            </td>
+            <td>
               <button class="update-button" @click="confirmUpdate(maitreOeuvre)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button v-if="userStore.canAccessBibliothequePages.value" class="upload-button" @click="showUploadModal(maitreOeuvre)" title="Télécharger fichier">📁</button>
               <button class="delete-button" @click="confirmDelete(maitreOeuvre)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
@@ -100,6 +112,14 @@
           />
           <!-- <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email }}</div> -->
         </div>
+        <!-- <div class="form-group">
+          <label>Fichier</label>
+          <input 
+            type="file" 
+            @change="handleFileSelect"
+            accept=".pdf,.doc,.docx,.txt"
+          />
+        </div> -->
         <div class="modal-actions">
           <button @click="validateAndAddMaitreOeuvre">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
@@ -133,12 +153,68 @@
         </div>
       </div>
     </div>
+
+    <!-- UPLOAD FILE MODAL -->
+    <div v-if="maitreOeuvreToUpload" class="modal-overlay">
+      <div class="modal">
+        <h2>Télécharger fichier pour {{ maitreOeuvreToUpload.designationMO }}</h2>
+        <div class="form-group">
+          <label>Fichier</label>
+          <input 
+            type="file" 
+            @change="handleUploadFileSelect"
+            accept=".pdf,.doc,.docx,.txt"
+          />
+        </div>
+        <div class="modal-actions">
+          <button @click="uploadFile" :disabled="!uploadFileSelected">Télécharger</button>
+          <button @click="maitreOeuvreToUpload = null" class="cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILE VIEWER MODAL -->
+    <div v-if="selectedDocument && selectedDocument.fichier" class="modal-overlay">
+      <div class="modal pdf-modal">
+        <h2>Consulter Document</h2>
+        
+        <div class="file-viewer-container">
+          <!-- PDF Viewer -->
+          <PdfViewer
+            v-if="selectedDocument.fichier && getFileType(selectedDocument) === 'pdf'"
+            :pdfUrl="selectedDocument.fichier"
+            :documentId="selectedDocument.idMaitreOeuvre"
+          />
+          
+          <!-- Image Viewer -->
+          <ImageViewer
+            v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'image'"
+            :imageUrl="selectedDocument.fichier"
+            :documentId="selectedDocument.idMaitreOeuvre"
+          />
+          
+          <!-- Video Viewer -->
+          <VideoViewer
+            v-else-if="selectedDocument.fichier && getFileType(selectedDocument) === 'video'"
+            :videoUrl="selectedDocument.fichier"
+            :documentId="selectedDocument.idMaitreOeuvre"
+          />
+        </div>
+        
+        <div class="modal-actions">
+          <button @click="closeDocumentViewer" class="cancel">Fermer</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
 import axiosInstance from '../axios'
 import { useUserStore } from '../store/userStore'
+import PdfViewer from '../components/PdfViewer.vue'
+import ImageViewer from '../components/ImageViewer.vue'
+import VideoViewer from '../components/VideoViewer.vue'
 
 interface MaitreOeuvre {
   idMaitreOeuvre: number
@@ -146,6 +222,10 @@ interface MaitreOeuvre {
   description: string
   adresse: string
   email: string
+  nomFichier: string | null
+  date_suppression: string | null
+  fichier?: string
+  detectedType?: string
 }
 
 const maitresOeuvre = ref<MaitreOeuvre[]>([])
@@ -161,8 +241,14 @@ const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
 const newMaitreOeuvre = ref({ designationMO: '', description: '', adresse: '', email: '' })
+const selectedFile = ref<File | null>(null)
 const maitreOeuvreToDelete = ref<MaitreOeuvre | null>(null)
 const maitreOeuvreToUpdate = ref<MaitreOeuvre | null>(null)
+const maitreOeuvreToUpload = ref<MaitreOeuvre | null>(null)
+const uploadFileSelected = ref<File | null>(null)
+const selectedDocument = ref<MaitreOeuvre | null>(null)
+const loadingConsulter = ref(false)
+const loadingDocumentId = ref<number | null>(null)
 
 // Validation errors
 const validationErrors = ref({
@@ -240,12 +326,41 @@ async function fetchMaitresOeuvre() {
   }
 }
 
+// function handleFileSelect(event: Event) {
+//   const target = event.target as HTMLInputElement
+//   selectedFile.value = target.files?.[0] || null
+// }
+
+function handleUploadFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  uploadFileSelected.value = target.files?.[0] || null
+}
+
+function showUploadModal(maitreOeuvre: MaitreOeuvre) {
+  maitreOeuvreToUpload.value = maitreOeuvre
+  uploadFileSelected.value = null
+}
+
 async function addMaitreOeuvre() {
   try {
-    const res = await axiosInstance.post('maitres-oeuvre/', newMaitreOeuvre.value)
+    const formData = new FormData()
+    formData.append('designationMO', newMaitreOeuvre.value.designationMO)
+    formData.append('description', newMaitreOeuvre.value.description || '')
+    formData.append('adresse', newMaitreOeuvre.value.adresse || '')
+    formData.append('email', newMaitreOeuvre.value.email || '')
+    if (selectedFile.value) {
+      formData.append('fichier', selectedFile.value)
+    }
+
+    const res = await axiosInstance.post('maitres-oeuvre/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
     maitresOeuvre.value.push(res.data)
     showAddPopup.value = false
     newMaitreOeuvre.value = { designationMO: '', description: '', adresse: '', email: '' }
+    selectedFile.value = null
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -262,13 +377,17 @@ function confirmUpdate(maitreOeuvre: MaitreOeuvre) {
 async function updateMaitreOeuvre() {
   if (!maitreOeuvreToUpdate.value) return
   try {
-    const maitreOeuvreToSend = {
-      designationMO: maitreOeuvreToUpdate.value.designationMO,
-      description: maitreOeuvreToUpdate.value.description,
-      adresse: maitreOeuvreToUpdate.value.adresse,
-      email: maitreOeuvreToUpdate.value.email
-    }
-    await axiosInstance.put(`maitres-oeuvre/${maitreOeuvreToUpdate.value.idMaitreOeuvre}/`, maitreOeuvreToSend)
+    const formData = new FormData()
+    formData.append('designationMO', maitreOeuvreToUpdate.value.designationMO)
+    formData.append('description', maitreOeuvreToUpdate.value.description || '')
+    formData.append('adresse', maitreOeuvreToUpdate.value.adresse || '')
+    formData.append('email', maitreOeuvreToUpdate.value.email || '')
+
+    await axiosInstance.put(`maitres-oeuvre/${maitreOeuvreToUpdate.value.idMaitreOeuvre}/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
     const index = maitresOeuvre.value.findIndex(m => m.idMaitreOeuvre === maitreOeuvreToUpdate.value!.idMaitreOeuvre)
     if (index !== -1) {
       maitresOeuvre.value[index] = { ...maitreOeuvreToUpdate.value }
@@ -326,14 +445,87 @@ function validateAndAddMaitreOeuvre() {
   }
 }
 
+async function uploadFile() {
+  if (!maitreOeuvreToUpload.value || !uploadFileSelected.value) return
+  try {
+    const formData = new FormData()
+    formData.append('fichier', uploadFileSelected.value)
+
+    await axiosInstance.post(`maitres-oeuvre/${maitreOeuvreToUpload.value.idMaitreOeuvre}/upload-file/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    await fetchMaitresOeuvre()
+    maitreOeuvreToUpload.value = null
+    uploadFileSelected.value = null
+  } catch (e: any) {
+    alert('Erreur lors du téléchargement : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+async function viewFile(id: number) {
+  const document = maitresOeuvre.value.find(m => m.idMaitreOeuvre === id)
+  if (!document) return
+  
+  loadingConsulter.value = true
+  loadingDocumentId.value = id
+  
+  try {
+    const response = await axiosInstance.get(`maitres-oeuvre/${id}/view-file/`, {
+      responseType: 'blob'
+    })
+    
+    if (response.status === 200) {
+      const blob = response.data
+      const fileUrl = URL.createObjectURL(blob)
+      
+      // Detect file type from blob content-type
+      let detectedType = 'pdf'
+      if (blob.type.startsWith('image/')) {
+        detectedType = 'image'
+      } else if (blob.type.startsWith('video/')) {
+        detectedType = 'video'
+      }
+      
+      selectedDocument.value = {
+        ...document,
+        fichier: fileUrl,
+        detectedType: detectedType
+      }
+    }
+  } catch (e: any) {
+    alert('Erreur lors de l\'ouverture du fichier : ' + (e?.message || 'Erreur inconnue'))
+  } finally {
+    loadingConsulter.value = false
+    loadingDocumentId.value = null
+  }
+}
+
+function getFileType(document: any): string {
+  if (document.detectedType) {
+    return document.detectedType
+  }
+  return 'pdf'
+}
+
+function closeDocumentViewer() {
+  if (selectedDocument.value?.fichier) {
+    URL.revokeObjectURL(selectedDocument.value.fichier)
+  }
+  selectedDocument.value = null
+}
+
 function exportCSV() {
-  const headers = ['ID', 'Désignation', 'Description', 'Adresse', 'Email']
+  const headers = ['ID', 'Désignation', 'Description', 'Adresse', 'Email', 'Fichier']
   const rows = filteredMaitresOeuvre.value.map(maitreOeuvre => [
     maitreOeuvre.idMaitreOeuvre,
     maitreOeuvre.designationMO,
     maitreOeuvre.description || '',
     maitreOeuvre.adresse || '',
-    maitreOeuvre.email || ''
+    maitreOeuvre.email || '',
+    maitreOeuvre.nomFichier || ''
   ])
 
   const csvContent =
@@ -432,6 +624,10 @@ h1 {
   border-bottom: 1px solid #232f4b;
   text-align: left;
   font-size: 1rem;
+  max-width: 150px;
+  word-wrap: break-word;
+  white-space: normal;
+  vertical-align: top;
 }
 
 .product-table th {
@@ -625,5 +821,91 @@ h1 {
   font-size: 0.85em;
   margin-top: 0.3em;
   font-weight: 500;
+}
+
+.upload-button {
+  padding: 5px 10px;
+  background: #ffc107;
+  color: #212529;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.upload-button:hover {
+  background: #e0a800;
+  border-color: #d39e00;
+}
+
+.view-file-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 5px;
+  font-size: 1.1em;
+}
+.view-file-btn:hover {
+  opacity: 0.7;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.5em;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.document-actions span {
+  word-break: break-all;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-btn {
+  padding: 6px 12px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.file-btn:hover:not(:disabled) {
+  background: #1976d2;
+}
+
+.file-btn:disabled {
+  background: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.no-file {
+  color: #888;
+  font-style: italic;
+}
+
+/* PDF Modal Styles */
+.pdf-modal {
+  max-width: 95vw;
+  max-height: 95vh;
+  width: fit-content;
+  height: fit-content;
+}
+
+.file-viewer-container {
+  width: 100%;
+  height: auto;
+  max-height: calc(90vh - 120px);
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 10px 0;
 }
 </style>

@@ -46,21 +46,32 @@
               Désignation
               <span v-if="sortColumn === 'designation'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
+            <th @click="toggleSort('ordre')" class="sortable">
+              Ordre
+              <span v-if="sortColumn === 'ordre'">{{ sortAsc ? '▲' : '▼' }}</span>
+            </th>
             <th>Actions</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr v-for="section in paginatedSections" :key="section.idSectionProduit">
+          <tr v-for="(section, index) in paginatedSections" :key="section.idSectionProduit"
+              :draggable="canModifySectionOrder(section)"
+              @dragstart="onDragStart($event, index)"
+              @dragover="onDragOver($event)"
+              @drop="onDrop($event, index)"
+              :class="{ 'selected-for-move': selectedSectionForMove?.idSectionProduit === section.idSectionProduit, 'non-draggable': !canModifySectionOrder(section) }"
+              @click="selectSectionForMove(section)">
             <!-- <td>{{ section.idSectionProduit }}</td> -->
             <td>{{ section.nom }}</td>
             <td>{{ section.designation }}</td>
+            <td>{{ section.ordre || 0 }}</td>
             <td>
               <button 
                 class="update-button" 
                 @click="confirmUpdate(section)"
-                :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }"
-                :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value"
+                :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value || !canModifySectionOrder(section) }"
+                :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value || !canModifySectionOrder(section)"
                 title="Modifier"
               >
                 ✎
@@ -85,6 +96,24 @@
       <button @click="currentPage--" :disabled="currentPage === 1">Précédent</button>
       <span>Page {{ currentPage }} / {{ totalPages }}</span>
       <button @click="currentPage++" :disabled="currentPage === totalPages">Suivant</button>
+    </div>
+
+    <!-- Move Controls -->
+    <div v-if="selectedSectionForMove" class="move-controls">
+      <div class="move-info">
+        Section sélectionnée: <strong>{{ selectedSectionForMove.nom }}</strong>
+      </div>
+      <div class="move-buttons">
+        <button @click="moveUp" :disabled="!canMoveUp" class="move-button">
+          ↑ Monter
+        </button>
+        <button @click="moveDown" :disabled="!canMoveDown" class="move-button">
+          ↓ Descendre
+        </button>
+        <button @click="selectedSectionForMove = null" class="cancel-move-button">
+          Annuler
+        </button>
+      </div>
     </div>
 
     <!-- ADD POPUP -->
@@ -117,13 +146,13 @@
           <div v-if="validationErrors.nom" class="error-message">{{ validationErrors.nom }}</div>
         </div>
         <div class="form-group">
-          <label>Désignation *</label>
+          <label>Désignation</label>
           <textarea 
             v-model="newSection.designation" 
             placeholder="Désignation" 
-            :class="{ 'error': validationErrors.designation }"
+            
           />
-          <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div>
+          <!-- <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div> -->
         </div>
         <div class="modal-actions">
           <button @click="validateAndAddSection">Ajouter</button>
@@ -173,6 +202,8 @@ interface Section {
   idSectionProduit: number
   nom: string
   designation: string
+  ordre?: number
+  createdBy?: number // ID of the user who created this section
 }
 
 const sections = ref<Section[]>([])
@@ -180,11 +211,18 @@ const types = ref<TypeProduit[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+// Drag and drop variables
+const draggedIndex = ref<number | null>(null)
+const draggedSection = ref<Section | null>(null)
+
+// Selection for move buttons
+const selectedSectionForMove = ref<Section | null>(null)
+
 const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'nom' | 'designation'>('nom')
+const sortColumn = ref<'nom' | 'designation' | 'ordre'>('ordre')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
@@ -212,6 +250,19 @@ const successMessage = ref('')
 
 // User store for role-based access control
 const userStore = useUserStore()
+
+// Check if user can modify section order
+function canModifySectionOrder(section: Section): boolean {
+  if (!userStore.currentUser.value) return false
+  
+  // Admin users can modify any section
+  if (userStore.isAdminFonctionnel.value || userStore.isAdminInformatique.value) {
+    return true
+  }
+  
+  // Regular users can only modify sections they created
+  return section.createdBy === userStore.currentUser.value.idUser
+}
 
 async function fetchTypes() {
   try {
@@ -260,6 +311,12 @@ const filteredSections = computed(() => {
   )
 
   return filtered.sort((a, b) => {
+    if (sortColumn.value === 'ordre') {
+      const ordreA = a.ordre || 0
+      const ordreB = b.ordre || 0
+      return sortAsc.value ? ordreA - ordreB : ordreB - ordreA
+    }
+    
     // Primary sort by nom (A to Z)
     const nameA = a.nom.toLowerCase()
     const nameB = b.nom.toLowerCase()
@@ -299,7 +356,7 @@ async function fetchSections() {
   error.value = null
   try {
     const response = await axiosInstance.get('sections/')
-    sections.value = response.data
+    sections.value = response.data.sort((a: Section, b: Section) => (a.ordre || 0) - (b.ordre || 0))
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
   } finally {
@@ -309,10 +366,13 @@ async function fetchSections() {
 
 async function addSection() {
   try {
+    const maxOrdre = Math.max(...sections.value.map(s => s.ordre || 0), 0)
     const sectionToSend = {
       nom: newSection.value.nom,
       designation: newSection.value.designation,
-      types: newSection.value.types
+      types: newSection.value.types,
+      ordre: maxOrdre + 1,
+      createdBy: userStore.currentUser.value?.idUser
     }
     const res = await axiosInstance.post('sections/', sectionToSend)
     sections.value.push(res.data)
@@ -332,6 +392,10 @@ function confirmDelete(section: Section) {
 }
 
 function confirmUpdate(section: Section) {
+  if (!canModifySectionOrder(section)) {
+    alert('Vous ne pouvez modifier que les sections que vous avez créées.')
+    return
+  }
   sectionToUpdate.value = { ...section }
 }
 
@@ -340,7 +404,8 @@ async function updateSection() {
   try {
     const sectionToSend = {
       nom: sectionToUpdate.value.nom,
-      designation: sectionToUpdate.value.designation
+      designation: sectionToUpdate.value.designation,
+      ordre: sectionToUpdate.value.ordre
     }
     await axiosInstance.put(`sections/${sectionToUpdate.value.idSectionProduit}/`, sectionToSend)
     const index = sections.value.findIndex(s => s.idSectionProduit === sectionToUpdate.value!.idSectionProduit)
@@ -384,10 +449,10 @@ function validateRequiredFields() {
     isValid = false
   }
   
-  if (!newSection.value.designation.trim()) {
-    errors.designation = 'La désignation est requise'
-    isValid = false
-  }
+  // if (!newSection.value.designation.trim()) {
+  //   errors.designation = 'La désignation est requise'
+  //   isValid = false
+  // }
   
   validationErrors.value = errors
   return isValid
@@ -408,13 +473,119 @@ function closeModal() {
   successMessage.value = ''
 }
 
+// Drag and drop functions
+function onDragStart(event: DragEvent, index: number) {
+  draggedIndex.value = index
+  draggedSection.value = paginatedSections.value[index]
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+function onDragOver(event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function onDrop(event: DragEvent, dropIndex: number) {
+  event.preventDefault()
+  
+  if (draggedIndex.value === null || draggedSection.value === null) return
+  if (draggedIndex.value === dropIndex) return
+  
+  reorderSections(draggedIndex.value, dropIndex)
+  
+  draggedIndex.value = null
+  draggedSection.value = null
+}
+
+// Reorder sections function
+async function reorderSections(fromIndex: number, toIndex: number) {
+  const sortedSections = [...filteredSections.value]
+  const [movedItem] = sortedSections.splice(fromIndex, 1)
+  
+  // Check if user can modify the moved section
+  if (!canModifySectionOrder(movedItem)) {
+    alert('Vous ne pouvez modifier que les sections que vous avez créées.')
+    return
+  }
+  
+  sortedSections.splice(toIndex, 0, movedItem)
+  
+  // Update ordre for all affected items
+  const updatedSections: Section[] = []
+  sortedSections.forEach((section, index) => {
+    section.ordre = index + 1
+    updatedSections.push(section)
+  })
+  
+  try {
+    // Update all sections in batch
+    await Promise.all(
+      updatedSections.map(section => 
+        axiosInstance.put(`sections/${section.idSectionProduit}/`, {
+          nom: section.nom,
+          designation: section.designation,
+          ordre: section.ordre
+        })
+      )
+    )
+    
+    // Update local data
+    sections.value = updatedSections
+  } catch (e: any) {
+    alert('Erreur lors de la réorganisation : ' + (e?.message || 'Erreur inconnue'))
+    await fetchSections()
+  }
+}
+
+// Selection functions
+function selectSectionForMove(section: Section) {
+  selectedSectionForMove.value = section
+}
+
+const canMoveUp = computed(() => {
+  if (!selectedSectionForMove.value) return false
+  const currentIndex = filteredSections.value.findIndex(s => s.idSectionProduit === selectedSectionForMove.value!.idSectionProduit)
+  return currentIndex > 0
+})
+
+const canMoveDown = computed(() => {
+  if (!selectedSectionForMove.value) return false
+  const currentIndex = filteredSections.value.findIndex(s => s.idSectionProduit === selectedSectionForMove.value!.idSectionProduit)
+  return currentIndex < filteredSections.value.length - 1
+})
+
+function moveUp() {
+  if (!selectedSectionForMove.value || !canMoveUp.value) return
+  if (!canModifySectionOrder(selectedSectionForMove.value)) {
+    alert('Vous ne pouvez modifier que les sections que vous avez créées.')
+    return
+  }
+  const currentIndex = filteredSections.value.findIndex(s => s.idSectionProduit === selectedSectionForMove.value!.idSectionProduit)
+  reorderSections(currentIndex, currentIndex - 1)
+}
+
+function moveDown() {
+  if (!selectedSectionForMove.value || !canMoveDown.value) return
+  if (!canModifySectionOrder(selectedSectionForMove.value)) {
+    alert('Vous ne pouvez modifier que les sections que vous avez créées.')
+    return
+  }
+  const currentIndex = filteredSections.value.findIndex(s => s.idSectionProduit === selectedSectionForMove.value!.idSectionProduit)
+  reorderSections(currentIndex, currentIndex + 1)
+}
+
 function exportCSV() {
-  const headers = ['ID Section', 'Nom', 'Désignation']
+  const headers = ['ID Section', 'Nom', 'Désignation', 'Ordre']
 
   const rows = filteredSections.value.map(section => [
     section.idSectionProduit,
     section.nom,
-    section.designation
+    section.designation,
+    section.ordre
   ])
 
   const csvContent =
@@ -744,5 +915,86 @@ h1 {
   flex: 1;
   font-weight: normal;
   margin: 0;
+}
+
+/* Drag and drop styles */
+.product-table tbody tr {
+  cursor: move;
+  transition: background-color 0.2s;
+}
+
+.product-table tbody tr:hover {
+  background-color: #1e2a4a;
+}
+
+.selected-for-move {
+  background-color: #2d4a87 !important;
+  border: 2px solid #4a90e2;
+}
+
+/* Move controls */
+.move-controls {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.move-info {
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.move-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.move-button {
+  padding: 6px 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.move-button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.move-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.cancel-move-button {
+  padding: 6px 12px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.cancel-move-button:hover {
+  background: #545b62;
+}
+
+.non-draggable {
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
+.non-draggable:hover {
+  background-color: #192850 !important;
 }
 </style>

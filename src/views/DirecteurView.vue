@@ -36,6 +36,7 @@
               Téléphone
               <span v-if="sortColumn === 'telephone'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
+            <th>Fichier</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -47,7 +48,15 @@
             <td>{{ directeur.fonction || '—' }}</td>
             <td>{{ directeur.telephone || '—' }}</td>
             <td>
+              <span v-if="directeur.nomFichier">
+                {{ directeur.nomFichier }}
+                <button @click="viewFile(directeur.idDirecteur)" class="view-file-btn" title="Voir le fichier">👁️</button>
+              </span>
+              <span v-else>—</span>
+            </td>
+            <td>
               <button class="update-button" @click="confirmUpdate(directeur)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button v-if="userStore.canAccessBibliothequePages.value" class="upload-button" @click="showUploadModal(directeur)" title="Télécharger fichier">📁</button>
               <button class="delete-button" @click="confirmDelete(directeur)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
@@ -91,6 +100,14 @@
           />
           <!-- <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone }}</div> -->
         </div>
+        <!-- <div class="form-group">
+          <label>Fichier</label>
+          <input 
+            type="file" 
+            @change="handleFileSelect"
+            accept=".pdf,.doc,.docx,.txt"
+          />
+        </div> -->
         <div class="modal-actions">
           <button @click="validateAndAddDirecteur">Ajouter</button>
           <button @click="showAddPopup = false" class="cancel">Annuler</button>
@@ -123,6 +140,25 @@
         </div>
       </div>
     </div>
+
+    <!-- UPLOAD FILE MODAL -->
+    <div v-if="directeurToUpload" class="modal-overlay">
+      <div class="modal">
+        <h2>Télécharger fichier pour {{ directeurToUpload.nomPrenomDirecteur }}</h2>
+        <div class="form-group">
+          <label>Fichier</label>
+          <input 
+            type="file" 
+            @change="handleUploadFileSelect"
+            accept=".pdf,.doc,.docx,.txt"
+          />
+        </div>
+        <div class="modal-actions">
+          <button @click="uploadFile" :disabled="!uploadFileSelected">Télécharger</button>
+          <button @click="directeurToUpload = null" class="cancel">Annuler</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script lang="ts" setup>
@@ -135,6 +171,8 @@ interface Directeur {
   nomPrenomDirecteur: string
   fonction: string
   telephone: string
+  nomFichier: string | null
+  date_suppression: string | null
 }
 
 const directeurs = ref<Directeur[]>([])
@@ -150,8 +188,11 @@ const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
 const newDirecteur = ref({ nomPrenomDirecteur: '', fonction: '', telephone: '' })
+const selectedFile = ref<File | null>(null)
 const directeurToDelete = ref<Directeur | null>(null)
 const directeurToUpdate = ref<Directeur | null>(null)
+const directeurToUpload = ref<Directeur | null>(null)
+const uploadFileSelected = ref<File | null>(null)
 
 // Validation errors
 const validationErrors = ref({
@@ -210,12 +251,40 @@ async function fetchDirecteurs() {
   }
 }
 
+// function handleFileSelect(event: Event) {
+//   const target = event.target as HTMLInputElement
+//   selectedFile.value = target.files?.[0] || null
+// }
+
+function handleUploadFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  uploadFileSelected.value = target.files?.[0] || null
+}
+
+function showUploadModal(directeur: Directeur) {
+  directeurToUpload.value = directeur
+  uploadFileSelected.value = null
+}
+
 async function addDirecteur() {
   try {
-    const res = await axiosInstance.post('directions-projets/', newDirecteur.value)
+    const formData = new FormData()
+    formData.append('nomPrenomDirecteur', newDirecteur.value.nomPrenomDirecteur)
+    formData.append('fonction', newDirecteur.value.fonction || '')
+    formData.append('telephone', newDirecteur.value.telephone || '')
+    if (selectedFile.value) {
+      formData.append('fichier', selectedFile.value)
+    }
+
+    const res = await axiosInstance.post('directions-projets/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
     directeurs.value.push(res.data)
     showAddPopup.value = false
     newDirecteur.value = { nomPrenomDirecteur: '', fonction: '', telephone: '' }
+    selectedFile.value = null
   } catch (e: any) {
     alert('Erreur lors de l’ajout : ' + (e?.message || 'Erreur inconnue'))
   }
@@ -232,12 +301,16 @@ function confirmUpdate(directeur: Directeur) {
 async function updateDirecteur() {
   if (!directeurToUpdate.value) return
   try {
-    const directeurToSend = {
-      nomPrenomDirecteur: directeurToUpdate.value.nomPrenomDirecteur,
-      fonction: directeurToUpdate.value.fonction,
-      telephone: directeurToUpdate.value.telephone
-    }
-    await axiosInstance.put(`directions-projets/${directeurToUpdate.value.idDirecteur}/`, directeurToSend)
+    const formData = new FormData()
+    formData.append('nomPrenomDirecteur', directeurToUpdate.value.nomPrenomDirecteur)
+    formData.append('fonction', directeurToUpdate.value.fonction || '')
+    formData.append('telephone', directeurToUpdate.value.telephone || '')
+
+    await axiosInstance.put(`directions-projets/${directeurToUpdate.value.idDirecteur}/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
     const index = directeurs.value.findIndex(d => d.idDirecteur === directeurToUpdate.value!.idDirecteur)
     if (index !== -1) {
       directeurs.value[index] = { ...directeurToUpdate.value }
@@ -295,13 +368,49 @@ function validateAndAddDirecteur() {
   }
 }
 
+async function uploadFile() {
+  if (!directeurToUpload.value || !uploadFileSelected.value) return
+  try {
+    const formData = new FormData()
+    formData.append('fichier', uploadFileSelected.value)
+
+    await axiosInstance.post(`directions-projets/${directeurToUpload.value.idDirecteur}/upload-file/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    await fetchDirecteurs()
+    directeurToUpload.value = null
+    uploadFileSelected.value = null
+  } catch (e: any) {
+    alert('Erreur lors du téléchargement : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
+async function viewFile(id: number) {
+  try {
+    const response = await axiosInstance.get(`directions-projets/${id}/view-file/`, {
+      responseType: 'blob'
+    })
+    
+    const blob = new Blob([response.data])
+    const url = window.URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    window.URL.revokeObjectURL(url)
+  } catch (e: any) {
+    alert('Erreur lors de l\'ouverture du fichier : ' + (e?.message || 'Erreur inconnue'))
+  }
+}
+
 function exportCSV() {
-  const headers = ['ID', 'Nom et Prénom', 'Fonction', 'Téléphone']
+  const headers = ['ID', 'Nom et Prénom', 'Fonction', 'Téléphone', 'Fichier']
   const rows = filteredDirecteurs.value.map(directeur => [
     directeur.idDirecteur,
     directeur.nomPrenomDirecteur,
     directeur.fonction || '',
-    directeur.telephone || ''
+    directeur.telephone || '',
+    directeur.nomFichier || ''
   ])
 
   const csvContent =
@@ -400,6 +509,10 @@ h1 {
   border-bottom: 1px solid #232f4b;
   text-align: left;
   font-size: 1rem;
+  max-width: 150px;
+  word-wrap: break-word;
+  white-space: normal;
+  vertical-align: top;
 }
 
 .product-table th {
@@ -592,5 +705,31 @@ h1 {
   font-size: 0.85em;
   margin-top: 0.3em;
   font-weight: 500;
+}
+
+.upload-button {
+  padding: 5px 10px;
+  background: #ffc107;
+  color: #212529;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.upload-button:hover {
+  background: #e0a800;
+  border-color: #d39e00;
+}
+
+.view-file-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 5px;
+  font-size: 1.1em;
+}
+.view-file-btn:hover {
+  opacity: 0.7;
 }
 </style>

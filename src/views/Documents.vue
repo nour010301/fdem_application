@@ -58,7 +58,7 @@
           </select>
 
           <div class="filter-buttons">
-            <button class="primary" @click="applyFilters" :disabled="loading || loadingConsulter">{{ loading ? "Filtrage..." : "Filtrer" }}</button>
+            <button class="primary" @click="() => applyFilters()" :disabled="loading || loadingConsulter">{{ loading ? "Filtrage..." : "Filtrer" }}</button>
             <button class="outline" @click="resetFilters" :disabled="loading || loadingConsulter">Annuler le filtre</button>
           </div>
         </div>
@@ -138,7 +138,7 @@
           <th>Documents cibles</th>
           <th v-if="canSeeCreatedBy">Créé par</th>
           <th>Fichier</th>
-          <th>Plan</th>
+          <th>Format Source</th>
           <th>Vidéo</th>
           <th>Photos</th>
           <th v-if="userStore.userRole.value === userStore.ROLES.MISE_A_JOUR || userStore.userRole.value !== userStore.ROLES.CONSULTATION || userStore.user.value?.valide">Validation</th>
@@ -236,10 +236,41 @@
       <div v-else class="no-result">Veuillez utiliser les filtres pour afficher les documents.</div>
     </div>
 
-    <div v-if="totalPages > 1" class="pagination">
-      <button @click="currentPage--" :disabled="currentPage === 1">Précédent</button>
-      <span>Page {{ currentPage }} / {{ totalPages }}</span>
-      <button @click="currentPage++" :disabled="currentPage === totalPages">Suivant</button>
+    <!-- Pagination Controls -->
+    <div v-if="totalPages > 1" class="pagination-container">
+      <div class="pagination-info">
+        Affichage {{ (currentPage - 1) * pageSize + 1 }} à 
+        {{ Math.min(currentPage * pageSize, totalCount) }} sur 
+        {{ totalCount }} documents
+      </div>
+      
+      <div class="pagination-controls">
+        <button 
+          :disabled="!hasPrevious" 
+          @click="applyFilters(currentPage - 1)"
+          class="btn-pagination">
+          Précédent
+        </button>
+        
+        <span class="page-info">Page {{ currentPage }} / {{ totalPages }}</span>
+        
+        <button 
+          :disabled="!hasNext" 
+          @click="applyFilters(currentPage + 1)"
+          class="btn-pagination">
+          Suivant
+        </button>
+      </div>
+      
+      <div class="page-size-selector">
+        <label>Éléments par page:</label>
+        <select :value="pageSize" @change="changePageSize(($event.target as HTMLSelectElement).value)">
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
     </div>
 
     <!-- DELETE CONFIRMATION -->
@@ -555,7 +586,11 @@ const error = ref<string | null>(null)
 const filtersApplied = ref(false)
 const search = ref('')
 const currentPage = ref(1)
-const pageSize = 10
+const pageSize = ref(10)
+const totalPages = ref(0)
+const totalCount = ref(0)
+const hasNext = ref(false)
+const hasPrevious = ref(false)
 const sortColumn = ref<'idDocument' | 'typeProduitDesignation' | 'produitDesignation'>('idDocument')
 const sortAsc = ref(true)
 const documentToDelete = ref<Document | null>(null)
@@ -783,29 +818,38 @@ function onSubdivision3Change() {
 
 
 // --- Filtering Documents ---
-async function applyFilters() {
+async function applyFilters(page = 1) {
   loading.value = true
   error.value = null
   filtersApplied.value = true
   try {
-    const params: Record<string, string | number> = {};
-    if (selectedTypeProduit.value) params.idTypeProduit = selectedTypeProduit.value;
-    if (selectedProduit.value) params.idProduit = selectedProduit.value;
-    if (selectedSection.value) params.idSection = selectedSection.value;
-    if (selectedStructure.value) params.idStructure = selectedStructure.value;
-    if (selectedSubdivision1.value) params.idSubDivisionNv_1 = selectedSubdivision1.value;
-    if (selectedSubdivision2.value) params.idSubDivisionNv_2 = selectedSubdivision2.value;
-    if (selectedSubdivision3.value) params.idSubDivisionNv_3 = selectedSubdivision3.value;
-    if (selectedSubdivision4.value) params.idSubDivisionNv_4 = selectedSubdivision4.value;
-    if (selectedValidation.value !== "") params.valide = selectedValidation.value;
+    const params = new URLSearchParams({
+      page: page.toString(),
+      page_size: pageSize.value.toString()
+    });
+    
+    if (selectedTypeProduit.value) params.append('idTypeProduit', selectedTypeProduit.value.toString());
+    if (selectedProduit.value) params.append('idProduit', selectedProduit.value.toString());
+    if (selectedSection.value) params.append('idSection', selectedSection.value.toString());
+    if (selectedStructure.value) params.append('idStructure', selectedStructure.value.toString());
+    if (selectedSubdivision1.value) params.append('idSubDivisionNv_1', selectedSubdivision1.value.toString());
+    if (selectedSubdivision2.value) params.append('idSubDivisionNv_2', selectedSubdivision2.value.toString());
+    if (selectedSubdivision3.value) params.append('idSubDivisionNv_3', selectedSubdivision3.value.toString());
+    if (selectedSubdivision4.value) params.append('idSubDivisionNv_4', selectedSubdivision4.value.toString());
+    if (selectedValidation.value !== "") params.append('valide', selectedValidation.value.toString());
 
-    const response = await axiosInstance.get('documentsFilter/', { params });
-    // Handle case where API returns {message: "Aucun document trouvé."} instead of empty array
-    documents.value = Array.isArray(response.data) ? response.data : [];
-    currentPage.value = 1;
+    const response = await axiosInstance.get(`documents/paginated/?${params}`);
+    const data = response.data;
+    
+    documents.value = data.results || [];
+    currentPage.value = data.current_page || 1;
+    totalPages.value = data.total_pages || 0;
+    totalCount.value = data.count || 0;
+    hasNext.value = !!data.next;
+    hasPrevious.value = !!data.previous;
   } catch (e: any) {
     error.value = e?.message || "Erreur lors du filtrage"
-    documents.value = []; // Ensure documents is always an array
+    documents.value = [];
   } finally {
     loading.value = false
   }
@@ -824,6 +868,11 @@ async function resetFilters() {
   selectedValidation.value = ""
   filtersApplied.value = false
   documents.value = []
+  currentPage.value = 1
+  totalPages.value = 0
+  totalCount.value = 0
+  hasNext.value = false
+  hasPrevious.value = false
   
   // Clear right-side content and reset states
   clearRightSideContent()
@@ -905,25 +954,22 @@ const filteredDocuments = computed(() => {
 
 
 
-const paginatedDocuments = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredDocuments.value.slice(start, start + pageSize)
-})
-const totalPages = computed(() => Math.ceil(filteredDocuments.value.length / pageSize))
+// Documents are already paginated from API
+const paginatedDocuments = computed(() => filteredDocuments.value)
 
 // --- Data CRUD (same as your code) ---
-async function fetchDocuments() {
-  loading.value = true
-  error.value = null
-  try {
-    const response = await axiosInstance.get('documents/')
-    documents.value = response.data
-  } catch (e: any) {
-    error.value = e?.message || 'Erreur inconnue'
-  } finally {
-    loading.value = false
-  }
-}
+// async function fetchDocuments() {
+//   loading.value = true
+//   error.value = null
+//   try {
+//     const response = await axiosInstance.get('documents/')
+//     documents.value = response.data
+//   } catch (e: any) {
+//     error.value = e?.message || 'Erreur inconnue'
+//   } finally {
+//     loading.value = false
+//   }
+// }
 //  function confirmDelete(document: Document) { documentToDelete.value = document }
 async function deleteDocument() {
   if (!documentToDelete.value) return
@@ -932,7 +978,12 @@ async function deleteDocument() {
     await logUserAction(documentToDelete.value.idDocument, LOG_ACTIONS.DELETE)
     
     await axiosInstance.delete(`documents/${documentToDelete.value.idDocument}/`)
-    documents.value = documents.value.filter(d => d.idDocument !== documentToDelete.value!.idDocument)
+    
+    // Refresh current page
+    if (filtersApplied.value) {
+      await applyFilters(currentPage.value)
+    }
+    
     documentToDelete.value = null
   } catch (e: any) {
     alert('Erreur lors de la suppression : ' + (e?.message || 'Erreur inconnue'))
@@ -1292,7 +1343,11 @@ async function updateDocument() {
       })
     }
     
-    await fetchDocuments()
+    // Refresh current page
+    if (filtersApplied.value) {
+      await applyFilters(currentPage.value)
+    }
+    
     documentToUpdate.value = null
     selectedFile.value = null
     multipleImages.value = []
@@ -1329,7 +1384,11 @@ async function moveDocument() {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     
-    await fetchDocuments()
+    // Refresh current page
+    if (filtersApplied.value) {
+      await applyFilters(currentPage.value)
+    }
+    
     documentToMove.value = null
   } catch (e: any) {
     alert('Erreur lors du déplacement : ' + (e?.message || 'Erreur inconnue'))
@@ -1371,10 +1430,9 @@ async function validateDocument() {
   try {
     await axiosInstance.put(`documents/create-two-file/${documentToValidate.value.idDocument}/`)
     
-    // Update the document in the local array
-    const index = documents.value.findIndex(d => d.idDocument === documentToValidate.value!.idDocument)
-    if (index !== -1) {
-      documents.value[index].valide = true
+    // Refresh current page
+    if (filtersApplied.value) {
+      await applyFilters(currentPage.value)
     }
     
     documentToValidate.value = null
@@ -1458,9 +1516,15 @@ async function downloadPlan(doc: Document) {
     
     URL.revokeObjectURL(url)
   } catch (error) {
-    console.error('Plan download failed:', error)
-    alert('Erreur lors du téléchargement du plan')
+    console.error('Fichier Source download failed:', error)
+    alert('Erreur lors du téléchargement du fichier source')
   }
+}
+
+// Change page size function
+function changePageSize(newSize: string) {
+  pageSize.value = Math.min(Math.max(parseInt(newSize), 1), 100)
+  applyFilters(1) // Reset to first page
 }
 
 onMounted(async () => {
@@ -1704,6 +1768,10 @@ h1 {
   border-bottom: 1px solid #232f4b;
   text-align: left;
   font-size: 1rem;
+   max-width: 200px;
+  word-wrap: break-word;
+  white-space: normal;
+  vertical-align: top;
 }
 
 .product-table th {
@@ -1735,25 +1803,78 @@ h1 {
   margin: 16px 0;
 }
 
-.pagination {
-  margin-top: 1rem;
+/* Pagination Styles */
+.pagination-container {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.pagination-info {
+  color: #6b7280;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.pagination-controls {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.pagination button {
-  padding: 6px 12px;
+.btn-pagination {
+  padding: 8px 16px;
   background: #22336e;
   color: white;
   border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background: #2d3c6e;
+  transform: translateY(-1px);
+}
+
+.btn-pagination:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.page-info {
+  font-weight: 500;
+  color: #374151;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.page-size-selector select {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
   border-radius: 4px;
+  background: white;
   cursor: pointer;
 }
 
-.pagination button:disabled {
-  background: #888;
-  cursor: not-allowed;
+.page-size-selector select:focus {
+  outline: none;
+  border-color: #22336e;
+  box-shadow: 0 0 0 2px rgba(34, 51, 110, 0.1);
 }
 
 .sortable {

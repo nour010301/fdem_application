@@ -40,18 +40,36 @@
               SubDiv
               <span v-if="sortColumn === 'subDiv'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
+            <th @click="toggleSort('ordre')" class="sortable">
+              Ordre
+              <span v-if="sortColumn === 'ordre'">{{ sortAsc ? '▲' : '▼' }}</span>
+            </th>
+            <th>Plan Vérif</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in paginatedSubdivs" :key="item.idSubDivisionNv_3">
+          <tr v-for="(item, index) in paginatedSubdivs" :key="item.idSubDivisionNv_3"
+              :draggable="canModifySubdivisionOrder(item)"
+              @dragstart="onDragStart($event, index)"
+              @dragover="onDragOver($event)"
+              @drop="onDrop($event, index)"
+              :class="{ 'selected-for-move': selectedSubdivisionForMove?.idSubDivisionNv_3 === item.idSubDivisionNv_3, 'non-draggable': !canModifySubdivisionOrder(item) }"
+              @click="selectSubdivisionForMove(item)">
             <!-- <td>{{ item.idSubDivisionNv_3 }}</td> -->
             <td>{{ item.nom }}</td>
             <!-- <td>{{ item.parent?.nom || '—' }}</td> -->
             <td>{{ item.designation || '—' }}</td>
             <td>{{ item.subDiv ? 'Oui' : 'Non' }}</td>
+            <td>{{ item.ordre || 0 }}</td>
+            <td @click.stop>
+              <span v-if="item.subDiv">—</span>
+              <span v-else :class="{ 'plan-verif-oui': item.planVerif, 'plan-verif-non': !item.planVerif }">
+                {{ item.planVerif ? 'Oui' : 'Non' }}
+              </span>
+            </td>
             <td>
-              <button class="update-button" @click="confirmUpdate(item)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Modifier">✎</button>
+              <button class="update-button" @click="confirmUpdate(item)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value || !canModifySubdivisionOrder(item) }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value || !canModifySubdivisionOrder(item)" title="Modifier">✎</button>
               <button class="delete-button" @click="confirmDelete(item)" :class="{ 'disabled': userStore.loading.value || !userStore.canAccessBibliothequePages.value }" :disabled="userStore.loading.value || !userStore.canAccessBibliothequePages.value" title="Supprimer">✕</button>
             </td>
           </tr>
@@ -64,6 +82,24 @@
       <button @click="currentPage--" :disabled="currentPage === 1">Précédent</button>
       <span>Page {{ currentPage }} / {{ totalPages }}</span>
       <button @click="currentPage++" :disabled="currentPage === totalPages">Suivant</button>
+    </div>
+
+    <!-- Move Controls -->
+    <div v-if="selectedSubdivisionForMove" class="move-controls">
+      <div class="move-info">
+        Subdivision sélectionnée: <strong>{{ selectedSubdivisionForMove.nom }}</strong>
+      </div>
+      <div class="move-buttons">
+        <button @click="moveUp" :disabled="!canMoveUp" class="move-button">
+          ↑ Monter
+        </button>
+        <button @click="moveDown" :disabled="!canMoveDown" class="move-button">
+          ↓ Descendre
+        </button>
+        <button @click="selectedSubdivisionForMove = null" class="cancel-move-button">
+          Annuler
+        </button>
+      </div>
     </div>
 
     <!-- ADD POPUP -->
@@ -167,6 +203,19 @@
             {{ subdiv.nom }}
           </option>
         </select>
+        <div v-if="!subdivisionToUpdate.subDiv" class="form-group">
+          <label>Voulez-vous autoriser les plans sources ?</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" :value="true" v-model="subdivisionToUpdate.planVerif" />
+              <span class="radio-text oui">Oui</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" :value="false" v-model="subdivisionToUpdate.planVerif" />
+              <span class="radio-text non">Non</span>
+            </label>
+          </div>
+        </div>
         <div class="modal-actions">
           <button @click="updateSubdivision">Modifier</button>
           <button @click="subdivisionToUpdate = null" class="cancel">Annuler</button>
@@ -192,6 +241,9 @@ interface SubdivisionNv3 {
   }
   date_suppression: string | null
   idSubDivisionNv_2?: number // For update operations
+  ordre?: number
+  planVerif?: boolean
+  createdBy?: number // ID of the user who created this subdivision
 }
 
 interface SubdivisionNv2 {
@@ -225,11 +277,18 @@ const filteredSubdivisionsNv2 = ref<SubdivisionNv2[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+// Drag and drop variables
+const draggedIndex = ref<number | null>(null)
+const draggedSubdivision = ref<SubdivisionNv3 | null>(null)
+
+// Selection for move buttons
+const selectedSubdivisionForMove = ref<SubdivisionNv3 | null>(null)
+
 const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'nom' | 'designation' | 'parent.nom' | 'subDiv'>('nom')
+const sortColumn = ref<'nom' | 'designation' | 'parent.nom' | 'subDiv' | 'ordre'>('ordre')
 const sortAsc = ref(true)
 
 const showAddPopup = ref(false)
@@ -249,7 +308,20 @@ const subdivisionToUpdate = ref<SubdivisionNv3 | null>(null)
 
 const userStore = useUserStore()
 
-function toggleSort(column: 'nom' | 'designation' | 'parent.nom' | 'subDiv') {
+// Check if user can modify subdivision order
+function canModifySubdivisionOrder(subdivision: SubdivisionNv3): boolean {
+  if (!userStore.currentUser.value) return false
+  
+  // Admin users can modify any subdivision
+  if (userStore.isAdminFonctionnel.value || userStore.isAdminInformatique.value) {
+    return true
+  }
+  
+  // Regular users can only modify subdivisions they created
+  return subdivision.createdBy === userStore.currentUser.value.idUser
+}
+
+function toggleSort(column: 'nom' | 'designation' | 'parent.nom' | 'subDiv' | 'ordre') {
   if (sortColumn.value === column) {
     sortAsc.value = !sortAsc.value
   } else {
@@ -266,6 +338,12 @@ const filteredSubdivs = computed(() => {
       item.designation?.toLowerCase().includes(s)
     )
     .sort((a, b) => {
+      if (sortColumn.value === 'ordre') {
+        const ordreA = a.ordre || 0
+        const ordreB = b.ordre || 0
+        return sortAsc.value ? ordreA - ordreB : ordreB - ordreA
+      }
+      
       // Primary sort by nom (A to Z)
       const nameA = a.nom.toLowerCase()
       const nameB = b.nom.toLowerCase()
@@ -317,7 +395,7 @@ async function fetchData() {
   error.value = null
   try {
     const response = await axiosInstance.get('subdivision-nv3/')
-    data.value = response.data
+    data.value = response.data.sort((a: SubdivisionNv3, b: SubdivisionNv3) => (a.ordre || 0) - (b.ordre || 0))
   } catch (e: any) {
     error.value = e?.message || 'Erreur inconnue'
   } finally {
@@ -394,7 +472,13 @@ async function onSubdivisionNv1Change() {
 
 async function addSubdivision() {
   try {
-    const res = await axiosInstance.post('subdivision-nv3/', newSubdivision.value)
+    const maxOrdre = Math.max(...data.value.map(s => s.ordre || 0), 0)
+    const subdivisionToSend = {
+      ...newSubdivision.value,
+      ordre: maxOrdre + 1,
+      createdBy: userStore.currentUser.value?.idUser
+    }
+    const res = await axiosInstance.post('subdivision-nv3/', subdivisionToSend)
     data.value.push(res.data)
     
     // Show success message
@@ -419,6 +503,10 @@ function confirmDelete(subdivision: SubdivisionNv3) {
 }
 
 function confirmUpdate(subdivision: SubdivisionNv3) {
+  if (!canModifySubdivisionOrder(subdivision)) {
+    alert('Vous ne pouvez modifier que les subdivisions que vous avez créées.')
+    return
+  }
   subdivisionToUpdate.value = { ...subdivision }
 }
 
@@ -428,7 +516,9 @@ async function updateSubdivision() {
     const subdivisionToSend = {
       nom: subdivisionToUpdate.value.nom,
       designation: subdivisionToUpdate.value.designation,
-      idSubDivisionNv_2: subdivisionToUpdate.value.parent.id
+      idSubDivisionNv_2: subdivisionToUpdate.value.parent.id,
+      ordre: subdivisionToUpdate.value.ordre,
+      planVerif: subdivisionToUpdate.value.planVerif
     }
     await axiosInstance.put(`subdivision-nv3/${subdivisionToUpdate.value.idSubDivisionNv_3}/`, subdivisionToSend)
     const index = data.value.findIndex(s => s.idSubDivisionNv_3 === subdivisionToUpdate.value!.idSubDivisionNv_3)
@@ -452,12 +542,121 @@ async function deleteSubdivision() {
   }
 }
 
+// Drag and drop functions
+function onDragStart(event: DragEvent, index: number) {
+  draggedIndex.value = index
+  draggedSubdivision.value = paginatedSubdivs.value[index]
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+function onDragOver(event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function onDrop(event: DragEvent, dropIndex: number) {
+  event.preventDefault()
+  
+  if (draggedIndex.value === null || draggedSubdivision.value === null) return
+  if (draggedIndex.value === dropIndex) return
+  
+  reorderSubdivisions(draggedIndex.value, dropIndex)
+  
+  draggedIndex.value = null
+  draggedSubdivision.value = null
+}
+
+// Reorder subdivisions function
+async function reorderSubdivisions(fromIndex: number, toIndex: number) {
+  const sortedSubdivisions = [...filteredSubdivs.value]
+  const [movedItem] = sortedSubdivisions.splice(fromIndex, 1)
+  
+  // Check if user can modify the moved subdivision
+  if (!canModifySubdivisionOrder(movedItem)) {
+    alert('Vous ne pouvez modifier que les subdivisions que vous avez créées.')
+    return
+  }
+  
+  sortedSubdivisions.splice(toIndex, 0, movedItem)
+  
+  // Update ordre for all affected items
+  const updatedSubdivisions: SubdivisionNv3[] = []
+  sortedSubdivisions.forEach((subdivision, index) => {
+    subdivision.ordre = index + 1
+    updatedSubdivisions.push(subdivision)
+  })
+  
+  try {
+    // Update all subdivisions in batch
+    await Promise.all(
+      updatedSubdivisions.map(subdivision => 
+        axiosInstance.put(`subdivision-nv3/${subdivision.idSubDivisionNv_3}/`, {
+          nom: subdivision.nom,
+          designation: subdivision.designation,
+          idSubDivisionNv_2: subdivision.parent.id,
+          ordre: subdivision.ordre,
+          planVerif: subdivision.planVerif
+        })
+      )
+    )
+    
+    // Update local data
+    data.value = updatedSubdivisions
+  } catch (e: any) {
+    alert('Erreur lors de la réorganisation : ' + (e?.message || 'Erreur inconnue'))
+    await fetchData()
+  }
+}
+
+// Selection functions
+function selectSubdivisionForMove(subdivision: SubdivisionNv3) {
+  selectedSubdivisionForMove.value = subdivision
+}
+
+const canMoveUp = computed(() => {
+  if (!selectedSubdivisionForMove.value) return false
+  const currentIndex = filteredSubdivs.value.findIndex(s => s.idSubDivisionNv_3 === selectedSubdivisionForMove.value!.idSubDivisionNv_3)
+  return currentIndex > 0
+})
+
+const canMoveDown = computed(() => {
+  if (!selectedSubdivisionForMove.value) return false
+  const currentIndex = filteredSubdivs.value.findIndex(s => s.idSubDivisionNv_3 === selectedSubdivisionForMove.value!.idSubDivisionNv_3)
+  return currentIndex < filteredSubdivs.value.length - 1
+})
+
+function moveUp() {
+  if (!selectedSubdivisionForMove.value || !canMoveUp.value) return
+  if (!canModifySubdivisionOrder(selectedSubdivisionForMove.value)) {
+    alert('Vous ne pouvez modifier que les subdivisions que vous avez créées.')
+    return
+  }
+  const currentIndex = filteredSubdivs.value.findIndex(s => s.idSubDivisionNv_3 === selectedSubdivisionForMove.value!.idSubDivisionNv_3)
+  reorderSubdivisions(currentIndex, currentIndex - 1)
+}
+
+function moveDown() {
+  if (!selectedSubdivisionForMove.value || !canMoveDown.value) return
+  if (!canModifySubdivisionOrder(selectedSubdivisionForMove.value)) {
+    alert('Vous ne pouvez modifier que les subdivisions que vous avez créées.')
+    return
+  }
+  const currentIndex = filteredSubdivs.value.findIndex(s => s.idSubDivisionNv_3 === selectedSubdivisionForMove.value!.idSubDivisionNv_3)
+  reorderSubdivisions(currentIndex, currentIndex + 1)
+}
+
 function exportCSV() {
-  const headers = ['ID', 'Nom', 'Désignation']
+  const headers = ['ID', 'Nom', 'Désignation', 'Ordre', 'Plan Vérif']
   const rows = filteredSubdivs.value.map(item => [
     item.idSubDivisionNv_3,
     item.nom,
-    item.designation || '—'
+    item.designation || '—',
+    item.ordre,
+    item.subDiv ? '—' : (item.planVerif ? 'Oui' : 'Non')
   ])
   const csvContent =
     'data:text/csv;charset=utf-8,' +
@@ -631,6 +830,10 @@ h1 {
   border-bottom: 1px solid #232f4b;
   text-align: left;
   font-size: 1rem;
+  max-width: 200px;
+  word-wrap: break-word;
+  white-space: normal;
+  vertical-align: top;
 }
 
 .product-table th {
@@ -819,5 +1022,138 @@ h1 {
   margin-bottom: 1rem;
   border: 1px solid #c3e6cb;
   font-weight: 500;
+}
+
+/* Drag and drop styles */
+.product-table tbody tr {
+  cursor: move;
+  transition: background-color 0.2s;
+}
+
+.product-table tbody tr:hover {
+  background-color: #1e2a4a;
+}
+
+.selected-for-move {
+  background-color: #2d4a87 !important;
+  border: 2px solid #4a90e2;
+}
+
+/* Move controls */
+.move-controls {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.move-info {
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.move-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.move-button {
+  padding: 6px 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.move-button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.move-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.cancel-move-button {
+  padding: 6px 12px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.cancel-move-button:hover {
+  background: #545b62;
+}
+
+.non-draggable {
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
+.non-draggable:hover {
+  background-color: #192850 !important;
+}
+
+/* Plan Vérif styles */
+.plan-verif-oui {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.plan-verif-non {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+/* Radio group styles */
+.radio-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  transition: all 0.2s;
+}
+
+.radio-option:hover {
+  background-color: #f8f9fa;
+}
+
+.radio-option input[type="radio"]:checked + .radio-text.oui {
+  background-color: #28a745;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+}
+
+.radio-option input[type="radio"]:checked + .radio-text.non {
+  background-color: #dc3545;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+}
+
+.radio-text {
+  font-weight: 500;
+  transition: all 0.2s;
 }
 </style>

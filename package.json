@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest --run",
+    "test:ui": "vitest",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.832.0",
@@ -31,11 +34,15 @@
     "@types/pdfjs-dist": "^2.10.377",
     "@vitejs/plugin-vue": "^5.2.2",
     "@vue/tsconfig": "^0.7.0",
+    "@vue/test-utils": "^2.4.6",
     "autoprefixer": "^10.4.21",
+    "happy-dom": "^15.11.7",
+    "jsdom": "^25.0.1",
     "postcss": "^8.5.3",
     "rollup": "^3.29.4",
     "typescript": "~5.7.2",
     "vite": "^6.3.5",
+    "vitest": "^2.1.8",
     "vue-tsc": "^2.2.8"
   }
 }
