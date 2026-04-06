@@ -14,37 +14,37 @@
               {{ type.designation }}
             </option>
           </select>
-          <select v-model="selectedProduit" @change="onProduitChange" :disabled="loadingFilters || !selectedTypeProduit || !filteredProduits.length">
+          <select v-model="selectedProduit" @change="onProduitChange" :disabled="loadingFilters">
             <option value="">Produits</option>
             <option v-for="prod in filteredProduits" :key="prod.idProduit" :value="prod.idProduit">
               {{ prod.designation }}
             </option>
           </select>
-          <select v-model="selectedStructure" @change="onStructureChange" :disabled="loadingFilters || !selectedProduit">
+          <select v-model="selectedStructure" @change="onStructureChange" :disabled="loadingFilters">
             <option value="">Structures Fond Documentaire</option>
             <option v-for="str in structures" :key="str.idStructure" :value="str.idStructure">
               {{ str.nom }}
             </option>
           </select>
-          <select v-model="selectedSection" @change="onSectionChange" :disabled="loadingFilters || !selectedStructure">
+          <select v-model="selectedSection" @change="onSectionChange" :disabled="loadingFilters">
             <option value="">Sections de produits</option>
             <option v-for="s in sections" :key="s.idSectionProduit" :value="s.idSectionProduit">
-              {{ s.designation }}
+              {{ s.nom }} - {{ s.designation }}
             </option>
           </select>
-          <select v-model="selectedSubdivision1" @change="onSubdivision1Change" :disabled="loadingFilters || !selectedSection">
+          <select v-model="selectedSubdivision1" @change="onSubdivision1Change" :disabled="loadingFilters">
             <option value="">Classes de documents</option>
             <option v-for="sub1 in subdivisions1" :key="sub1.idSubDivisionNv_1" :value="sub1.idSubDivisionNv_1">
               {{ sub1.nom }}
             </option>
           </select>
-          <select v-model="selectedSubdivision2" @change="onSubdivision2Change" :disabled="loadingFilters || !selectedSubdivision1 || !filteredSubdivisions2.length">
+          <select v-model="selectedSubdivision2" @change="onSubdivision2Change" :disabled="loadingFilters">
             <option value="">Types de documents</option>
             <option v-for="sub2 in filteredSubdivisions2" :key="sub2.idSubDivisionNv_2.idSubDivisionNv_2" :value="sub2.idSubDivisionNv_2.idSubDivisionNv_2">
               {{ sub2.idSubDivisionNv_2.nom }}
             </option>
           </select>
-          <select v-model="selectedSubdivision3" @change="onSubdivision3Change" :disabled="loadingFilters || !selectedSubdivision2 || !filteredSubdivisions3.length">
+          <select v-model="selectedSubdivision3" @change="onSubdivision3Change" :disabled="loadingFilters">
             <option value="">Documents cibles</option>
             <option v-for="sub3 in filteredSubdivisions3" :key="sub3.idSubDivisionNv_3.idSubDivisionNv_3" :value="sub3.idSubDivisionNv_3.idSubDivisionNv_3">
               {{ sub3.idSubDivisionNv_3.nom }}
@@ -677,15 +677,17 @@ const loadingFilters = ref(false)
 async function loadFilterOptions() {
   loadingFilters.value = true
   try {
-    const [typesRes, structuresRes, subDivsRes, subDivs3Res, subDivs4Res] = await Promise.all([
+    const [typesRes, structuresRes, sectionsRes, subDivsRes, subDivs3Res, subDivs4Res] = await Promise.all([
       axiosInstance.get('types/'),
       axiosInstance.get('structures/'),
+      axiosInstance.get('sections/'),
       axiosInstance.get('subdiv1et2/'),
       axiosInstance.get('subdiv2et3/'),
       axiosInstance.get('subdiv3et4/')
     ]);
     typesProduit.value = typesRes.data.sort((a: any, b: any) => (a.designation || '').toLowerCase().localeCompare((b.designation || '').toLowerCase()));
     structures.value = structuresRes.data.sort((a: any, b: any) => (a.designation || a.nom || '').toLowerCase().localeCompare((b.designation || b.nom || '').toLowerCase()));
+    sections.value = sectionsRes.data.sort((a: any, b: any) => (a.designation || '').toLowerCase().localeCompare((b.designation || '').toLowerCase()));
     allSubDivs1Et2.value = subDivsRes.data;
     allSubDivs2Et3.value = subDivs3Res.data;
     allSubDivs3Et4.value = subDivs4Res.data;
@@ -727,7 +729,6 @@ async function onTypeProduitChange() {
   selectedSubdivision4.value = ""
   
   produits.value = []
-  sections.value = []
   subdivisions1.value = []
   
   // Clear right-side content and reset states
@@ -735,14 +736,10 @@ async function onTypeProduitChange() {
   
   if (selectedTypeProduit.value) {
     try {
-      const [produitsRes, sectionsRes] = await Promise.all([
-        axiosInstance.get(`produits/by-type/${selectedTypeProduit.value}/`),
-        axiosInstance.get(`sections/by-type/${selectedTypeProduit.value}/`)
-      ])
+      const produitsRes = await axiosInstance.get(`produits/by-type/${selectedTypeProduit.value}/`)
       produits.value = produitsRes.data.sort((a: any, b: any) => (a.designation || '').toLowerCase().localeCompare((b.designation || '').toLowerCase()))
-      sections.value = sectionsRes.data.sort((a: any, b: any) => (a.designation || '').toLowerCase().localeCompare((b.designation || '').toLowerCase()))
     } catch (error) {
-      console.error('Error loading produits/sections:', error)
+      console.error('Error loading produits:', error)
     }
   }
 }
