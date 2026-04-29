@@ -27,6 +27,7 @@ import SubDivisionNv_4View from '../views/SubDivisionNv_4View.vue'
 import UsersView from '../views/UsersView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import HierarchicalStatsView from '../views/HierarchicalStatsView.vue'
+import DocumentsChartView from '../views/DocumentsChartView.vue'
 import PAQView from '../views/PAQView.vue'
 import SecteursView from '../views/SecteursView.vue'
 import axiosInstance from '../axios.ts'
@@ -205,6 +206,12 @@ const routes: Array<RouteRecordRaw> = [
         name: 'hierarchical-stats',
         component: HierarchicalStatsView,
         meta: { requiresAuth: true, title: 'Statistiques hiérarchiques' },
+      },
+      {
+        path: '/documents-chart',
+        name: 'documents-chart',
+        component: DocumentsChartView,
+        meta: { requiresAuth: true, title: 'Documents par produit' },
       },
       {
         path: '/paqs',

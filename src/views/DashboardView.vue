@@ -370,6 +370,7 @@ const sortedSubdivisionData = ref<{product: string, total: number, subdivisions:
 
 const totalPiecesEcrites = ref(0);
 const totalPiecesGraphiques = ref(0);
+const abbreviationMap = ref<Record<string, string | null>>({});
 
 // const searchQuery = ref('');
 // const selectedProducts = ref<string[]>([]);
@@ -642,13 +643,17 @@ function createTotalProductChart(data: Record<string, Record<string, number>>) {
   
   const maxValue = Math.max(...filteredProducts.map(p => p.total));
 
-  // Set canvas height based on number of products (more space between bars)
+  // Use abbreviation for X-axis label if available, otherwise full name
+  const xLabels = filteredProducts.map(item =>
+    abbreviationMap.value[item.product] || item.product
+  );
+
   ctx.height = filteredProducts.length * 60;
 
   totalProductChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: filteredProducts.map(item => item.product),
+      labels: xLabels,
       datasets: [
         {
           label: 'Pièces écrites',
@@ -685,6 +690,11 @@ function createTotalProductChart(data: Record<string, Record<string, number>>) {
           bodyFont: { size: 14 },
           padding: 12,
           callbacks: {
+            title: function(context) {
+              // Always show full product name in tooltip title
+              const dataIndex = context[0].dataIndex;
+              return filteredProducts[dataIndex].product;
+            },
             label: function(context) {
               const label = context.dataset.label || '';
               const value = context.parsed.y;
@@ -750,8 +760,18 @@ const fetchDocumentsByProduct = async () => {
 const fetchDocumentsByProductSubdivision = async () => {
   try {
     const response = await axiosInstance.get('document-count-by-produit-subdivision-1/');
-    console.log('Documents par subdivision API Response:', response.data);
-    return response.data || {};
+    // New format: { productName: { abbreviation: string|null, subdivisions: {...} } }
+    const raw = response.data || {};
+    const normalized: Record<string, Record<string, number>> = {};
+    for (const [name, val] of Object.entries(raw as Record<string, { abbreviation: string | null, subdivisions: Record<string, number> }>)) {
+      normalized[name] = val.subdivisions;
+    }
+    // Store abbreviations separately
+    abbreviationMap.value = Object.fromEntries(
+      Object.entries(raw as Record<string, { abbreviation: string | null, subdivisions: Record<string, number> }>)
+        .map(([name, val]) => [name, val.abbreviation || null])
+    );
+    return normalized;
   } catch (error) {
     console.error('Error fetching documents by product subdivision:', error);
     return {};

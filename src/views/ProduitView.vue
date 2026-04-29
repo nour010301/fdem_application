@@ -46,6 +46,10 @@
              Produit
               <span v-if="sortColumn === 'designation'">{{ sortAsc ? '▲' : '▼' }}</span>
             </th>
+            <th @click="toggleSort('designation_abbreviation')" class="sortable">
+              Abréviation
+              <span v-if="sortColumn === 'designation_abbreviation'">{{ sortAsc ? '▲' : '▼' }}</span>
+            </th>
             <th @click="toggleSort('description')" class="sortable">
               Description
               <span v-if="sortColumn === 'description'">{{ sortAsc ? '▲' : '▼' }}</span>
@@ -58,6 +62,7 @@
             <!-- <td>{{ produit.idProduit }}</td> -->
             <td>{{ produit.typeProduitDesignation || '—' }}</td>
             <td>{{ produit.designation }}</td>
+            <td>{{ produit.designation_abbreviation || '—' }}</td>
             <td>{{ produit.description || '—' }}</td>
             <td>
               <button 
@@ -119,6 +124,10 @@
           <div v-if="validationErrors.designation" class="error-message">{{ validationErrors.designation }}</div>
         </div>
         <div class="form-group">
+          <label>Abréviation</label>
+          <input v-model="newProduit.designation_abbreviation" placeholder="Abréviation (optionnelle)" />
+        </div>
+        <div class="form-group">
           <label>Description</label>
           <textarea v-model="newProduit.description" placeholder="Description (optionnelle)" />
         </div>
@@ -150,6 +159,7 @@
           </option>
         </select>
         <input v-model="produitToUpdate.designation" placeholder="Désignation" />
+        <input v-model="produitToUpdate.designation_abbreviation" placeholder="Abréviation (optionnelle)" />
         <textarea v-model="produitToUpdate.description" placeholder="Description (optionnelle)" />
         <div class="modal-actions">
           <button @click="updateProduit">Modifier</button>
@@ -177,6 +187,7 @@ interface Produit {
   idTypeProduit: number
   typeProduitDesignation: string
   designation: string
+  designation_abbreviation: string
   description: string
 }
 
@@ -188,7 +199,7 @@ const search = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const sortColumn = ref<'typeProduitDesignation' | 'designation' | 'description'>('designation')
+const sortColumn = ref<'typeProduitDesignation' | 'designation' | 'designation_abbreviation' | 'description'>('designation')
 
 const sortAsc = ref(true)
 
@@ -201,10 +212,12 @@ const showAddPopup = ref(false)
 const newProduit = ref<{
   idTypeProduit: number | null
   designation: string
+  designation_abbreviation: string
   description: string
 }>({
   idTypeProduit: null,
   designation: '',
+  designation_abbreviation: '',
   description: ''
 })
 
@@ -335,6 +348,7 @@ async function addProduit() {
     const produitToSend = {
       idTypeProduit: newProduit.value.idTypeProduit,
       designation: newProduit.value.designation,
+      designation_abbreviation: newProduit.value.designation_abbreviation,
       description: newProduit.value.description
     }
     const res = await axiosInstance.post('produits/', produitToSend)
@@ -345,7 +359,7 @@ async function addProduit() {
     })
     // Keep modal open and preserve idTypeProduit, only clear designation and description
     const selectedTypeId = newProduit.value.idTypeProduit
-    newProduit.value = { idTypeProduit: selectedTypeId, designation: '', description: '' }
+    newProduit.value = { idTypeProduit: selectedTypeId, designation: '', designation_abbreviation: '', description: '' }
     validationErrors.value = { idTypeProduit: '', designation: '' }
     successMessage.value = 'Produit ajouté avec succès!'
     setTimeout(() => successMessage.value = '', 3000)
@@ -368,6 +382,7 @@ async function updateProduit() {
     const produitToSend = {
       idTypeProduit: produitToUpdate.value.idTypeProduit,
       designation: produitToUpdate.value.designation,
+      designation_abbreviation: produitToUpdate.value.designation_abbreviation,
       description: produitToUpdate.value.description
     }
     await axiosInstance.put(`produits/${produitToUpdate.value.idProduit}/`, produitToSend)
@@ -429,18 +444,19 @@ function validateAndAddProduit() {
 // Close modal and reset all fields
 function closeModal() {
   showAddPopup.value = false
-  newProduit.value = { idTypeProduit: null, designation: '', description: '' }
+  newProduit.value = { idTypeProduit: null, designation: '', designation_abbreviation: '', description: '' }
   validationErrors.value = { idTypeProduit: '', designation: '' }
   successMessage.value = ''
 }
 
 function exportCSV() {
-  const headers = ['ID Produit', 'Type Désignation', 'Désignation', 'Description']
+  const headers = ['ID Produit', 'Type Désignation', 'Désignation', 'Abréviation', 'Description']
 
   const rows = filteredProduits.value.map(produit => [
     produit.idProduit,
     produit.typeProduitDesignation,
     produit.designation,
+    produit.designation_abbreviation || '—',
     produit.description || '—'
   ])
 

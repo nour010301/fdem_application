@@ -5729,7 +5729,7 @@ const contextConsulterEntityConfig: Record<string, EntityConfig> = {
     columnKeys: ["designation", "description", "adresse", "secteurs_activite"]
   },
   maitre_oeuvre: {
-    label: "Maîtres d'Œuvre(BCS)",
+    label: "Maîtres d'Œuvre/BCS",
     endpoint: ((produitId: number) => `/moe/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["Désignation", "Description", "Adresse"],
     columnKeys: ["designation", "description", "adresse"]
@@ -5747,7 +5747,7 @@ const contextConsulterEntityConfig: Record<string, EntityConfig> = {
     columnKeys: ["designationStt", "description", "adresse", "telephone", "email", "secteurs_activite"]
   },
   bet_soustraitants_etudes: {
-    label: "BET Sous-traitants",
+    label: "Bureaux d'Études",
     endpoint: ((produitId: number) => `bet/by-produit/${produitId}`) as ProduitEndpoint,
     columns: ["Nom", "Description", "Secteur Activité"],
     columnKeys: ["nom", "description", "secteurs_activite"]
@@ -6355,11 +6355,11 @@ function getColKeyByHeader(header: string) {
 const contextEntities = [
   { key: "projet", label: "Projet" },
   { key: "maitre_ouvrage", label: "Maîtres d'Ouvrage" },
-  { key: "maitre_oeuvre", label: "Maîtres d'Œuvre(BCS)" },
+  { key: "maitre_oeuvre", label: "Maîtres d'Œuvre/BCS" },
   { key: "soustraitants_tvx", label: "Sous-traitants de Travaux" },
   { key: "fournisseur", label: "Fournisseur" },
   // { key: "partenaire", label: "Partenaire" },
-  { key: "bet_soustraitants_etudes", label: "BET Sous-traitants" },
+  { key: "bet_soustraitants_etudes", label: "Bureaux d'Études" },
   { key: "direction_projet", label: "Direction du Projet" },
   // { key: "paq", label: "PAQ" }
 ];
@@ -7959,7 +7959,7 @@ const contextEntitiesConfig = {
     allowMultiple: false,
   },
   maitre_oeuvre: {
-    label: "Maître d'Œuvre",
+    label: "Maître d'Œuvre/BCS",
     api: '/maitres-oeuvre/',
     idCol: 'idMaitreOeuvre',
     columns: ['ID', 'Désignation', 'Description', 'Email'],
@@ -7979,7 +7979,7 @@ const contextEntitiesConfig = {
     allowMultiple: true,
   },
   bet_soustraitants_etudes: {
-    label: "BET Soustraitants Études",
+    label: "Bureaux d'Études",
     api: '/bureaux-etudes/',
     idCol: 'idBET',
     columns: ['Nom', 'Description', 'Secteur Activité'],

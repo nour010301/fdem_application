@@ -26,6 +26,10 @@
         <span class="icon">📊</span>
         <span>Statistiques hiérarchiques</span>
       </router-link>
+      <!-- <router-link to="/documents-chart" class="nav-link" active-class="active">
+        <span class="icon">📈</span>
+        <span>Documents par produit</span>
+      </router-link> -->
 
       <!-- BIBLIOTHEQUE -->
       <div class="bibliotheque-group">
